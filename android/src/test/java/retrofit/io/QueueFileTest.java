@@ -1,17 +1,20 @@
 // Copyright 2010 Square, Inc.
 package retrofit.io;
 
+import org.junit.After;
+import org.junit.Before;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
-import junit.framework.ComparisonFailure;
-import junit.framework.TestCase;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * Tests for QueueFile.
@@ -19,7 +22,7 @@ import junit.framework.TestCase;
  * @author Bob Lee (bob@squareup.com)
  */
 @SuppressWarnings({"ResultOfMethodCallIgnored"})
-public class QueueFileTest extends TestCase {
+public class QueueFileTest {
   private static final Logger logger =
       Logger.getLogger(QueueFileTest.class.getName());
 
@@ -41,12 +44,12 @@ public class QueueFileTest extends TestCase {
 
   private File file;
 
-  @Override protected void setUp() throws Exception {
+  @Before protected void setUp() throws Exception {
     file = File.createTempFile("test.queue", null);
     file.delete();
   }
 
-  @Override protected void tearDown() throws Exception {
+  @After protected void tearDown() throws Exception {
     file.delete();
   }
 
@@ -281,14 +284,6 @@ public class QueueFileTest extends TestCase {
 
     assertEquals(a, queueFile.peek());
     assertEquals(2, iteration[0]);
-  }
-
-  /** Compares two byte[]s for equality. */
-  private static void assertEquals(byte[] expected, byte[] actual) {
-    if (!Arrays.equals(expected, actual)) {
-      throw new ComparisonFailure(null, Arrays.toString(expected),
-          Arrays.toString(actual));
-    }
   }
 
   /**
