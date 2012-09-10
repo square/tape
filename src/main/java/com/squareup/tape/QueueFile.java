@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package retrofit.io;
+package com.squareup.tape;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -40,7 +40,7 @@ import java.util.logging.Logger;
  * the system crashes after {@code peek} and during processing, the element will
  * remain in the queue, to be processed when the system restarts.
  * <p/>
- * <p><b><font color="red">NOTE:</font></b> The current implementation is built
+ * <p><strong>NOTE:</strong> The current implementation is built
  * for file systems that support atomic segment writes (like YAFFS). Most
  * conventional file systems don't support this; if the power goes out while
  * writing a segment, the segment will contain garbage and the file will be
@@ -279,10 +279,10 @@ public class QueueFile {
    * @param data   to copy bytes from
    * @param offset to start from in buffer
    * @param count  number of bytes to copy
-   * @throws IndexOutOfBoundsException if {@code offset < 0} or {@code count <
-   *                                   0}, or if {@code offset + count} is
-   *                                   bigger than the length of {@code
-   *                                   buffer}.
+   * @throws IndexOutOfBoundsException if {@code offset < 0} or
+   *                                   {@code count < 0}, or if
+   *                                   {@code offset + count} is bigger than
+   *                                   the length of {@code buffer}.
    */
   public synchronized void add(byte[] data, int offset, int count)
       throws IOException {
@@ -438,7 +438,7 @@ public class QueueFile {
   }
 
   /** Reads a single element. */
-  private class ElementInputStream extends InputStream {
+  private final class ElementInputStream extends InputStream {
     private int position;
     private int remaining;
 

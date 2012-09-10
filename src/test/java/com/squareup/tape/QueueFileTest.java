@@ -1,16 +1,12 @@
 // Copyright 2010 Square, Inc.
-package retrofit.io;
+package com.squareup.tape;
 
 import org.fest.assertions.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
