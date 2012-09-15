@@ -50,8 +50,7 @@ import java.util.logging.Logger;
  * @author Bob Lee (bob@squareup.com)
  */
 public class QueueFile {
-  private static final Logger LOGGER =
-      Logger.getLogger(QueueFile.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(QueueFile.class.getName());
 
   /** Initial file size in bytes. */
   private static final int INITIAL_LENGTH = 4096; // one file system block
@@ -154,8 +153,7 @@ public class QueueFile {
     raf.readFully(buffer);
     fileLength = readInt(buffer, 0);
     if (fileLength > raf.length()) {
-      throw new IOException("File is truncated. Expected length: "
-          + fileLength + ", Actual length: " + raf.length());
+      throw new IOException("File is truncated. Expected length: " + fileLength + ", Actual length: " + raf.length());
     }
     elementCount = readInt(buffer, 4);
     int firstOffset = readInt(buffer, 8);
@@ -171,8 +169,7 @@ public class QueueFile {
    * variables *after* this call succeeds. Assumes segment writes are atomic in
    * the underlying file system.
    */
-  private void writeHeader(int fileLength, int elementCount, int firstPosition,
-                           int lastPosition) throws IOException {
+  private void writeHeader(int fileLength, int elementCount, int firstPosition, int lastPosition) throws IOException {
     writeInts(buffer, fileLength, elementCount, firstPosition, lastPosition);
     raf.seek(0);
     raf.write(buffer);
@@ -223,8 +220,7 @@ public class QueueFile {
    * @param buffer   to write from
    * @param count    # of bytes to write
    */
-  private void ringWrite(int position, byte[] buffer, int offset, int count)
-      throws IOException {
+  private void ringWrite(int position, byte[] buffer, int offset, int count) throws IOException {
     position = wrapPosition(position);
     if (position + count <= fileLength) {
       raf.seek(position);
@@ -247,8 +243,7 @@ public class QueueFile {
    * @param buffer   to read into
    * @param count    # of bytes to read
    */
-  private void ringRead(int position, byte[] buffer, int offset, int count)
-      throws IOException {
+  private void ringRead(int position, byte[] buffer, int offset, int count) throws IOException {
     position = wrapPosition(position);
     if (position + count <= fileLength) {
       raf.seek(position);
@@ -279,13 +274,10 @@ public class QueueFile {
    * @param data   to copy bytes from
    * @param offset to start from in buffer
    * @param count  number of bytes to copy
-   * @throws IndexOutOfBoundsException if {@code offset < 0} or
-   *                                   {@code count < 0}, or if
-   *                                   {@code offset + count} is bigger than
-   *                                   the length of {@code buffer}.
+   * @throws IndexOutOfBoundsException if {@code offset < 0} or {@code count < 0}, or if {@code offset + count} is
+   *                                   bigger than the length of {@code buffer}.
    */
-  public synchronized void add(byte[] data, int offset, int count)
-      throws IOException {
+  public synchronized void add(byte[] data, int offset, int count) throws IOException {
     nonNull(data, "buffer");
     if ((offset | count) < 0 || count > data.length - offset) {
       throw new IndexOutOfBoundsException();
@@ -295,8 +287,7 @@ public class QueueFile {
 
     // Insert a new element after the current last element.
     boolean wasEmpty = isEmpty();
-    int position = wasEmpty ? HEADER_LENGTH : wrapPosition(
-        last.position + Element.HEADER_LENGTH + last.length);
+    int position = wasEmpty ? HEADER_LENGTH : wrapPosition(last.position + Element.HEADER_LENGTH + last.length);
     Element newLast = new Element(position, count);
 
     // Write length.
@@ -365,8 +356,7 @@ public class QueueFile {
     setLength(newLength);
 
     // Calculate the position of the tail end of the data in the ring buffer
-    int endOfLastElement = wrapPosition(
-        last.position + Element.HEADER_LENGTH + last.length);
+    int endOfLastElement = wrapPosition(last.position + Element.HEADER_LENGTH + last.length);
 
     // If the buffer is split, we need to make it contiguous
     if (endOfLastElement < first.position) {
@@ -422,8 +412,7 @@ public class QueueFile {
     for (int i = 0; i < elementCount; i++) {
       Element current = readElement(position);
       reader.read(new ElementInputStream(current), current.length);
-      position = wrapPosition(current.position + Element.HEADER_LENGTH
-          + current.length);
+      position = wrapPosition(current.position + Element.HEADER_LENGTH + current.length);
     }
   }
 
@@ -447,8 +436,7 @@ public class QueueFile {
       remaining = element.length;
     }
 
-    @Override public int read(byte[] buffer, int offset, int length)
-        throws IOException {
+    @Override public int read(byte[] buffer, int offset, int length) throws IOException {
       nonNull(buffer, "buffer");
       if ((offset | length) < 0 || length > buffer.length - offset) {
         throw new ArrayIndexOutOfBoundsException();
@@ -486,12 +474,10 @@ public class QueueFile {
       clear();
     } else {
       // assert elementCount > 1
-      int newFirstPosition = wrapPosition(first.position
-          + Element.HEADER_LENGTH + first.length);
+      int newFirstPosition = wrapPosition(first.position + Element.HEADER_LENGTH + first.length);
       ringRead(newFirstPosition, buffer, 0, Element.HEADER_LENGTH);
       int length = readInt(buffer, 0);
-      writeHeader(fileLength, elementCount - 1, newFirstPosition,
-          last.position);
+      writeHeader(fileLength, elementCount - 1, newFirstPosition, last.position);
       elementCount--;
       first = new Element(newFirstPosition, length);
     }
