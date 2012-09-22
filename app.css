@@ -1,0 +1,95 @@
+html, body {
+  -webkit-font-smoothing: antialiased;
+  color: #222;
+  height: 100%;
+}
+body {
+  background: transparent url('head.png') repeat-x top;
+  border-top: 3px solid #771414;
+}
+
+code {
+  color: #505050;
+  white-space: nowrap;
+}
+pre {
+  font-size: 12px;
+}
+
+.license p, .license blockquote {
+    font-family: monospace;
+    font-size: 10px;
+    margin: 15px 0;
+}
+
+.titlebar {
+  color: #444;
+  text-align: center;
+}
+.titlebar h1 {
+  height: 227px;
+  text-indent: -9999px;
+  /* Image courtesy http://www.flickr.com/photos/paulm/5916480112/*/
+  background: transparent url('lead.png') no-repeat center;
+}
+
+
+.content .row {
+  margin-bottom: 40px;
+}
+.content h2 {
+  font-weight: normal;
+  font-size: 20px;
+  line-height: 20px;
+  margin-bottom: 15px;
+  color: #882020;
+}
+.content h3 {
+  font-weight: normal;
+  font-size: 15px;
+  line-height: 15px;
+  color: #555;
+  margin: 35px 0 15px;
+  text-decoration: underline;
+}
+.content pre.maven {
+  margin-top: 20px;
+}
+
+.footer {
+  background: #888;
+  text-align: center;
+  border-top: 3px solid #771414;
+}
+.footer a {
+  padding: 10px 20px;
+  display: inline-block;
+  margin: 10px 0;
+}
+.footer a:hover {
+  background-color: #999;
+}
+.footer a img {
+  border: 0;
+}
+
+a:link, a:active, a:visited {
+  color: #661414;
+}
+a:hover {
+  color: #440000;
+}
+a.btn {
+  color: #fff;
+}
+
+#ribbon {
+  text-indent: -9999px;
+  background: transparent url('ribbon.png') no-repeat;
+  position: absolute;
+  top: 2px;
+  right: 0;
+  border: 0;
+  height: 149px;
+  width: 149px;
+}
