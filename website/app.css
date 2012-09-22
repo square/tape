@@ -1,0 +1,97 @@
+html, body {
+  background-color:#eee;
+  -webkit-font-smoothing: antialiased;
+  color: #222;
+  height: 100%;
+}
+
+code {
+  color: #666;
+  white-space: nowrap;
+}
+
+.license p, .license blockquote {
+    font-family: monospace;
+    font-size: 10px;
+    margin: 15px 0;
+}
+
+.content .row {
+  margin-top: 40px;
+  margin-bottom: 40px;
+}
+
+.titlebar {
+  background: #2BA6CB;
+  color: #ECF8FF;
+  border-top: 2px solid #333;
+  border-bottom: 2px solid #ccc;
+  text-align: center;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+.titlebar h1 {
+  font-weight: 100;
+  font-size: 80px;
+  line-height: 80px;
+  margin-bottom: 30px;
+  text-shadow: -1px 1px #777;
+  font-family: Roboto, sans-serif;
+}
+.titlebar p {
+  font-size: 20px;
+  line-height: 20px;
+  margin-bottom: 20px;
+  text-shadow: -1px 1px #999;
+}
+
+.content h2 {
+  font-weight: normal;
+  font-size: 20px;
+  line-height: 20px;
+  color: #2BA6CB;
+}
+.content h3 {
+  font-weight: normal;
+  font-size: 15px;
+  line-height: 15px;
+  color: #555;
+  margin: 25px 0 10px;
+  text-decoration: underline;
+}
+
+.accordion-body pre {
+  border: 0;
+  border-radius: 0;
+  -moz-border-radius: 0;
+  -x-border-radius: 0;
+  margin: 0;
+}
+
+.footer {
+  background: #777;
+  text-align: center;
+  border-top: 3px solid #2BA6CB;
+}
+.footer a {
+  padding: 10px 20px;
+  margin: 20px;
+  display: inline-block;
+}
+.footer a:hover {
+  background-color: #888;
+}
+.footer a img {
+  border: 0;
+}
+
+#ribbon {
+  text-indent: -9999px;
+  background: transparent url('ribbon.png') no-repeat;
+  position: absolute;
+  top: 2px;
+  right: 0;
+  border: 0;
+  height: 149px;
+  width: 149px;
+}
