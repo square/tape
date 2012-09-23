@@ -1,9 +1,22 @@
 Tape by Square, Inc.
 ====================
 
-A lightning fast, transactional, file-based FIFO for Java.
+Tape is a collection of queue-related classes for Java.
 
-*For usage instructions please see [the website][1].*
+`QueueFile` is a reliable, efficient, file-based, FIFO queue. Addition and
+removal from an instance is an O(1) operation and is atomic. Writes are
+synchronous; data will be written to disk before an operation returns. The
+underlying file is structured to survive process and even system crashes and if
+an I/O exception is thrown during a mutating change, the change is aborted.
+
+An `ObjectQueue` represents an ordering of arbitrary objects which can be backed
+either by the filesystem (via `QueueFile`) or in memory only.
+
+`TaskQueue` is a special object queue which holds `Task`s, objects which have a
+notion of being executed. Instances are managed by an external executor which
+prepares and executes enqueued tasks.
+
+*Some examples are available on [the website][1].*
 
 
 
