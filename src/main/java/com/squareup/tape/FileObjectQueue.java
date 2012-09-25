@@ -44,7 +44,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
       bytes.reset();
       converter.toStream(entry, bytes);
       queueFile.add(bytes.getArray(), 0, bytes.size());
-      if (listener != null) listener.onAdd(entry);
+      if (listener != null) listener.onAdd(this, entry);
     } catch (IOException e) {
       throw new FileException("Failed to add entry.", e, file);
     }
@@ -63,30 +63,27 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
   @Override public final void remove() {
     try {
       queueFile.remove();
-      if (listener != null) listener.onRemove();
+      if (listener != null) listener.onRemove(this);
     } catch (IOException e) {
       throw new FileException("Failed to remove.", e, file);
     }
   }
 
-  /**
-   * Scans each entry of the backing QueueFile.
-   *
-   * @see QueueFile#forEach(com.squareup.tape.QueueFile.ElementReader)
-   */
   @Override public void setListener(final Listener<T> listener) {
-    try {
-      queueFile.forEach(new QueueFile.ElementReader() {
-        @Override
-        public void read(InputStream in, int length) throws IOException {
-          byte[] data = new byte[length];
-          in.read(data, 0, length);
+    if (listener != null) {
+      try {
+        queueFile.forEach(new QueueFile.ElementReader() {
+          @Override
+          public void read(InputStream in, int length) throws IOException {
+            byte[] data = new byte[length];
+            in.read(data, 0, length);
 
-          listener.onAdd(converter.from(data));
-        }
-      });
-    } catch (IOException e) {
-      throw new FileException("Unable to iterate over QueueFile contents.", e, file);
+            listener.onAdd(FileObjectQueue.this, converter.from(data));
+          }
+        });
+      } catch (IOException e) {
+        throw new FileException("Unable to iterate over QueueFile contents.", e, file);
+      }
     }
     this.listener = listener;
   }

@@ -11,18 +11,17 @@ import java.util.Queue;
  * @param <T> The type of elements in the queue.
  */
 public class InMemoryObjectQueue<T> implements ObjectQueue<T> {
-  private Startable startable;
-  private Queue<T> tasks;
+  private final Queue<T> tasks;
+  private Listener<T> listener;
 
   @SuppressWarnings("unchecked")
-  public InMemoryObjectQueue(Startable startable) {
-    this.startable = startable;
+  public InMemoryObjectQueue() {
     tasks = (Queue<T>) new LinkedList();
   }
 
   @Override public void add(T entry) {
     tasks.add(entry);
-    startable.start();
+    if (listener != null) listener.onAdd(this, entry);
   }
 
   @Override public T peek() {
@@ -35,9 +34,15 @@ public class InMemoryObjectQueue<T> implements ObjectQueue<T> {
 
   @Override public void remove() {
     tasks.remove();
+    if (listener != null) listener.onRemove(this);
   }
 
   @Override public void setListener(Listener<T> listener) {
-    throw new UnsupportedOperationException("Listener not supported for in-memory queue");
+    if (listener != null) {
+      for (T task : tasks) {
+        listener.onAdd(this, task);
+      }
+    }
+    this.listener = listener;
   }
 }
