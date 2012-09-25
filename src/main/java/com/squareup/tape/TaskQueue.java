@@ -10,12 +10,10 @@ public class TaskQueue<T extends Task> implements ObjectQueue<T> {
 
   private final TaskInjector<T> taskInjector;
   private final ObjectQueue<T> delegate;
-  private final Startable startable;
 
-  public TaskQueue(ObjectQueue<T> delegate, TaskInjector<T> taskInjector, Startable startable) {
+  public TaskQueue(ObjectQueue<T> delegate, TaskInjector<T> taskInjector) {
     this.delegate = delegate;
     this.taskInjector = taskInjector;
-    this.startable = startable;
   }
 
   /**
@@ -25,12 +23,9 @@ public class TaskQueue<T extends Task> implements ObjectQueue<T> {
    */
   @Override public T peek() {
     T task = delegate.peek();
-
-    if (task == null) {
-      return null;
+    if (task != null) {
+      taskInjector.injectMembers(task);
     }
-    taskInjector.injectMembers(task);
-
     return task;
   }
 
@@ -40,9 +35,6 @@ public class TaskQueue<T extends Task> implements ObjectQueue<T> {
 
   @Override public void add(T entry) {
     delegate.add(entry);
-    if (startable != null) {
-      startable.start();
-    }
   }
 
   @Override public void remove() {
