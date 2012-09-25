@@ -12,7 +12,7 @@
   <groupId>com.squareup</groupId>
   <artifactId>tape</artifactId>
   <packaging>jar</packaging>
-  <version>1.0.0</version>
+  <version>1.0.1-SNAPSHOT</version>
 
   <name>Tape</name>
   <description>A lightning fast, transactional, file-based FIFO for Android and Java.</description>
