@@ -1,10 +1,10 @@
 .com { color: #93a1a1; }
-.lit { color: #195f91; }
+.lit { color: #999; }
 .pun, .opn, .clo { color: #93a1a1; }
 .fun { color: #dc322f; }
 .str, .atv { color: #D14; }
-.kwd, .linenums, .tag { color: #1e347b; }
-.typ, .atn, .dec, .var { color: teal; }
+.kwd, .linenums, .tag { color: #444; font-weight: bold; }
+.typ, .atn, .dec, .var { color: #661414; }
 .pln { color: #48484c; }
 
 .prettyprint {

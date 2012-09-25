@@ -1,13 +1,19 @@
 html, body {
-  background-color:#eee;
   -webkit-font-smoothing: antialiased;
   color: #222;
   height: 100%;
 }
+body {
+  background: transparent url('head.png') repeat-x top;
+  border-top: 3px solid #771414;
+}
 
 code {
-  color: #666;
+  color: #505050;
   white-space: nowrap;
+}
+pre {
+  font-size: 12px;
 }
 
 .license p, .license blockquote {
@@ -16,73 +22,65 @@ code {
     margin: 15px 0;
 }
 
-.content .row {
-  margin-top: 40px;
-  margin-bottom: 40px;
-}
-
 .titlebar {
-  background: #2BA6CB;
-  color: #ECF8FF;
-  border-top: 2px solid #333;
-  border-bottom: 2px solid #ccc;
+  color: #444;
   text-align: center;
-  padding-left: 20px;
-  padding-right: 20px;
 }
 .titlebar h1 {
-  font-weight: 100;
-  font-size: 80px;
-  line-height: 80px;
-  margin-bottom: 30px;
-  text-shadow: -1px 1px #777;
-  font-family: Roboto, sans-serif;
-}
-.titlebar p {
-  font-size: 20px;
-  line-height: 20px;
-  margin-bottom: 20px;
-  text-shadow: -1px 1px #999;
+  height: 227px;
+  text-indent: -9999px;
+  /* Image courtesy http://www.flickr.com/photos/paulm/5916480112/*/
+  background: transparent url('lead.png') no-repeat center;
 }
 
+
+.content .row {
+  margin-bottom: 40px;
+}
 .content h2 {
   font-weight: normal;
   font-size: 20px;
   line-height: 20px;
-  color: #2BA6CB;
+  margin-bottom: 15px;
+  color: #882020;
 }
 .content h3 {
   font-weight: normal;
   font-size: 15px;
   line-height: 15px;
   color: #555;
-  margin: 25px 0 10px;
+  margin: 35px 0 15px;
   text-decoration: underline;
 }
-
-.accordion-body pre {
-  border: 0;
-  border-radius: 0;
-  -moz-border-radius: 0;
-  -x-border-radius: 0;
-  margin: 0;
+.content pre.maven {
+  margin-top: 20px;
 }
 
 .footer {
-  background: #777;
+  background: #888;
   text-align: center;
-  border-top: 3px solid #2BA6CB;
+  border-top: 3px solid #771414;
 }
 .footer a {
   padding: 10px 20px;
-  margin: 20px;
   display: inline-block;
+  margin: 10px 0;
 }
 .footer a:hover {
-  background-color: #888;
+  background-color: #999;
 }
 .footer a img {
   border: 0;
+}
+
+a:link, a:active, a:visited {
+  color: #661414;
+}
+a:hover {
+  color: #440000;
+}
+a.btn {
+  color: #fff;
 }
 
 #ribbon {

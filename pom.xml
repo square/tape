@@ -16,7 +16,7 @@
   <version>1.0.0-SNAPSHOT</version>
 
   <name>Tape</name>
-  <description>A lightning fast, transactional, file-based FIFO for Java.</description>
+  <description>A lightning fast, transactional, file-based FIFO for Android and Java.</description>
 
   <scm>
     <url>http://github.com/square/tape</url>

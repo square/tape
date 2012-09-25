@@ -12,97 +12,56 @@
     <link href="prettify.css" rel="stylesheet">
     <link href="app.css" rel="stylesheet">
     <script src="http://code.jquery.com/jquery-latest.js"></script>
-    <script src="bootstrap.min.js"></script>
   </head>
   <body>
-    <div class="titlebar">
-      <div class="container">
-        <div class="row">
-          <div class="span12">
-            <h1>Tape</h1>
-            <p>A lightning-fast, transactional, file-based FIFO for Java.</p>
-          </div>
+    <div class="container content">
+      <div class="row titlebar">
+        <div class="span12">
+          <h1>Tape</h1>
         </div>
       </div>
-    </div>
-    <div class="container content">
       <div class="row">
         <div class="span6">
-          <h2>About</h2>
-          <p>Tape is a collection of queue-related classes for Java.</p>
-          <p><code>QueueFile</code> is a reliable, efficient, file-based, FIFO queue. Addition and removal from an instance is an O(1) operation and is atomic. Writes are synchronous; data will be written to disk before an operation returns. The underlying file is structured to survive process and even system crashes and if an I/O exception is thrown during a mutating change, the change is aborted.</p>
+          <h2 id="about">About</h2>
+          <p>Tape is a collection of queue-related classes for Android and Java by Square, Inc.</p>
+          <p><code>QueueFile</code> is a lightning-fast, transactional, file-based FIFO. Addition and removal from an instance is an O(1) operation and is atomic. Writes are synchronous; data will be written to disk before an operation returns. The underlying file is structured to survive process and even system crashes and if an I/O exception is thrown during a mutating change, the change is aborted.</p>
           <p>An <code>ObjectQueue</code> represents an ordering of arbitrary objects which can be backed either by the filesystem (via <code>QueueFile</code>) or in memory only.</p>
           <p><code>TaskQueue</code> is a special object queue which holds <code>Task</code>s, objects which have a notion of being executed. Instances are managed by an external executor which prepares and executes enqueued tasks.</p>
         </div>
-        <div class="span6">
-          <h2>Contents</h2>
-          <ul>
-            <li><code>QueueFile</code> &ndash; File-based FIFO queue.</li>
-          </ul>
-          <ul>
-            <li>
-              <code>ObjectQueue</code> &ndash; A generic queue of objects.
-              <ul>
-                <li><code>FileObjectQueue</code> &ndash; Queue backed by a <code>QueueFile</code>.</li>
-                <li><code>InMemoryObjectQueue</code> &ndash; Queue backed by an in-memory list.</li>
-              </ul>
-            </li>
-          </ul>
-          <ul>
-            <li>
-              <code>TaskQueue</code> &ndash; Persistent queue for tasks.
-              <ul>
-                <li><code>Task</code> &ndash; A task that can be enqueued, persisted, and executed at a later time.</li>
-                <li><code>TaskInjector</code> &ndash; Inject dependencies into tasks.</li>
-                <li><code>Startable</code> &ndash; Something that can be started to process tasks.</li>
-              </ul>
-            </li>
-          </ul>
-          <ul>
-            <li><code>SerializedConverter</code> &ndash; Converter for persisting objects using Java serialization.
-          </ul>
-        </div>
-      </div>
-      <div class="row">
-        <div class="span12">
-          <h2>Download</h2>
-        </div>
-        <div class="span6">
+        <div class="span5 offset1">
+          <h2 id="download">Download</h2>
           <p>Available via Maven or as a downloadable <code>.jar</code>.</p>
           <p><a href="http://github.com/square/tape/downloads" class="btn btn-inverse btn-large" id="download">Download</a></p>
           <p><a href="http://github.com/square/tape" id="ribbon">Fork Tape on GitHub</a></p>
-        </div>
-        <div class="span6">
-          <pre>&lt;dependency>
+          <pre class="maven">&lt;dependency>
     &lt;groupId>com.squareup&lt;/groupId>
     &lt;artifactId>tape&lt;artifactId>
-    &lt;version><span id="mvn-version"><em>(insert latest version)</em></span>&lt;/version>
+    &lt;version><span id="mvn-version"><em>(insert latest)</em></span>&lt;/version>
 &lt;/dependency></pre>
         </div>
       </div>
       <div class="row">
         <div class="span12">
-          <h2>Examples</h2>
-          <h3>Android Task Queue Service</h3>
+          <h2 id="examples">Example Usages</h2>
+          <p></p>
+          <h3 id="example-image-queue">Android Task Queue Service</h3>
           <p>When used on Android, a service is the perfect companion to a <code>TaskQueue</code> since it allows actions to be completed in the background. If the user is uploading new photos to their favorite sharing site, the service will iterate through the queue until all of the upload tasks completes successfully.</p>
-          <div class="accordion" id="ex-service">
-            <div class="accordion-group">
-              <div class="accordion-heading">
-                <a class="accordion-toggle" data-toggle="collapse" data-parent="#ex-gson" href="#ex-service-code">Show Code</a>
-              </div>
-              <div id="ex-service-code" class="accordion-body collapse">
-                <pre class="prettyprint">public class ImageQueueServiceStarter implements Startable {
+          <pre class="prettyprint">/** Listener for starting the upload service when the queue has tasks. */
+public class ImageQueueServiceListener implements ObjectQueue.Listener&lt;ImageUploadTask> {
   private final Context context;
 
   public ImageQueueServiceStarter(Context context) {
     this.context = context;
   }
 
-  @Override public void start() {
+  @Override public void onAdd(ObjectQueue&lt;ImageUploadTask>, ImageUploadTask task) {
     context.startService(new Intent(context, ImageQueueService.class));
   }
+
+  @Override public void onRemove(ObjectQueue&lt;ImageUploadTask>) {}
 }
 
+/** Service which iterates through pending upload tasks one-by-one. */
 public class ImageQueueService extends Service implements ImageUploadTask.Callback {
   private TaskQueue&lt;ImageUploadTask> queue;
   private boolean running;
@@ -134,18 +93,10 @@ public class ImageQueueService extends Service implements ImageUploadTask.Callba
     executeNext();
   }
 }</pre>
-              </div>
-            </div>
-          </div>
-          <h3>GSON Object Converter</h3>
+          <h3 id="example-gson">GSON Object Converter</h3>
           <p>As an alternative to traditional object serialization, GSON makes it really easy to convert objects to and from a format that can be written to disk by the <code>FileObjectQueue</code>. This allows for much more flexibility in modifying classes moving forward as well as providing a human-readable storage format.</p>
-          <div class="accordion" id="ex-gson">
-            <div class="accordion-group">
-              <div class="accordion-heading">
-                <a class="accordion-toggle" data-toggle="collapse" data-parent="#ex-gson" href="#ex-gson-code">Show Code</a>
-              </div>
-              <div id="ex-gson-code" class="accordion-body collapse">
-                <pre class="prettyprint">public class GsonConverter&lt;T> implements FileObjectQueue.Converter&lt;T> {
+          <pre class="prettyprint">/** Converter which uses GSON to serialize instances of class T to disk. */
+public class GsonConverter&lt;T> implements FileObjectQueue.Converter&lt;T> {
   private final Gson gson;
   private final Class&lt;T> type;
 
@@ -165,20 +116,17 @@ public class ImageQueueService extends Service implements ImageUploadTask.Callba
     writer.close();
   }
 }</pre>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
       <div class="row">
         <div class="span6">
-          <h2>Contributing</h2>
+          <h2 id="contributing">Contributing</h2>
           <p>If you would like to contribute code to Tape you can do so through GitHub by forking the repository and sending a pull request.</p>
           <p>When submitting code, please make every effort to follow existing conventions and style in order to keep the code as readable as possible. Please also make sure your code compiles by running <code>mvn clean verify</code>. Checkstyle failures during compilation indicate errors in your style and can be viewed in the <code>target/checkstyle-result.xml</code> file.</p>
           <p>Before your code can be accepted into the project you must also sign the <a href="https://spreadsheets.google.com/spreadsheet/viewform?formkey=dDViT2xzUHAwRkI3X3k5Z0lQM091OGc6MQ&ndplr=1">Individual Contributor License Agreement (CLA)</a>.</p>
         </div>
         <div class="span6 license">
-          <h2>License</h2>
+          <h2 id="license">License</h2>
           <p>Copyright 2012 Square, Inc.</p>
           <p>Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at</p>
           <blockquote>http://www.apache.org/licenses/LICENSE-2.0</blockquote>

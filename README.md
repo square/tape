@@ -1,9 +1,9 @@
 Tape by Square, Inc.
 ====================
 
-Tape is a collection of queue-related classes for Java.
+Tape is a collection of queue-related classes for Android and Java.
 
-`QueueFile` is a reliable, efficient, file-based, FIFO queue. Addition and
+`QueueFile` is a lightning-fast, transactional, file-based FIFO. Addition and
 removal from an instance is an O(1) operation and is atomic. Writes are
 synchronous; data will be written to disk before an operation returns. The
 underlying file is structured to survive process and even system crashes and if
