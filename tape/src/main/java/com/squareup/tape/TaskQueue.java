@@ -11,6 +11,10 @@ public class TaskQueue<T extends Task> implements ObjectQueue<T> {
   private final TaskInjector<T> taskInjector;
   private final ObjectQueue<T> delegate;
 
+  public TaskQueue(ObjectQueue<T> delegate) {
+    this(delegate, null);
+  }
+
   public TaskQueue(ObjectQueue<T> delegate, TaskInjector<T> taskInjector) {
     this.delegate = delegate;
     this.taskInjector = taskInjector;
@@ -23,7 +27,7 @@ public class TaskQueue<T extends Task> implements ObjectQueue<T> {
    */
   @Override public T peek() {
     T task = delegate.peek();
-    if (task != null) {
+    if (task != null && taskInjector != null) {
       taskInjector.injectMembers(task);
     }
     return task;
