@@ -15,11 +15,11 @@ OPT_FLAGS=-O3
 #debug: OPT_FLAGS=-O0 -g3
 #debug: all
 
-all: TapeC
+all: c-tape
 
-TapeC: $(OBJS) $(TEST_OBJS)
+c-tape: $(OBJS) $(TEST_OBJS)
 	@echo 'Building target: $@'
-	gcc  -o "TapeC" $(OBJS) $(TEST_OBJS)
+	gcc  -o "c-tape" $(OBJS) $(TEST_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -31,4 +31,4 @@ TapeC: $(OBJS) $(TEST_OBJS)
 	@echo ' '
 
 clean:
-	rm -rf $(OBJS) $(DEPTS) $(TEST_OBJS) $(TEST_DEPS) TapeC
+	rm -rf $(OBJS) $(DEPS) $(TEST_OBJS) $(TEST_DEPS) "c-tape"

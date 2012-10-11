@@ -415,7 +415,6 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength);
  * @param offset to start from in buffer
  * @param count  number of bytes to copy
  */
-//synchronized
 bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
     uint32_t count) {
   if (NULLARG(qf) || NULLARG(data)) return false;
@@ -430,10 +429,9 @@ bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
         QueueFile_wrapPosition(qf, qf->last->position + Element_HEADER_LENGTH +
             qf->last->length);
     Element* newLast = Element_new(position, count);
-    success = newLast != NULL;
     // Write length & data.
     writeInt(qf->buffer, 0, count);
-    if (success &&
+    if (newLast != NULL &&
         QueueFile_ringWrite(qf, newLast->position, qf->buffer, 0,
             Element_HEADER_LENGTH) &&
         QueueFile_ringWrite(qf, newLast->position + Element_HEADER_LENGTH, data,
@@ -443,9 +441,11 @@ bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
       uint32_t firstPosition = wasEmpty ? newLast->position : qf->first->position;
       if (QueueFile_writeHeader(qf, qf->fileLength, qf->elementCount + 1,
           firstPosition, newLast->position)) {
-        success = freeAndAssignNonNull(&qf->last, newLast);
-        qf->elementCount++;
-        if (wasEmpty) freeAndAssignNonNull(&qf->first, qf->last); // first element
+        if (freeAndAssignNonNull(&qf->last, newLast)) {
+          if (wasEmpty) freeAndAssignNonNull(&qf->first, qf->last); // first element
+          success = true;
+          qf->elementCount++;
+        }
       }
     }
   }
@@ -634,7 +634,7 @@ bool QueueFile_clear(QueueFile* qf) {
 bool QueueFile_close(QueueFile* qf) {
   if (NULLARG(qf)) return false;
   pthread_mutex_lock(&qf->mutex);
-  bool success = fclose(qf->file);
+  bool success = !fclose(qf->file);
   pthread_mutex_unlock(&qf->mutex);
   return success;
 }
