@@ -1,0 +1,34 @@
+
+
+SRCS=$(wildcard *.c)
+OBJS=$(SRCS:.c=.o)
+DEPS=$(SRCS:.c=.d)
+BUILD=Release
+
+TEST_SRCS=$(wildcard tests/*.c)
+TEST_OBJS=$(TEST_SRCS:.c=.o)
+TEST_DEPS=$(TEST_SRCS:.c=.d)
+
+OPT_FLAGS=-O3
+
+#debug: BUILD=Debug
+#debug: OPT_FLAGS=-O0 -g3
+#debug: all
+
+all: TapeC
+
+TapeC: $(OBJS) $(TEST_OBJS)
+	@echo 'Building target: $@'
+	gcc  -o "TapeC" $(OBJS) $(TEST_OBJS)
+	@echo 'Finished building target: $@'
+	@echo ' '
+
+
+%.o: %.c
+	@echo 'Building file: $@'
+	gcc $(OPT_FLAGS) -Wall -Wextra -Werror -Wconversion -c -fmessage-length=0 -Wno-unused-function -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	@echo 'Finished building: $@'
+	@echo ' '
+
+clean:
+	rm -rf $(OBJS) $(DEPTS) $(TEST_OBJS) $(TEST_DEPS) TapeC
