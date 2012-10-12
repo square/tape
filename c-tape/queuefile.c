@@ -481,12 +481,13 @@ static uint32_t QueueFile_remainingBytes(QueueFile* qf) {
  * given length.
  *
  * @param dataLength length of data being added
+ * @returns false only if an error was encountered.
  */
 static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength) {
   uint32_t elementLength = Element_HEADER_LENGTH + dataLength;
   uint32_t remainingBytes = QueueFile_remainingBytes(qf);
   if (remainingBytes >= elementLength) {
-    return false;
+    return true;
   }
 
   // Expand.

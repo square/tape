@@ -65,7 +65,7 @@ static void testSimpleAddOneElement() {
   byte* expected = values[253];
   QueueFile_add(queue, expected, 0, 253);
   byte* actual = QueueFile_peek(queue);
-  mu_assert_memcmp(queue, actual, 253);
+  mu_assert_memcmp(expected, actual, 253);
   free(actual);
 }
 
