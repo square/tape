@@ -69,9 +69,25 @@ static void testSimpleAddOneElement() {
   free(actual);
 }
 
+static void testAddOneElement() {
+  byte* expected = values[253];
+  QueueFile_add(queue, expected, 0, 253);
+  byte* actual = QueueFile_peek(queue);
+  mu_assert_memcmp(expected, actual, 253);
+  QueueFile_close(queue);
+  free(queue);
+
+  queue = QueueFile_new(TEST_QUEUE_FILENAME);
+  actual = QueueFile_peek(queue);
+  mu_assert_memcmp(expected, actual, 253);
+
+  free(actual);
+}
+
 int main() {
   LOG_SETDEBUGFAILLEVEL_WARN;
   mu_run_test(testSimpleAddOneElement);
+  mu_run_test(testAddOneElement);
   printf("%d tests passed.\n", tests_run);
   return 0;
 }

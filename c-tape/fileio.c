@@ -27,6 +27,9 @@
 // copy buffer is on stack.
 #define COPY_BUFFER_SIZE 4096
 
+// sanity limit of 2GB
+#define FILE_HARD_SANITY_LIMIT (1<<31)
+
 /**
  * File utility primitives somewhat patterned on RandomAccessFile.
  *
@@ -34,6 +37,12 @@
  */
 
 bool FileIo_seek(FILE* file, uint32_t position) {
+  if (position > (uint32_t)FILE_HARD_SANITY_LIMIT) {
+    LOG(LFATAL, "Requested seek (%d) exceeds sanity hard limit %d", position,
+        FILE_HARD_SANITY_LIMIT);
+    return false;
+  }
+
   if (fseek(file, (long)position, SEEK_SET) < 0) {
     LOG(LWARN, "Error setting file position to %d. fhandle %d", position,
         fileno(file));
@@ -44,6 +53,11 @@ bool FileIo_seek(FILE* file, uint32_t position) {
 
 bool FileIo_write(FILE* file, const byte* buffer, uint32_t buffer_offset,
                       uint32_t length) {
+  if (length > (uint32_t)FILE_HARD_SANITY_LIMIT || buffer_offset > (uint32_t)FILE_HARD_SANITY_LIMIT) {
+    LOG(LFATAL, "Requested file write %d or offset %d exceeds sanity hard limit %d",
+        length, buffer_offset, FILE_HARD_SANITY_LIMIT);
+    return false;
+  }
   if (fwrite(buffer + buffer_offset, (size_t)1, (size_t)length, file) != length) {
     LOG(LWARN, "Error writing data, fhandle %d", fileno(file));
     return false;
@@ -56,6 +70,11 @@ bool FileIo_write(FILE* file, const byte* buffer, uint32_t buffer_offset,
 }
 
 bool FileIo_read(FILE* file, void* buffer, uint32_t buffer_offset, uint32_t length) {
+  if (length > (uint32_t)FILE_HARD_SANITY_LIMIT) {
+    LOG(LFATAL, "Requested seek (%d) exceeds sanity hard limit %d", length,
+        FILE_HARD_SANITY_LIMIT);
+    return false;
+  }
   if (fread(buffer + buffer_offset, (size_t)1, (size_t)length, file) != length) {
     LOG(LWARN, "Error reading element from fhandle %d", fileno(file));
     return false;
@@ -97,6 +116,11 @@ bool FileIo_writeZeros(FILE* file, uint32_t length) {
 /** Some systems allow the file length to be adjusted using truncate, as
  * some JVMs do. */
 bool FileIo_setLength(FILE* file, uint32_t length) {
+  if (length > (uint32_t)FILE_HARD_SANITY_LIMIT) {
+    LOG(LFATAL, "Requested file size (%d) exceeds sanity hard limit %d", length,
+        FILE_HARD_SANITY_LIMIT);
+    return false;
+  }
   if (ftruncate(fileno(file), (off_t)length) != 0 || fsync(fileno(file)) != 0) {
     LOG(LWARN, "Error setting file length to %d, fhandle %d", length,
         fileno(file));
@@ -111,7 +135,7 @@ bool FileIo_setLength(FILE* file, uint32_t length) {
  * The parts to transfer may not overlap.
  * TODO: if needed, overlap handling to be more accommodating.
  * TODO: investigate whether fread and fwrite make efficient use of the
- *       FILE's read cache.
+ *       FILE's read cache. Use sendfile for Android, investigate for OSX.
  **/
 bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
     uint32_t length) {

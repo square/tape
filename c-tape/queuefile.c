@@ -280,13 +280,13 @@ static bool QueueFile_writeHeader(QueueFile* qf, uint32_t fileLength,
 
 /** Returns the Element for the given offset. */
 static Element* QueueFile_readElement(QueueFile* qf, uint32_t position) {
-  uint32_t value;
   if (position == 0 ||
       !FileIo_seek(qf->file, position) ||
-      !FileIo_read(qf->file, &value, 0, (uint32_t)sizeof(value))) {
+      !FileIo_read(qf->file, qf->buffer, 0, (uint32_t)sizeof(uint32_t))) {
     return NULL;
   }
-  return Element_new(position, value);
+  uint32_t length = readInt(qf->buffer, 0);
+  return Element_new(position, length);
 }
 
 
@@ -318,10 +318,7 @@ static bool initialize(char* filename) {
   if (FileIo_setLength(tempfile, QueueFile_INITIAL_LENGTH)) {
     byte headerBuffer[QueueFile_HEADER_LENGTH];
       writeInts(headerBuffer, QueueFile_INITIAL_LENGTH, 0, 0, 0);
-      if (FileIo_write(tempfile, headerBuffer, 0, QueueFile_HEADER_LENGTH)) {
-        writeInts(headerBuffer, QueueFile_INITIAL_LENGTH, 0, 0, 0);
-        success = FileIo_write(tempfile, headerBuffer, 0, QueueFile_HEADER_LENGTH);
-      }
+      success = FileIo_write(tempfile, headerBuffer, 0, QueueFile_HEADER_LENGTH);
   }
 
   fclose(tempfile);
@@ -654,11 +651,13 @@ char *makeTempName(const char* filename, int maxLen) {
   if (filename == NULL || maxLen < 4) {
     return NULL;
   }
-  char *tempname = malloc(strnlen(filename, (size_t)maxLen - 4) + 4);
+  size_t len = strnlen(filename, (size_t)maxLen - 5) + 5;
+  char *tempname = malloc(len);
   if (CHECKOOM(tempname)) {
     return NULL;
   }
-  strncpy(tempname, filename, (size_t)maxLen - 4);
+  strncpy(tempname, filename, len);
+  tempname[len-1] = '\0'; // make sure it's terminated if filename was too long.
   strcat(tempname, ".tmp");
   return tempname;
 }
