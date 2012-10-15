@@ -42,7 +42,7 @@ int tests_run = 0;
 static void mu_setup() {
   int i;
   for (i = 0; i < N; i++) {
-    values[i] = malloc((size_t)i + 1000);
+    values[i] = malloc((size_t)i);
     // Example: values[3] = { 3, 2, 1 }
     int ii;
     for (ii = 0; ii < i; ii++) values[i][ii] = (byte) (i - ii);
