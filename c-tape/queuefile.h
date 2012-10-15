@@ -37,8 +37,9 @@ bool QueueFile_add(QueueFile *qf, const byte* data, uint32_t offset,
     uint32_t count);
 
 /** Reads the eldest element. Returns null if the queue is empty.
+ * @param returnedLength contains the size of the returned buffer.
  * CALLER MUST FREE THE RETURNED MEMORY */
-byte* QueueFile_peek(QueueFile* qf);
+byte* QueueFile_peek(QueueFile* qf, uint32_t *returnedLength);
 
 /** Returns true if there are no entries or NULL passed. */
 bool QueueFile_isEmpty(QueueFile* qf);
@@ -57,5 +58,8 @@ uint32_t QueueFile_size(QueueFile* qf);
  * @return false if empty or NULL passed.
  */
 bool QueueFile_remove(QueueFile* qf);
+
+
+FILE* _for_testing_QueueFile_get_fhandle(QueueFile *qf);
 
 #endif //queuefile_h

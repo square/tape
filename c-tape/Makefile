@@ -9,6 +9,7 @@ TEST_SRCS=$(wildcard tests/*.c)
 TEST_OBJS=$(TEST_SRCS:.c=.o)
 TEST_DEPS=$(TEST_SRCS:.c=.d)
 
+
 OPT_FLAGS=-O3
 
 #debug: BUILD=Debug
@@ -22,7 +23,6 @@ c-tape: $(OBJS) $(TEST_OBJS)
 	gcc  -o "c-tape" $(OBJS) $(TEST_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
-
 
 %.o: %.c
 	@echo 'Building file: $@'

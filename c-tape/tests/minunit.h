@@ -22,8 +22,9 @@
  * @author Jochen Bekmann (jochen@squareup.com)
  */
 
-#define mu_assert(test, message) do { if (!(test)) { fprintf(stderr, "%s:%d test fail:  %s\n",__FILE__, __LINE__, message); abort(); } } while (0)
-#define mu_assertv(test, ...) do { if (!(test)) { fprintf(stderr, "%s:%d test fail:  ",__FILE__, __LINE__); vfprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); abort(); } } while (0)
+#define mu_assert(test) do { if (!(test)) { fprintf(stderr, "%s:%d test fail: assertion failure\n",__FILE__, __LINE__); abort(); } } while (0)
+#define mu_assertm(test, message) do { if (!(test)) { fprintf(stderr, "%s:%d test fail:  %s\n",__FILE__, __LINE__, message); abort(); } } while (0)
+#define mu_assertmv(test, ...) do { if (!(test)) { fprintf(stderr, "%s:%d test fail:  ",__FILE__, __LINE__); vfprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); abort(); } } while (0)
 #define mu_assert_notnull(test) do { if (!(test)) { fprintf(stderr, "%s:%d test fail:  null pointer\n",__FILE__, __LINE__); abort(); } } while (0)
 #define mu_assert_memcmp(m1, m2, l) do { if(m1==NULL||m2==NULL||memcmp(m1,m2,(size_t)l)!=0) { fprintf(stderr, "%s:%d test fail:  data doesn't match\n",__FILE__, __LINE__); abort(); } } while (0)
 #define mu_run_test(testfn) do { mu_setup(); tests_run++; testfn(); mu_teardown(); } while (0)

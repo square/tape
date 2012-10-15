@@ -388,7 +388,7 @@ static bool QueueFile_ringRead(QueueFile *qf, uint32_t position, byte* buffer,
     success = FileIo_seek(qf->file, position) &&
                 FileIo_read(qf->file, buffer, offset, beforeEof) &&
                 FileIo_seek(qf->file, QueueFile_HEADER_LENGTH) &&
-                FileIo_write(qf->file, buffer, offset + beforeEof, count -
+                FileIo_read(qf->file, buffer, offset + beforeEof, count -
                     beforeEof);
   }
   return success;
@@ -439,7 +439,8 @@ bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
       if (QueueFile_writeHeader(qf, qf->fileLength, qf->elementCount + 1,
           firstPosition, newLast->position)) {
         if (freeAndAssignNonNull(&qf->last, newLast)) {
-          if (wasEmpty) freeAndAssignNonNull(&qf->first, qf->last); // first element
+          if (wasEmpty) freeAndAssignNonNull(&qf->first,
+              Element_new(qf->last->position, qf->last->length)); // first element
           success = true;
           qf->elementCount++;
         }
@@ -532,9 +533,10 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength) {
 
 /** Reads the eldest element. Returns null if the queue is empty.
  * CALLER MUST FREE THE RETURNED MEMORY */
-byte* QueueFile_peek(QueueFile* qf) {
-  if (NULLARG(qf) || QueueFile_isEmpty(qf)) return NULL;
+byte* QueueFile_peek(QueueFile* qf, uint32_t *returnedLength) {
+  if (NULLARG(qf) || NULLARG(returnedLength) || QueueFile_isEmpty(qf)) return NULL;
   pthread_mutex_lock(&qf->mutex);
+  *returnedLength = 0;
 
   uint32_t length = qf->first->length;
   byte* data = malloc((size_t)length);
@@ -544,6 +546,7 @@ byte* QueueFile_peek(QueueFile* qf) {
     free(data);
     data = NULL;
   }
+  *returnedLength = length;
 
   pthread_mutex_unlock(&qf->mutex);
   return data;
@@ -638,6 +641,10 @@ bool QueueFile_close(QueueFile* qf) {
 }
 
 // TODO: bool QueueFile_fprintf(QueueFile *qf);
+
+FILE* _for_testing_QueueFile_get_fhandle(QueueFile *qf) {
+  return qf->file;
+}
 
 
 // ---------------------------- Utility Functions ------------------------------
