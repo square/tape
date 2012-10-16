@@ -23,12 +23,15 @@
 
 #include "fileio.h"
 #include "logutil.h"
+#include "types.h"
 
 // copy buffer is on stack.
 #define COPY_BUFFER_SIZE 4096
 
 // sanity limit of 2GB
 #define FILE_HARD_SANITY_LIMIT (1<<31)
+
+static bool for_testing_failAllWrites = false;
 
 /**
  * File utility primitives somewhat patterned on RandomAccessFile.
@@ -53,6 +56,10 @@ bool FileIo_seek(FILE* file, uint32_t position) {
 
 bool FileIo_write(FILE* file, const byte* buffer, uint32_t buffer_offset,
                       uint32_t length) {
+  if (for_testing_failAllWrites) {
+    LOG(LDEBUG, "Failing write as requested. see for_testing_failAllWrites");
+    return false;
+  }
   if (length > (uint32_t)FILE_HARD_SANITY_LIMIT || buffer_offset > (uint32_t)FILE_HARD_SANITY_LIMIT) {
     LOG(LFATAL, "Requested file write %d or offset %d exceeds sanity hard limit %d",
         length, buffer_offset, FILE_HARD_SANITY_LIMIT);
@@ -93,6 +100,11 @@ off_t FileIo_getLength(FILE* file) {
 
 // Length must be multiple of 4.
 bool FileIo_writeZeros(FILE* file, uint32_t length) {
+  if (for_testing_failAllWrites) {
+    LOG(LDEBUG, "Failing write as requested. see for_testing_failAllWrites");
+    return false;
+  }
+
   if (length % sizeof(uint32_t) != 0) {
     LOG(LFATAL, "Initial file length must be multiple of 4 bytes, got %d", length);
     return false;
@@ -116,6 +128,11 @@ bool FileIo_writeZeros(FILE* file, uint32_t length) {
 /** Some systems allow the file length to be adjusted using truncate, as
  * some JVMs do. */
 bool FileIo_setLength(FILE* file, uint32_t length) {
+  if (for_testing_failAllWrites) {
+    LOG(LDEBUG, "Failing write as requested. see for_testing_failAllWrites");
+    return false;
+  }
+
   if (length > (uint32_t)FILE_HARD_SANITY_LIMIT) {
     LOG(LFATAL, "Requested file size (%d) exceeds sanity hard limit %d", length,
         FILE_HARD_SANITY_LIMIT);
@@ -140,6 +157,11 @@ bool FileIo_setLength(FILE* file, uint32_t length) {
 bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
     uint32_t length) {
   byte buffer[COPY_BUFFER_SIZE];
+
+  if (for_testing_failAllWrites) {
+    LOG(LDEBUG, "Failing write as requested. see for_testing_failAllWrites");
+    return false;
+  }
 
   if ((destination > source && source + length > destination) ||
       (destination < source && destination + length > source)){
@@ -177,8 +199,10 @@ bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
   return true;
 }
 
-
-
+/** For testing only, enable or disable writes */
+void _for_testing_FileIo_failAllWrites(bool fail) {
+  for_testing_failAllWrites = fail;
+}
 
 
 

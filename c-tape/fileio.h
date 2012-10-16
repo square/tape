@@ -53,4 +53,7 @@ bool FileIo_setLength(FILE* file, uint32_t length);
 bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
     uint32_t length);
 
+/** For testing only, enable or disable writes */
+void _for_testing_FileIo_failAllWrites(bool fail);
+
 #endif

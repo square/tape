@@ -39,6 +39,13 @@ static QueueFile* queue;
 int tests_run = 0;
 
 
+typedef STAILQ_HEAD(listHead_t, listEntry_t) listHead;
+static void _assertPeekCompare(QueueFile *queue, byte* data, uint32_t length);
+static void _assertPeekCompareRemove(QueueFile *queue, byte* data,
+    uint32_t length);
+static void _assertPeekCompareRemoveDequeue(QueueFile *queue,
+    listHead *expectqueue);
+
 static void mu_setup() {
   int i;
   for (i = 0; i < N; i++) {
@@ -67,31 +74,21 @@ static void mu_teardown() {
 static void testSimpleAddOneElement() {
   byte* expected = values[253];
   QueueFile_add(queue, expected, 0, 253);
-  uint32_t length;
-  byte* actual = QueueFile_peek(queue, &length);
-  mu_assert(length == 253);
-  mu_assert_memcmp(expected, actual, 253);
-  free(actual);
+  _assertPeekCompare(queue, expected, 253);
 }
 
 static void testAddOneElement() {
   byte* expected = values[253];
   QueueFile_add(queue, expected, 0, 253);
-  uint32_t length;
-  byte* actual = QueueFile_peek(queue, &length);
-  mu_assert(length == 253);
-  mu_assert_memcmp(expected, actual, 253);
-  free(actual);
+  _assertPeekCompare(queue, expected, 253);
   QueueFile_close(queue);
   free(queue);
-
   queue = QueueFile_new(TEST_QUEUE_FILENAME);
-  actual = QueueFile_peek(queue, &length);
-  mu_assert(length == 253);
-  mu_assert_memcmp(expected, actual, 253);
-  free(actual);
+  _assertPeekCompare(queue, expected, 253);
 }
 
+
+// stuct for test queue.
 struct listEntry_t {
   byte *data;
   uint32_t length;
@@ -112,7 +109,7 @@ static void testAddAndRemoveElements() {
 
   time_t start = time(NULL);
 
-  STAILQ_HEAD(listHead_t, listEntry_t) expect = STAILQ_HEAD_INITIALIZER(expect);
+  listHead expect = STAILQ_HEAD_INITIALIZER(expect);
   struct listEntry_t *entry;
 
   int round;
@@ -128,15 +125,7 @@ static void testAddAndRemoveElements() {
     // Leave N elements in round N, 15 total for 5 rounds. Removing all the
     // elements would be like starting with an empty queue.
     for (i = 0; i < N - round - 1; i++) {
-      uint32_t length;
-      byte* actual = QueueFile_peek(queue, &length);
-      entry = STAILQ_FIRST(&expect);
-      mu_assert(length == entry->length);
-      mu_assert_memcmp(entry->data, actual, entry->length);
-      free(actual);
-      STAILQ_REMOVE_HEAD(&expect, next_entry);
-      free(entry);
-      mu_assert(QueueFile_remove(queue));
+      _assertPeekCompareRemoveDequeue(queue, &expect);
     }
     QueueFile_close(queue);
     free(queue);
@@ -153,15 +142,7 @@ static void testAddAndRemoveElements() {
   mu_assert(expectCount == 15);
 
   while (!STAILQ_EMPTY(&expect)) {
-    uint32_t length;
-    byte* actual = QueueFile_peek(queue, &length);
-    entry = STAILQ_FIRST(&expect);
-    mu_assert(length == entry->length);
-    mu_assert_memcmp(entry->data, actual, entry->length);
-    free(actual);
-    STAILQ_REMOVE_HEAD(&expect, next_entry);
-    free(entry);
-    mu_assert(QueueFile_remove(queue));
+    _assertPeekCompareRemoveDequeue(queue, &expect);
   }
 
   time_t stop = time(NULL);
@@ -174,7 +155,7 @@ static void testSplitExpansion() {
   // This should result in 3560 bytes.
   int max = 80;
 
-  STAILQ_HEAD(listHead_t, listEntry_t) expect = STAILQ_HEAD_INITIALIZER(expect);
+  listHead expect = STAILQ_HEAD_INITIALIZER(expect);
   struct listEntry_t *entry;
 
   int i;
@@ -187,15 +168,7 @@ static void testSplitExpansion() {
 
   // Remove all but 1.
   for (i = 1; i < max; i++) {
-    uint32_t length;
-    byte* actual = QueueFile_peek(queue, &length);
-    entry = STAILQ_FIRST(&expect);
-    mu_assert(length == entry->length);
-    mu_assert_memcmp(entry->data, actual, entry->length);
-    free(actual);
-    STAILQ_REMOVE_HEAD(&expect, next_entry);
-    free(entry);
-    mu_assert(QueueFile_remove(queue));
+    _assertPeekCompareRemoveDequeue(queue, &expect);
   }
 
   uint32_t flen1 = FileIo_getLength(_for_testing_QueueFile_get_fhandle(queue));
@@ -208,15 +181,7 @@ static void testSplitExpansion() {
   }
 
   while (!STAILQ_EMPTY(&expect)) {
-    uint32_t length;
-    byte* actual = QueueFile_peek(queue, &length);
-    entry = STAILQ_FIRST(&expect);
-    mu_assert(length == entry->length);
-    mu_assert_memcmp(entry->data, actual, entry->length);
-    free(actual);
-    STAILQ_REMOVE_HEAD(&expect, next_entry);
-    free(entry);
-    mu_assert(QueueFile_remove(queue));
+    _assertPeekCompareRemoveDequeue(queue, &expect);
   }
 
   uint32_t flen2 = FileIo_getLength(_for_testing_QueueFile_get_fhandle(queue));
@@ -300,6 +265,61 @@ static void testFileExpansionCorrectlyMovesElements() {
 }
 
 
+static void testFailedAdd() {
+  mu_assert(QueueFile_add(queue, values[253], 0, 253));
+  _for_testing_FileIo_failAllWrites((int)1);
+  mu_assert(!QueueFile_add(queue, values[252], 0, 252));
+  _for_testing_FileIo_failAllWrites(false);
+
+  // Allow a subsequent add to succeed.
+  mu_assert(QueueFile_add(queue, values[251], 0, 251));
+
+  QueueFile_close(queue);
+  free(queue);
+  queue = QueueFile_new(TEST_QUEUE_FILENAME);
+
+  mu_assert(QueueFile_size(queue) == 2);
+  _assertPeekCompareRemove(queue, values[253], 253);
+  _assertPeekCompareRemove(queue, values[251], 251);
+}
+
+static void testFailedRemoval() {
+  mu_assert(QueueFile_add(queue, values[253], 0, 253));
+  _for_testing_FileIo_failAllWrites(true);
+  mu_assert(!QueueFile_remove(queue));
+  _for_testing_FileIo_failAllWrites(false);
+
+  QueueFile_close(queue);
+  free(queue);
+  queue = QueueFile_new(TEST_QUEUE_FILENAME);
+
+  mu_assert(QueueFile_size(queue) == 1);
+  _assertPeekCompareRemove(queue, values[253], 253);
+  mu_assert(QueueFile_add(queue, values[99], 0, 99));
+  _assertPeekCompareRemove(queue, values[99], 99);
+}
+
+static void testFailedExpansion() {
+  mu_assert(QueueFile_add(queue, values[253], 0, 253));
+  _for_testing_FileIo_failAllWrites(true);
+  byte bigbuf[8000];
+  mu_assert(!QueueFile_add(queue, bigbuf, 0, 8000));
+  _for_testing_FileIo_failAllWrites(false);
+
+  QueueFile_close(queue);
+  free(queue);
+  queue = QueueFile_new(TEST_QUEUE_FILENAME);
+
+  mu_assert(QueueFile_size(queue) == 1);
+
+  _assertPeekCompare(queue, values[253], 253);
+  mu_assert(4096 == FileIo_getLength(_for_testing_QueueFile_get_fhandle(queue)));
+  mu_assert(QueueFile_add(queue, values[99], 0, 99));
+  _assertPeekCompareRemove(queue, values[253], 253);
+  _assertPeekCompareRemove(queue, values[99], 99);
+}
+
+
 int main() {
   LOG_SETDEBUGFAILLEVEL_WARN;
   mu_run_test(testSimpleAddOneElement);
@@ -307,7 +327,38 @@ int main() {
   mu_run_test(testAddAndRemoveElements);
   mu_run_test(testSplitExpansion);
   mu_run_test(testFileExpansionCorrectlyMovesElements);
+  mu_run_test(testFailedAdd);
+  mu_run_test(testFailedRemoval);
+  mu_run_test(testFailedExpansion);
 
   printf("%d tests passed.\n", tests_run);
   return 0;
 }
+
+
+
+// ------------- utility methods ---------------
+
+static void _assertPeekCompare(QueueFile *queue, byte* data, uint32_t length) {
+  uint32_t qlength;
+  byte* actual = QueueFile_peek(queue, &qlength);
+  mu_assert(qlength == length);
+  mu_assert_memcmp(data, actual, length);
+  free(actual);
+}
+
+static void _assertPeekCompareRemove(QueueFile *queue, byte* data,
+    uint32_t length) {
+  _assertPeekCompare(queue, data, length);
+  mu_assert(QueueFile_remove(queue));
+}
+
+static void _assertPeekCompareRemoveDequeue(QueueFile *queue,
+    struct listHead_t *expectqueue) {
+  struct listEntry_t *entry = STAILQ_FIRST(expectqueue);
+  mu_assert_notnull(entry);
+  _assertPeekCompareRemove(queue, entry->data, entry->length);
+  STAILQ_REMOVE_HEAD(expectqueue, next_entry);
+  free(entry);
+}
+
