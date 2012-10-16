@@ -382,7 +382,7 @@ public class QueueFileTest {
     // block "5" to be moved to the end of the file.
     queue.add(values[4]);
 
-    byte[] expectedBlockNumbers = {2, 3, 4, 6, 7, 8,};
+    byte[] expectedBlockNumbers = {2, 3, 4, 6, 7, 8, 5};
 
     // Make sure values are not corrupted, specifically block "4" that wasn't
     // being made contiguous in the version with the bug.
