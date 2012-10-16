@@ -552,9 +552,135 @@ byte* QueueFile_peek(QueueFile* qf, uint32_t *returnedLength) {
   return data;
 }
 
+
+struct _QueueFile_ElementStream {
+  QueueFile *qf;
+  uint32_t position;
+  uint32_t remaining;
+};
+
+/**
+ * Read data from an element stream.
+ * @param stream pointer to element stream
+ * @param buffer  to copy bytes to
+ * @param length  size of buffer
+ * @param lengthRemaining will be set to number of bytes left.
+ * @return false if an error occurred.
+ * *********************************************************
+ * WARNING! MUST ONLY BE USED INSIDE A CALLBACK FROM FOREACH
+ * as this ensures the queuefile is under mutex lock.
+ * the validity of stream is only guaranteed under this callback.
+ * *********************************************************
+ */
+bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
+    uint32_t length, uint32_t* lengthRemaining) {
+  if (NULLARG(stream) || NULLARG(buffer) || NULLARG(lengthRemaining) ||
+      NULLARG(stream->qf)) return false;
+  *lengthRemaining = 0;
+  if (stream->remaining == 0)
+    return true;
+
+  if (length > stream->remaining) length = stream->remaining;
+  if (QueueFile_ringRead(stream->qf, stream->position, buffer, 0,
+      length)) {
+    stream->position = QueueFile_wrapPosition(stream->qf,
+        stream->position + length);
+    stream->remaining -= length;
+    *lengthRemaining = stream->remaining;
+  } else {
+    return false;
+  }
+  return true;
+}
+
+/* Reads the next byte, returns as int, or -1 if the element has ended, or there
+ * was an error.
+ *
+ * *********************************************************
+ * WARNING! MUST ONLY BE USED INSIDE A CALLBACK FROM FOREACH
+ * as this ensures the queuefile is under mutex lock.
+ * the validity of stream is only guaranteed under this callback.
+ * *********************************************************
+ */
+int QueueFile_readElementStreamNextByte(QueueFile_ElementStream* stream) {
+  byte buffer;
+  uint32_t remaining;
+  if (stream->remaining == 0) {
+    return -1;
+  }
+  if(!QueueFile_readElementStream(stream, &buffer, (uint32_t)sizeof(byte),
+      &remaining))
+    return -1;
+  return (int)buffer;
+}
+
+/**
+ * Invokes the given reader once for the first element in the queue.
+ * There will be no callback if the queue is empty.
+ * @return false if an error occurred.
+ */
+bool QueueFile_peekWithElementReader(QueueFile* qf,
+    QueueFile_ElementReader reader) {
+  if (NULLARG(reader) || NULLARG(qf)) return false;
+  pthread_mutex_lock(&qf->mutex);
+
+  if (qf->first == NULL) {
+    LOG(LFATAL, "Internal error: queue should have a first element.");
+    return false;
+  }
+  if (qf->elementCount == 0) return true;
+
+  Element* current = QueueFile_readElement(qf, qf->first->position);
+  if (current == NULL) return false;
+  QueueFile_ElementStream stream;
+  stream.qf = qf;
+  stream.position = QueueFile_wrapPosition(qf,
+      current->position + Element_HEADER_LENGTH);
+  stream.remaining = current->length;
+  (*reader)(&stream, stream.remaining);
+
+  pthread_mutex_unlock(&qf->mutex);
+  return true;
+}
+
+/**
+ * Invokes the given reader once for each element in the queue, from eldest to
+ * most recently added. Note that this is under lock.
+ * There will be no callback if the queue is empty.
+ * @return false if an error occurred.
+ */
+bool QueueFile_forEach(QueueFile* qf, QueueFile_ElementReader reader) {
+  if (NULLARG(reader) || NULLARG(qf)) return false;
+  pthread_mutex_lock(&qf->mutex);
+
+  if (qf->elementCount == 0) return true;
+
+  if (qf->first == NULL) {
+    LOG(LFATAL, "Internal error: queue should have a first element.");
+    return false;
+  }
+
+  uint32_t nextReadPosition = qf->first->position;
+  uint32_t i;
+  bool stopRequested = false;
+  for (i = 0; i < qf->elementCount && !stopRequested; i++) {
+    Element* current = QueueFile_readElement(qf, nextReadPosition);
+    if (current == NULL) return false;
+    QueueFile_ElementStream stream;
+    stream.qf = qf;
+    stream.position = QueueFile_wrapPosition(qf,
+        current->position + Element_HEADER_LENGTH);
+    stream.remaining = current->length;
+    stopRequested = !(*reader)(&stream, stream.remaining);
+    nextReadPosition = QueueFile_wrapPosition(qf, current->position +
+        Element_HEADER_LENGTH + current->length);
+  }
+
+  pthread_mutex_unlock(&qf->mutex);
+  return true;
+}
+
 // TODO: void QueueFile_peekWithReader(QueueFile* qf, ElementReader reader);
-// TODO: void forEach(ElementReader reader);
-// TODO: static ElementInputStream;
 
 /** Returns the number of elements in this queue, or 0 if NULL is passed. */
 uint32_t QueueFile_size(QueueFile* qf) {
@@ -600,8 +726,9 @@ bool QueueFile_remove(QueueFile* qf) {
   return success;
 }
 
-
-/** Clears this queue. Truncates the file to the initial size. */
+/** Clears this queue. Truncates the file to the initial size.
+ * @return false if an error occurred.
+ */
 bool QueueFile_clear(QueueFile* qf) {
   if (NULLARG(qf)) return false;
   bool success = false;
@@ -642,7 +769,7 @@ bool QueueFile_close(QueueFile* qf) {
 
 // TODO: bool QueueFile_fprintf(QueueFile *qf);
 
-FILE* _for_testing_QueueFile_get_fhandle(QueueFile *qf) {
+FILE* _for_testing_QueueFile_getFhandle(QueueFile *qf) {
   return qf->file;
 }
 

@@ -10,7 +10,7 @@ TEST_OBJS=$(TEST_SRCS:.c=.o)
 TEST_DEPS=$(TEST_SRCS:.c=.d)
 
 
-OPT_FLAGS=-O3
+OPT_FLAGS=-O3 -O0
 
 #debug: BUILD=Debug
 #debug: OPT_FLAGS=-O0 -g3

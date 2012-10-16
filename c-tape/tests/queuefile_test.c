@@ -22,10 +22,10 @@
 
 #include "minunit.h"
 
-#include "../fileio.h"
 #include "../logutil.h"
 #include "../queuefile.h"
 #include "../types.h"
+#include "../fileio.h"
 
 /**
  * Takes up 33401 bytes in the queue (N*(N+1)/2+4*N). Picked 254 instead of
@@ -40,8 +40,9 @@ int tests_run = 0;
 
 
 typedef STAILQ_HEAD(listHead_t, listEntry_t) listHead;
-static void _assertPeekCompare(QueueFile *queue, byte* data, uint32_t length);
-static void _assertPeekCompareRemove(QueueFile *queue, byte* data,
+static void _assertPeekCompare(QueueFile *queue, const byte* data,
+    uint32_t length);
+static void _assertPeekCompareRemove(QueueFile *queue, const byte* data,
     uint32_t length);
 static void _assertPeekCompareRemoveDequeue(QueueFile *queue,
     listHead *expectqueue);
@@ -171,7 +172,7 @@ static void testSplitExpansion() {
     _assertPeekCompareRemoveDequeue(queue, &expect);
   }
 
-  uint32_t flen1 = FileIo_getLength(_for_testing_QueueFile_get_fhandle(queue));
+  uint32_t flen1 = FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
 
   // This should wrap around before expanding.
   for (i = 0; i < N; i++) {
@@ -184,8 +185,157 @@ static void testSplitExpansion() {
     _assertPeekCompareRemoveDequeue(queue, &expect);
   }
 
-  uint32_t flen2 = FileIo_getLength(_for_testing_QueueFile_get_fhandle(queue));
+  uint32_t flen2 = FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
   mu_assertm(flen1 == flen2, "file size should remain same");
+}
+
+#define ARR_A_SIZE 5
+static const byte arrA[ARR_A_SIZE] = {1, 2, 3, 4, 5};
+#define ARR_B_SIZE 3
+static const byte arrB[ARR_B_SIZE] = {3, 4, 5};
+
+static int forEachIterationCount = 0;
+static bool forEachReader(QueueFile_ElementStream* stream, uint32_t length) {
+      if (forEachIterationCount == 0) {
+        mu_assert(length == ARR_A_SIZE);
+        mu_assert_notnull(stream);
+
+        // Read in small chunks to test reader.
+        byte actual[ARR_A_SIZE];
+        int elementIteration = 0;
+        uint32_t expectedRemaining[] = { 3, 1, 0 };
+        uint32_t remaining = ARR_A_SIZE;
+        do {
+          // i.e. read past end i.e. 3 reads of 2 > 5
+          mu_assert(QueueFile_readElementStream(stream,
+              actual + ARR_A_SIZE - remaining, 2, &remaining));
+          mu_assert(expectedRemaining[elementIteration] == remaining);
+          ++elementIteration;
+        } while (remaining > 0 && elementIteration < 4);
+        mu_assert(elementIteration == 3);
+        mu_assert_memcmp(actual, arrA, ARR_A_SIZE);
+      } else if (forEachIterationCount == 1) {
+        mu_assert(length == ARR_B_SIZE);
+        mu_assert_notnull(stream);
+        byte actual[ARR_B_SIZE];
+        uint32_t remaining;
+        mu_assert(QueueFile_readElementStream(stream,
+            actual, ARR_B_SIZE, &remaining));
+        mu_assert(remaining == 0);
+        mu_assert_memcmp(actual, arrB, ARR_B_SIZE);
+      } else {
+        mu_assertm(false, "Should never iterate beyond 2");
+      }
+      forEachIterationCount++;
+      return true;
+}
+
+static void testForEach() {
+  mu_assert(QueueFile_add(queue, arrA, 0, ARR_A_SIZE));
+  mu_assert(QueueFile_add(queue, arrB, 0, ARR_B_SIZE));
+
+  mu_assert(QueueFile_forEach(queue, forEachReader));
+  _assertPeekCompare(queue, arrA, ARR_A_SIZE);
+  mu_assertm(forEachIterationCount == 2, "expected 2 iterations");
+}
+
+
+static bool peekReaderAblock(QueueFile_ElementStream* stream, uint32_t length) {
+  mu_assert(length == ARR_A_SIZE);
+  byte actual[length];
+  uint32_t remaining;
+  mu_assert(QueueFile_readElementStream(stream, actual, length, &remaining));
+  mu_assert(remaining == 0);
+  mu_assert_memcmp(actual, arrA, length);
+  return true;
+}
+
+static bool peekReaderAbytewise(QueueFile_ElementStream* stream, uint32_t length) {
+  mu_assert(length == ARR_A_SIZE);
+  mu_assert(QueueFile_readElementStreamNextByte(stream) == 1);
+  mu_assert(QueueFile_readElementStreamNextByte(stream) == 2);
+  mu_assert(QueueFile_readElementStreamNextByte(stream) == 3);
+  mu_assert(QueueFile_readElementStreamNextByte(stream) == 4);
+  mu_assert(QueueFile_readElementStreamNextByte(stream) == 5);
+  mu_assert(QueueFile_readElementStreamNextByte(stream) == -1);
+  return true;
+}
+
+static bool peekReaderBblock(QueueFile_ElementStream* stream, uint32_t length) {
+  mu_assert(length == ARR_B_SIZE);
+  byte actual[length];
+  uint32_t remaining;
+  mu_assert(QueueFile_readElementStream(stream, actual, length, &remaining));
+  mu_assert(remaining == 0);
+  mu_assert_memcmp(actual, arrB, length);
+  return true;
+}
+
+static void testPeekWithElementReader() {
+  mu_assert(QueueFile_add(queue, arrA, 0, ARR_A_SIZE));
+  mu_assert(QueueFile_add(queue, arrB, 0, ARR_B_SIZE));
+
+  QueueFile_peekWithElementReader(queue, peekReaderAblock); // ignore response.
+  QueueFile_peekWithElementReader(queue, peekReaderAbytewise); // ignore response.
+
+  mu_assert(QueueFile_remove(queue));
+
+  QueueFile_peekWithElementReader(queue, peekReaderBblock); // ignore response.
+
+  mu_assert(QueueFile_size(queue) == 1);
+  _assertPeekCompare(queue, arrB, ARR_B_SIZE);
+}
+
+/**
+ * Exercise a bug where wrapped elements were getting corrupted when the
+ * QueueFile was forced to expand in size and a portion of the final Element
+ * had been wrapped into space at the beginning of the file.
+ */
+static void testFileExpansionDoesntCorruptWrappedElements() {
+
+  // Create test data - 1k blocks marked consecutively 1, 2, 3, 4 and 5.
+  uint32_t valuesCount = 5;
+  uint32_t valuesLength = 1024;
+  byte* values[valuesCount];
+  uint32_t blockNum;
+  for (blockNum = 0; blockNum < valuesCount; blockNum++) {
+    values[blockNum] = malloc((size_t)valuesLength);
+    uint32_t i;
+    for (i = 0; i < valuesLength; i++) {
+      values[blockNum][i] = (byte) (blockNum + 1);
+    }
+  }
+
+  // First, add the first two blocks to the queue, remove one leaving a
+  // 1K space at the beginning of the buffer.
+  mu_assert(QueueFile_add(queue, values[0], 0, valuesLength));
+  mu_assert(QueueFile_add(queue, values[1], 0, valuesLength));
+  mu_assert(QueueFile_remove(queue));
+
+  // The trailing end of block "4" will be wrapped to the start of the buffer.
+  mu_assert(QueueFile_add(queue, values[2], 0, valuesLength));
+  mu_assert(QueueFile_add(queue, values[3], 0, valuesLength));
+
+  // Cause buffer to expand as there isn't space between the end of block "4"
+  // and the start of block "2".  Internally the queue should cause block "4"
+  // to be contiguous, but there was a bug where that wasn't happening.
+  mu_assert(QueueFile_add(queue, values[4], 0, valuesLength));
+
+  // Make sure values are not corrupted, specifically block "4" that wasn't
+  // being made contiguous in the version with the bug.
+  uint32_t i;
+  for (i = 1; i < valuesCount; i++) { // start at 1!
+    uint32_t length;
+    byte* value = QueueFile_peek(queue, &length);
+    mu_assert(length == valuesLength);
+    mu_assert(QueueFile_remove(queue));
+
+    uint32_t j;
+    for (j = 0; j < length; j++) {
+      mu_assert(value[j] == i + 1);
+    }
+    free(value);
+  }
 }
 
 /**
@@ -198,54 +348,56 @@ static void testSplitExpansion() {
 static void testFileExpansionCorrectlyMovesElements() {
 
   // Create test data - 1k blocks marked consecutively 1, 2, 3, 4 and 5.
-  int valuesLength = 5;
-  uint32_t valuesSize = 1024;
-  byte* values[valuesLength];
-  int blockNum;
-  for (blockNum = 0; blockNum < valuesLength; blockNum++) {
-    values[blockNum] = malloc((size_t)valuesSize);
+  uint32_t valuesCount = 5;
+  uint32_t valuesLength = 1024;
+  byte* values[valuesCount];
+  uint32_t blockNum;
+  for (blockNum = 0; blockNum < valuesCount; blockNum++) {
+    values[blockNum] = malloc((size_t)valuesLength);
     uint32_t i;
-    for (i = 0; i < valuesSize; i++) {
+    for (i = 0; i < valuesLength; i++) {
       values[blockNum][i] = (byte) (blockNum + 1);
     }
   }
 
   // smaller data elements
-  int smallerLength = 3;
-  uint32_t smallerSize = 256;
-  byte* smaller[smallerLength];
-  for (blockNum = 0; blockNum < smallerLength; blockNum++) {
-    smaller[blockNum] = malloc((size_t)smallerSize);
+  uint32_t smallerCount = 3;
+  uint32_t smallerLength = 256;
+  byte* smaller[smallerCount];
+  for (blockNum = 0; blockNum < smallerCount; blockNum++) {
+    smaller[blockNum] = malloc((size_t)smallerLength);
     uint32_t i;
-    for (i = 0; i < smallerSize; i++) {
+    for (i = 0; i < smallerLength; i++) {
       smaller[blockNum][i] = (byte) (blockNum + 6);
     }
   }
 
   // First, add the first two blocks to the queue, remove one leaving a
   // 1K space at the beginning of the buffer.
-  mu_assert(QueueFile_add(queue, values[0], 0, valuesSize));
-  mu_assert(QueueFile_add(queue, values[1], 0, valuesSize));
+  mu_assert(QueueFile_add(queue, values[0], 0, valuesLength));
+  mu_assert(QueueFile_add(queue, values[1], 0, valuesLength));
   mu_assert(QueueFile_remove(queue));
 
   // The trailing end of block "4" will be wrapped to the start of the buffer.
-  mu_assert(QueueFile_add(queue, values[2], 0, valuesSize));
-  mu_assert(QueueFile_add(queue, values[3], 0, valuesSize));
+  mu_assert(QueueFile_add(queue, values[2], 0, valuesLength));
+  mu_assert(QueueFile_add(queue, values[3], 0, valuesLength));
 
   // Now fill in some space with smaller blocks, none of which will cause
   // an expansion.
-  mu_assert(QueueFile_add(queue, smaller[0], 0, smallerSize));
-  mu_assert(QueueFile_add(queue, smaller[1], 0, smallerSize));
-  mu_assert(QueueFile_add(queue, smaller[2], 0, smallerSize));
+  mu_assert(QueueFile_add(queue, smaller[0], 0, smallerLength));
+  mu_assert(QueueFile_add(queue, smaller[1], 0, smallerLength));
+  mu_assert(QueueFile_add(queue, smaller[2], 0, smallerLength));
 
   // Cause buffer to expand as there isn't space between the end of the
   // smaller block "8" and the start of block "2".  Internally the queue
   // should cause all of tbe smaller blocks, and the trailing end of
   // block "5" to be moved to the end of the file.
-  mu_assert(QueueFile_add(queue, values[4], 0, valuesSize));
+  mu_assert(QueueFile_add(queue, values[4], 0, valuesLength));
 
-  uint32_t expectedBlockLen = 6;
-  byte expectedBlockNumbers[] = {2, 3, 4, 6, 7, 8,};
+  uint32_t expectedBlockLen = 7;
+  byte expectedBlockNumbers[] = {2, 3, 4, 6, 7, 8, 5};
+  uint32_t expectedLengths[] = {valuesLength, valuesLength, valuesLength,
+      smallerLength, smallerLength, smallerLength, valuesLength};
 
   // Make sure values are not corrupted, specifically block "4" that wasn't
   // being made contiguous in the version with the bug.
@@ -254,6 +406,7 @@ static void testFileExpansionCorrectlyMovesElements() {
     byte expectedBlockNumber = expectedBlockNumbers[i];
     uint32_t length;
     byte* value = QueueFile_peek(queue, &length);
+    mu_assert(length == expectedLengths[i]);
     mu_assert(QueueFile_remove(queue));
 
     uint32_t j;
@@ -262,12 +415,13 @@ static void testFileExpansionCorrectlyMovesElements() {
     }
     free(value);
   }
+  mu_assert(QueueFile_isEmpty(queue));
 }
 
 
 static void testFailedAdd() {
   mu_assert(QueueFile_add(queue, values[253], 0, 253));
-  _for_testing_FileIo_failAllWrites((int)1);
+  _for_testing_FileIo_failAllWrites(true);
   mu_assert(!QueueFile_add(queue, values[252], 0, 252));
   _for_testing_FileIo_failAllWrites(false);
 
@@ -313,7 +467,7 @@ static void testFailedExpansion() {
   mu_assert(QueueFile_size(queue) == 1);
 
   _assertPeekCompare(queue, values[253], 253);
-  mu_assert(4096 == FileIo_getLength(_for_testing_QueueFile_get_fhandle(queue)));
+  mu_assert(4096 == FileIo_getLength(_for_testing_QueueFile_getFhandle(queue)));
   mu_assert(QueueFile_add(queue, values[99], 0, 99));
   _assertPeekCompareRemove(queue, values[253], 253);
   _assertPeekCompareRemove(queue, values[99], 99);
@@ -326,10 +480,13 @@ int main() {
   mu_run_test(testAddOneElement);
   mu_run_test(testAddAndRemoveElements);
   mu_run_test(testSplitExpansion);
+  mu_run_test(testFileExpansionDoesntCorruptWrappedElements);
   mu_run_test(testFileExpansionCorrectlyMovesElements);
   mu_run_test(testFailedAdd);
   mu_run_test(testFailedRemoval);
   mu_run_test(testFailedExpansion);
+  mu_run_test(testForEach);
+  mu_run_test(testPeekWithElementReader);
 
   printf("%d tests passed.\n", tests_run);
   return 0;
@@ -339,7 +496,8 @@ int main() {
 
 // ------------- utility methods ---------------
 
-static void _assertPeekCompare(QueueFile *queue, byte* data, uint32_t length) {
+static void _assertPeekCompare(QueueFile *queue, const byte* data,
+    uint32_t length) {
   uint32_t qlength;
   byte* actual = QueueFile_peek(queue, &qlength);
   mu_assert(qlength == length);
@@ -347,7 +505,7 @@ static void _assertPeekCompare(QueueFile *queue, byte* data, uint32_t length) {
   free(actual);
 }
 
-static void _assertPeekCompareRemove(QueueFile *queue, byte* data,
+static void _assertPeekCompareRemove(QueueFile *queue, const byte* data,
     uint32_t length) {
   _assertPeekCompare(queue, data, length);
   mu_assert(QueueFile_remove(queue));

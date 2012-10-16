@@ -200,7 +200,7 @@ bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
 }
 
 /** For testing only, enable or disable writes */
-void _for_testing_FileIo_failAllWrites(bool fail) {
+void _for_testing_FileIo_failAllWrites(int fail) {
   for_testing_failAllWrites = fail;
 }
 
