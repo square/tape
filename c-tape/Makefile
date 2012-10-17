@@ -1,22 +1,19 @@
 
-
 SRCS=$(wildcard *.c)
 OBJS=$(SRCS:.c=.o)
 DEPS=$(SRCS:.c=.d)
-BUILD=Release
 
 TEST_SRCS=$(wildcard tests/*.c)
 TEST_OBJS=$(TEST_SRCS:.c=.o)
 TEST_DEPS=$(TEST_SRCS:.c=.d)
 
-
-OPT_FLAGS=-ggdb
-
-#debug: BUILD=Debug
-#debug: OPT_FLAGS=-O0 -g3
-#debug: all
+OPT_FLAGS=-O3
 
 all: c-tape
+
+debug: OPT_FLAGS=-ggdb
+debug: all
+
 
 c-tape: $(OBJS) $(TEST_OBJS)
 	@echo 'Building target: $@'

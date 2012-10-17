@@ -166,7 +166,7 @@ static void testSplitExpansion() {
     _assertPeekCompareRemoveDequeue(queue, &expect);
   }
 
-  uint32_t flen1 = FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
+  uint32_t flen1 = (uint32_t)FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
 
   // This should wrap around before expanding.
   for (i = 0; i < N; i++) {
@@ -179,7 +179,7 @@ static void testSplitExpansion() {
     _assertPeekCompareRemoveDequeue(queue, &expect);
   }
 
-  uint32_t flen2 = FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
+  uint32_t flen2 = (uint32_t)FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
   mu_assertm(flen1 == flen2, "file size should remain same");
 }
 
