@@ -18,6 +18,11 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+
+#ifdef HAS_SENDFILE
+#include <sys/sendfile.h>
+#endif // HAS_SENDFILE
+
 #include <sys/stat.h>
 #include <unistd.h> // for fsync()
 
@@ -163,6 +168,18 @@ bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
     return false;
   }
 
+#ifdef HAS_SENDFILE
+
+  if (!FileIo_seek(file, source)) return false;
+  ssize_t wrote = sendfile(fileno(file), fileno(file), NULL, (size_t)length);
+  if (wrote == -1 || wrote != (size_t)length) {
+    LOG(LWARN, "Error in sendfile. src=%d dest=%d len=%d (%d), fhandle %d",
+        source, destination, length, read, fileno(file));
+    return false;
+  }
+
+#else
+
   if ((destination > source && source + length > destination) ||
       (destination < source && destination + length > source)){
     LOG(LWARN, "Can't transfer between overlapping parts of file. "
@@ -196,6 +213,9 @@ bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
     LOG(LWARN, "Error flushing file, fhandle %d", fileno(file));
     return false;
   }
+  
+#endif // HAS_SENDFILE
+  
   return true;
 }
 
