@@ -171,8 +171,6 @@ static bool QueueFile_readHeader(QueueFile* qf);
 
 
 // returns NULL on error.
-// TODO: replace filename with a RandomAccessFile API that allows mocking
-//       for testing, such as expansion failure etc..
 QueueFile* QueueFile_new(char *filename) {
   if (NULLARG(filename)) return NULL;
   QueueFile* qf = malloc(sizeof(QueueFile));
@@ -205,6 +203,26 @@ QueueFile* QueueFile_new(char *filename) {
   pthread_mutex_init (&qf->mutex, &mta);
 
   return qf;
+}
+
+bool QueueFile_closeAndFree(QueueFile *qf) {
+  pthread_mutex_lock(&qf->mutex);
+  bool success = !fclose(qf->file);
+  if (success) {
+    if (qf != NULL) {
+      if (qf->first != NULL) {
+        free(qf->first);
+      }
+      if (qf->last != NULL && qf->last != qf->first) free(qf->last);
+      qf->first = qf->last = NULL;
+    }
+  }
+  pthread_mutex_unlock(&qf->mutex);
+
+  if(success)
+    free(qf);
+
+  return success;
 }
 
 /**
@@ -278,7 +296,9 @@ static bool QueueFile_writeHeader(QueueFile* qf, uint32_t fileLength,
 }
 
 
-/** Returns the Element for the given offset. */
+/** 
+ * Returns the Element for the given offset. CALLER MUST FREE MEMORY.
+ */
 static Element* QueueFile_readElement(QueueFile* qf, uint32_t position) {
   if (position == 0 ||
       !FileIo_seek(qf->file, position) ||
@@ -313,8 +333,8 @@ static bool initialize(char* filename) {
   }
   
   bool success = false;
-  // TODO: if truncate does not work for our target platform, consider writing
-  //       out the empty file using FileIo_writeZeros.
+  // TODO: if truncate in setLength does not work for target platform, consider
+  //  appending 0s using FileIo_writeZeros.
   if (FileIo_setLength(tempfile, QueueFile_INITIAL_LENGTH)) {
     byte headerBuffer[QueueFile_HEADER_LENGTH];
       writeInts(headerBuffer, QueueFile_INITIAL_LENGTH, 0, 0, 0);
@@ -428,22 +448,27 @@ bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
     Element* newLast = Element_new(position, count);
     // Write length & data.
     writeInt(qf->buffer, 0, count);
-    if (newLast != NULL &&
-        QueueFile_ringWrite(qf, newLast->position, qf->buffer, 0,
+    if (newLast != NULL) {
+      if (QueueFile_ringWrite(qf, newLast->position, qf->buffer, 0,
             Element_HEADER_LENGTH) &&
         QueueFile_ringWrite(qf, newLast->position + Element_HEADER_LENGTH, data,
             offset, count)) {
 
-      // Commit the addition. If wasEmpty, first == last.
-      uint32_t firstPosition = wasEmpty ? newLast->position : qf->first->position;
-      if (QueueFile_writeHeader(qf, qf->fileLength, qf->elementCount + 1,
-          firstPosition, newLast->position)) {
+        // Commit the addition. If wasEmpty, first == last.
+        uint32_t firstPosition = wasEmpty ? newLast->position : qf->first->position;
+        success = QueueFile_writeHeader(qf, qf->fileLength, qf->elementCount + 1,
+                                        firstPosition, newLast->position);
+      }
+      if (success) {
         if (freeAndAssignNonNull(&qf->last, newLast)) {
           if (wasEmpty) freeAndAssignNonNull(&qf->first,
-              Element_new(qf->last->position, qf->last->length)); // first element
+                                             Element_new(qf->last->position,
+                                                         qf->last->length));
           success = true;
           qf->elementCount++;
         }
+      } else {
+        free(newLast);
       }
     }
   }
@@ -498,8 +523,8 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength) {
     previousLength = newLength;
   } while (remainingBytes < elementLength);
 
-// TODO: if setLength does not work for target platform, consider appending 0s
-//       using FileIo_writeZeros.
+// TODO: if truncate in setLength does not work for target platform, consider
+//  appending 0s using FileIo_writeZeros.
   if (!FileIo_setLength(qf->file, newLength)) return false;
 
   // Calculate the position of the tail end of the data in the ring buffer
@@ -624,23 +649,29 @@ bool QueueFile_peekWithElementReader(QueueFile* qf,
   if (NULLARG(reader) || NULLARG(qf)) return false;
   pthread_mutex_lock(&qf->mutex);
 
-  if (qf->first == NULL) {
-    LOG(LFATAL, "Internal error: queue should have a first element.");
-    return false;
+  bool success = false;
+  if (qf->elementCount == 0) {
+    success = true;
+  } else {
+    if (qf->first == NULL) {
+      LOG(LFATAL, "Internal error: queue should have a first element.");
+    } else {
+      Element* current = QueueFile_readElement(qf, qf->first->position);
+      if (current != NULL) {
+        QueueFile_ElementStream stream;
+        stream.qf = qf;
+        stream.position = QueueFile_wrapPosition(qf,
+            current->position + Element_HEADER_LENGTH);
+        stream.remaining = current->length;
+        free(current);
+        (*reader)(&stream, stream.remaining);
+        success = true;
+      }
+    }
   }
-  if (qf->elementCount == 0) return true;
-
-  Element* current = QueueFile_readElement(qf, qf->first->position);
-  if (current == NULL) return false;
-  QueueFile_ElementStream stream;
-  stream.qf = qf;
-  stream.position = QueueFile_wrapPosition(qf,
-      current->position + Element_HEADER_LENGTH);
-  stream.remaining = current->length;
-  (*reader)(&stream, stream.remaining);
-
+  
   pthread_mutex_unlock(&qf->mutex);
-  return true;
+  return success;
 }
 
 /**
@@ -653,34 +684,39 @@ bool QueueFile_forEach(QueueFile* qf, QueueFile_ElementReader reader) {
   if (NULLARG(reader) || NULLARG(qf)) return false;
   pthread_mutex_lock(&qf->mutex);
 
-  if (qf->elementCount == 0) return true;
-
-  if (qf->first == NULL) {
-    LOG(LFATAL, "Internal error: queue should have a first element.");
-    return false;
+  bool success = false;
+  if (qf->elementCount == 0) {
+    success = true;
+  } else {
+    if (qf->first == NULL) {
+      LOG(LFATAL, "Internal error: queue should have a first element.");
+    } else {
+      uint32_t nextReadPosition = qf->first->position;
+      uint32_t i;
+      bool stopRequested = false;
+      success = true;
+      for (i = 0; i < qf->elementCount && !stopRequested && success; i++) {
+        Element* current = QueueFile_readElement(qf, nextReadPosition);
+        if (current != NULL) {
+          QueueFile_ElementStream stream;
+          stream.qf = qf;
+          stream.position = QueueFile_wrapPosition(qf,
+              current->position + Element_HEADER_LENGTH);
+          stream.remaining = current->length;
+          stopRequested = !(*reader)(&stream, stream.remaining);
+          nextReadPosition = QueueFile_wrapPosition(qf, current->position +
+              Element_HEADER_LENGTH + current->length);
+          free(current);
+        } else {
+          success = false;
+        }
+      }
+    }
   }
-
-  uint32_t nextReadPosition = qf->first->position;
-  uint32_t i;
-  bool stopRequested = false;
-  for (i = 0; i < qf->elementCount && !stopRequested; i++) {
-    Element* current = QueueFile_readElement(qf, nextReadPosition);
-    if (current == NULL) return false;
-    QueueFile_ElementStream stream;
-    stream.qf = qf;
-    stream.position = QueueFile_wrapPosition(qf,
-        current->position + Element_HEADER_LENGTH);
-    stream.remaining = current->length;
-    stopRequested = !(*reader)(&stream, stream.remaining);
-    nextReadPosition = QueueFile_wrapPosition(qf, current->position +
-        Element_HEADER_LENGTH + current->length);
-  }
-
+  
   pthread_mutex_unlock(&qf->mutex);
-  return true;
+  return success;
 }
-
-// TODO: void QueueFile_peekWithReader(QueueFile* qf, ElementReader reader);
 
 /** Returns the number of elements in this queue, or 0 if NULL is passed. */
 uint32_t QueueFile_size(QueueFile* qf) {
@@ -754,15 +790,6 @@ bool QueueFile_clear(QueueFile* qf) {
     }
   }
 
-  pthread_mutex_unlock(&qf->mutex);
-  return success;
-}
-
-/** Closes the underlying file. */
-bool QueueFile_close(QueueFile* qf) {
-  if (NULLARG(qf)) return false;
-  pthread_mutex_lock(&qf->mutex);
-  bool success = !fclose(qf->file);
   pthread_mutex_unlock(&qf->mutex);
   return success;
 }

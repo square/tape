@@ -25,6 +25,10 @@ typedef struct _QueueFile QueueFile;
 // returns NULL on error.
 QueueFile* QueueFile_new(char *filename);
 
+/** Closes the underlying file and frees all memory including
+ *  the pointer passed. */
+bool QueueFile_closeAndFree(QueueFile* qf);
+
 /**
  * Adds an element to the end of the queue.
  *
@@ -105,9 +109,6 @@ bool QueueFile_isEmpty(QueueFile* qf);
  * @return false if an error occurred.
  */
 bool QueueFile_clear(QueueFile* qf);
-
-/** Closes the underlying file. */
-bool QueueFile_close(QueueFile* qf);
 
 /** Returns the number of elements in this queue, or 0 if NULL is passed. */
 uint32_t QueueFile_size(QueueFile* qf);

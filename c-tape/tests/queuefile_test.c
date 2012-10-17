@@ -63,9 +63,7 @@ static void mu_setup() {
 }
 
 static void mu_teardown() {
-  QueueFile_close(queue);
-  free(queue);
-
+  QueueFile_closeAndFree(queue);
   int i;
   for (i = 0; i < N; i++) {
     free(values[i]);
@@ -82,8 +80,7 @@ static void testAddOneElement() {
   byte* expected = values[253];
   QueueFile_add(queue, expected, 0, 253);
   _assertPeekCompare(queue, expected, 253);
-  QueueFile_close(queue);
-  free(queue);
+  QueueFile_closeAndFree(queue);
   queue = QueueFile_new(TEST_QUEUE_FILENAME);
   _assertPeekCompare(queue, expected, 253);
 }
@@ -105,9 +102,7 @@ struct listEntry_t* listEntry_new(byte *argdata, uint32_t arglen) {
 };
 
 static void testAddAndRemoveElements() {
-  QueueFile_close(queue);
-  free(queue);
-
+  QueueFile_closeAndFree(queue);
   time_t start = time(NULL);
 
   listHead expect = STAILQ_HEAD_INITIALIZER(expect);
@@ -128,8 +123,7 @@ static void testAddAndRemoveElements() {
     for (i = 0; i < N - round - 1; i++) {
       _assertPeekCompareRemoveDequeue(queue, &expect);
     }
-    QueueFile_close(queue);
-    free(queue);
+    QueueFile_closeAndFree(queue);
   }
 
   // Remove and validate remaining 15 elements.
@@ -336,6 +330,10 @@ static void testFileExpansionDoesntCorruptWrappedElements() {
     }
     free(value);
   }
+
+  for (blockNum = 0; blockNum < valuesCount; blockNum++) {
+    free(values[blockNum]);
+  }
 }
 
 /**
@@ -416,6 +414,14 @@ static void testFileExpansionCorrectlyMovesElements() {
     free(value);
   }
   mu_assert(QueueFile_isEmpty(queue));
+
+  for (blockNum = 0; blockNum < valuesCount; blockNum++) {
+    free(values[blockNum]);
+  }
+
+  for (blockNum = 0; blockNum < smallerCount; blockNum++) {
+    free(smaller[blockNum]);
+  }
 }
 
 
@@ -428,8 +434,7 @@ static void testFailedAdd() {
   // Allow a subsequent add to succeed.
   mu_assert(QueueFile_add(queue, values[251], 0, 251));
 
-  QueueFile_close(queue);
-  free(queue);
+  QueueFile_closeAndFree(queue);
   queue = QueueFile_new(TEST_QUEUE_FILENAME);
 
   mu_assert(QueueFile_size(queue) == 2);
@@ -443,8 +448,7 @@ static void testFailedRemoval() {
   mu_assert(!QueueFile_remove(queue));
   _for_testing_FileIo_failAllWrites(false);
 
-  QueueFile_close(queue);
-  free(queue);
+  QueueFile_closeAndFree(queue);
   queue = QueueFile_new(TEST_QUEUE_FILENAME);
 
   mu_assert(QueueFile_size(queue) == 1);
@@ -460,8 +464,7 @@ static void testFailedExpansion() {
   mu_assert(!QueueFile_add(queue, bigbuf, 0, 8000));
   _for_testing_FileIo_failAllWrites(false);
 
-  QueueFile_close(queue);
-  free(queue);
+  QueueFile_closeAndFree(queue);
   queue = QueueFile_new(TEST_QUEUE_FILENAME);
 
   mu_assert(QueueFile_size(queue) == 1);
