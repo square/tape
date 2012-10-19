@@ -50,7 +50,7 @@ static void _assertPeekCompareRemoveDequeue(QueueFile *queue,
 static void mu_setup() {
   int i;
   for (i = 0; i < N; i++) {
-    values[i] = malloc((size_t)i);
+    values[i] = malloc((size_t) i);
     // Example: values[3] = { 3, 2, 1 }
     int ii;
     for (ii = 0; ii < i; ii++) values[i][ii] = (byte) (i - ii);
@@ -113,8 +113,8 @@ static void testAddAndRemoveElements() {
     queue = QueueFile_new(TEST_QUEUE_FILENAME);
     int i;
     for (i = 0; i < N; i++) {
-      QueueFile_add(queue, values[i], 0, (uint32_t)i);
-      entry = listEntry_new(values[i], (uint32_t)i);
+      QueueFile_add(queue, values[i], 0, (uint32_t) i);
+      entry = listEntry_new(values[i], (uint32_t) i);
       STAILQ_INSERT_TAIL(&expect, entry, next_entry);
     }
 
@@ -155,8 +155,8 @@ static void testSplitExpansion() {
 
   int i;
   for (i = 0; i < max; i++) {
-    QueueFile_add(queue, values[i], 0, (uint32_t)i);
-    entry = listEntry_new(values[i], (uint32_t)i);
+    QueueFile_add(queue, values[i], 0, (uint32_t) i);
+    entry = listEntry_new(values[i], (uint32_t) i);
     STAILQ_INSERT_TAIL(&expect, entry, next_entry);
   }
 
@@ -170,8 +170,8 @@ static void testSplitExpansion() {
 
   // This should wrap around before expanding.
   for (i = 0; i < N; i++) {
-    QueueFile_add(queue, values[i], 0, (uint32_t)i);
-    entry = listEntry_new(values[i], (uint32_t)i);
+    QueueFile_add(queue, values[i], 0, (uint32_t) i);
+    entry = listEntry_new(values[i], (uint32_t) i);
     STAILQ_INSERT_TAIL(&expect, entry, next_entry);
   }
 
@@ -179,7 +179,7 @@ static void testSplitExpansion() {
     _assertPeekCompareRemoveDequeue(queue, &expect);
   }
 
-  uint32_t flen2 = (uint32_t)FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
+  uint32_t flen2 = (uint32_t) FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
   mu_assertm(flen1 == flen2, "file size should remain same");
 }
 
@@ -293,7 +293,7 @@ static void testFileExpansionDoesntCorruptWrappedElements() {
   byte* values[valuesCount];
   uint32_t blockNum;
   for (blockNum = 0; blockNum < valuesCount; blockNum++) {
-    values[blockNum] = malloc((size_t)valuesLength);
+    values[blockNum] = malloc((size_t) valuesLength);
     uint32_t i;
     for (i = 0; i < valuesLength; i++) {
       values[blockNum][i] = (byte) (blockNum + 1);
@@ -351,7 +351,7 @@ static void testFileExpansionCorrectlyMovesElements() {
   byte* values[valuesCount];
   uint32_t blockNum;
   for (blockNum = 0; blockNum < valuesCount; blockNum++) {
-    values[blockNum] = malloc((size_t)valuesLength);
+    values[blockNum] = malloc((size_t) valuesLength);
     uint32_t i;
     for (i = 0; i < valuesLength; i++) {
       values[blockNum][i] = (byte) (blockNum + 1);
@@ -363,7 +363,7 @@ static void testFileExpansionCorrectlyMovesElements() {
   uint32_t smallerLength = 256;
   byte* smaller[smallerCount];
   for (blockNum = 0; blockNum < smallerCount; blockNum++) {
-    smaller[blockNum] = malloc((size_t)smallerLength);
+    smaller[blockNum] = malloc((size_t) smallerLength);
     uint32_t i;
     for (i = 0; i < smallerLength; i++) {
       smaller[blockNum][i] = (byte) (blockNum + 6);

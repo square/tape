@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef fileio_h
-#define fileio_h
+#ifndef FILEIO_H_
+#define FILEIO_H_
 
 #include"types.h"
 
@@ -23,7 +23,7 @@
  * File utility primitives somewhat patterned on RandomAccessFile.
  */
 
-
+/** Moves the file pointer to given position */
 bool FileIo_seek(FILE* file, uint32_t position);
 
 /** Writes buffer to file, flushes to media. */
@@ -36,25 +36,34 @@ bool FileIo_read(FILE* file, void* buffer, uint32_t buffer_offset,
 /** @return file length or -1 on error */
 off_t FileIo_getLength(FILE* file);
 
-/** Writes length 0s to file, flushes to media. Starts at current file position. */
-/** @param length must be multiple of 4. */
+/**
+  * Writes length 0s to file, flushes to media. Starts at current file position.
+  * @param length must be multiple of 4.
+  */
 bool FileIo_writeZeros(FILE* file, uint32_t length);
 
-/** Some systems allow the file length to be adjusted using truncate, as
- * some JVMs do for RandomAccessFile.setLength */
+/**
+ * Sets the file length.
+ * (Some systems allow the file length to be adjusted using truncate, as
+ * some JVMs do for RandomAccessFile.setLength.
+ * TODO(jochen): test this for iOS and Android).
+ */
 bool FileIo_setLength(FILE* file, uint32_t length);
 
-/** Will copy part of a file to another offset, the caller is responsible for
+/**
+ * Copies part of a file to another offset, the caller is responsible for
  * checking that there is enough data from the source to cover length.
  * The parts to transfer may not overlap.
  * TODO: investigate whether fread and fwrite make efficient use of the
  *       FILE's read cache.
- **/
+ */
 bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
     uint32_t length);
 
-/** For testing only, enable or disable writes, for some reason the _Bool
- * macro expansion causes warnings? when called with a bool?? */
+/**
+ * For testing only, enable or disable writes, for some reason the _Bool
+ * macro expansion causes warnings? when called with a bool??
+ */
 void _for_testing_FileIo_failAllWrites(int fail);
 
 #endif

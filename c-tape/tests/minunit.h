@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef minunit_h
-#define minunit_h
+#ifndef MINUNIT_H_
+#define MINUNIT_H_
 
 /*
  * Some minimal unit testing functions.
- * @author Jochen Bekmann (jochen@squareup.com)
  */
 
 #define mu_assert(test) do { if (!(test)) { fprintf(stderr, "%s:%d test fail: assertion failure\n",__FILE__, __LINE__); abort(); } } while (0)

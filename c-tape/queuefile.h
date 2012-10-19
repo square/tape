@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef queuefile_h
-#define queuefile_h
+#ifndef QUEUEFILE_H_
+#define QUEUEFILE_H_
 
 #include"types.h"
 

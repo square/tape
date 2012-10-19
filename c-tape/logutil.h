@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef logutil_h
-#define logutil_h
+#ifndef LOGUTIL_H_
+#define LOGUTIL_H_
 
 /*
  * Bare bones logging tool.
- *
- * @author Jochen Bekmann (jochen@squareup.com)
- *
  *
  * Usage example:
  *
@@ -29,12 +26,12 @@
  *   LOG_SETLEVEL_WARN;
  *   LOG(LFATAL, "This prints to a logfile, hello %s, this is a number: %d", name, value);
  *
- * TODO: consider using log4c.
+ * TODO(jochen): consider using log4c.
  */
 
 #define LOG _log_vprintf
 
-// TODO: use varidic macros.
+// TODO(jochen): use varidic macros.
 #define LDEBUG _LOGLEVEL_DEBUG, __FILE__, __LINE__
 #define LINFO _LOGLEVEL_INFO, __FILE__, __LINE__
 #define LWARN _LOGLEVEL_WARN, __FILE__, __LINE__

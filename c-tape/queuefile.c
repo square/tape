@@ -25,7 +25,6 @@
 
 /*
  * Port of Tape project from Java. https://github.com/square/tape
- * @author Jochen Bekmann (jochen@squareup.com)
  *
  * Original description:
  *
@@ -193,7 +192,7 @@ QueueFile* QueueFile_new(char *filename) {
     return NULL;
   }
 
-  // TODO: consider NP mutex options, audit code for re-entrancy and
+  // TODO(jochen): consider NP mutex options, audit code for re-entrancy and
   //    eliminate recursive option if needed.
   // NOTE: there was a problem with static initializers on OSX
   //    http://gcc.gnu.org/bugzilla/show_bug.cgi?id=51906
@@ -261,12 +260,12 @@ static Element* QueueFile_readElement(QueueFile* qf, uint32_t position);
 /** Reads the header. */
 static bool QueueFile_readHeader(QueueFile* qf) {
   if (!FileIo_seek(qf->file, 0) ||
-      !FileIo_read(qf->file, qf->buffer, 0, (uint32_t)sizeof(qf->buffer))) {
+      !FileIo_read(qf->file, qf->buffer, 0, (uint32_t) sizeof(qf->buffer))) {
     return false;
   }
 
   qf->fileLength = readInt(qf->buffer, 0);
-  uint32_t actualLength = (uint32_t)FileIo_getLength(qf->file);
+  uint32_t actualLength = (uint32_t) FileIo_getLength(qf->file);
   if (qf->fileLength > actualLength) {
     LOG(LWARN, "File is truncated. Expected length: %d, Actual length: %d",
         qf->fileLength,  actualLength);
@@ -302,7 +301,7 @@ static bool QueueFile_writeHeader(QueueFile* qf, uint32_t fileLength,
 static Element* QueueFile_readElement(QueueFile* qf, uint32_t position) {
   if (position == 0 ||
       !FileIo_seek(qf->file, position) ||
-      !FileIo_read(qf->file, qf->buffer, 0, (uint32_t)sizeof(uint32_t))) {
+      !FileIo_read(qf->file, qf->buffer, 0, (uint32_t) sizeof(uint32_t))) {
     return NULL;
   }
   uint32_t length = readInt(qf->buffer, 0);
@@ -333,7 +332,7 @@ static bool initialize(char* filename) {
   }
   
   bool success = false;
-  // TODO: if truncate in setLength does not work for target platform, consider
+  // TODO(jochen): if truncate in setLength does not work for target platform, consider
   //  appending 0s using FileIo_writeZeros.
   if (FileIo_setLength(tempfile, QueueFile_INITIAL_LENGTH)) {
     byte headerBuffer[QueueFile_HEADER_LENGTH];
@@ -523,7 +522,7 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength) {
     previousLength = newLength;
   } while (remainingBytes < elementLength);
 
-// TODO: if truncate in setLength does not work for target platform, consider
+// TODO(jochen): if truncate in setLength does not work for target platform, consider
 //  appending 0s using FileIo_writeZeros.
   if (!FileIo_setLength(qf->file, newLength)) return false;
 
@@ -564,7 +563,7 @@ byte* QueueFile_peek(QueueFile* qf, uint32_t *returnedLength) {
   *returnedLength = 0;
 
   uint32_t length = qf->first->length;
-  byte* data = malloc((size_t)length);
+  byte* data = malloc((size_t) length);
   if (CHECKOOM(data)) return NULL;
   if(!QueueFile_ringRead(qf, qf->first->position + Element_HEADER_LENGTH,
       data, 0, length)) {
@@ -633,7 +632,7 @@ int QueueFile_readElementStreamNextByte(QueueFile_ElementStream* stream) {
   if (stream->remaining == 0) {
     return -1;
   }
-  if(!QueueFile_readElementStream(stream, &buffer, (uint32_t)sizeof(byte),
+  if(!QueueFile_readElementStream(stream, &buffer, (uint32_t) sizeof(byte),
       &remaining))
     return -1;
   return (int)buffer;
@@ -749,7 +748,7 @@ bool QueueFile_remove(QueueFile* qf) {
         if(QueueFile_writeHeader(qf, qf->fileLength, qf->elementCount - 1,
             newFirstPosition, qf->last->position)) {
           if(freeAndAssignNonNull(&qf->first,
-              Element_new(newFirstPosition, (uint32_t)length))) {
+              Element_new(newFirstPosition, (uint32_t) length))) {
             qf->elementCount--;
             success = true;
           }
@@ -794,7 +793,7 @@ bool QueueFile_clear(QueueFile* qf) {
   return success;
 }
 
-// TODO: bool QueueFile_fprintf(QueueFile *qf);
+// TODO(jochen): bool QueueFile_fprintf(QueueFile *qf);
 
 FILE* _for_testing_QueueFile_getFhandle(QueueFile *qf) {
   return qf->file;
@@ -812,7 +811,7 @@ char *makeTempName(const char* filename, int maxLen) {
   if (filename == NULL || maxLen < 4) {
     return NULL;
   }
-  size_t len = strnlen(filename, (size_t)maxLen - 5) + 5;
+  size_t len = strnlen(filename, (size_t) maxLen - 5) + 5;
   char *tempname = malloc(len);
   if (CHECKOOM(tempname)) {
     return NULL;

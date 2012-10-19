@@ -34,18 +34,16 @@
 #define COPY_BUFFER_SIZE 4096
 
 // sanity limit of 2GB
-#define FILE_HARD_SANITY_LIMIT (1<<31)
+#define FILE_HARD_SANITY_LIMIT ((uint32_t)(1<<31))
 
 static bool for_testing_failAllWrites = false;
 
 /**
  * File utility primitives somewhat patterned on RandomAccessFile.
- *
- * @author Jochen Bekmann (jochen@squareup.com)
  */
 
 bool FileIo_seek(FILE* file, uint32_t position) {
-  if (position > (uint32_t)FILE_HARD_SANITY_LIMIT) {
+  if (position > FILE_HARD_SANITY_LIMIT) {
     LOG(LFATAL, "Requested seek (%d) exceeds sanity hard limit %d", position,
         FILE_HARD_SANITY_LIMIT);
     return false;
@@ -60,17 +58,17 @@ bool FileIo_seek(FILE* file, uint32_t position) {
 }
 
 bool FileIo_write(FILE* file, const byte* buffer, uint32_t buffer_offset,
-                      uint32_t length) {
+                    uint32_t length) {
   if (for_testing_failAllWrites) {
     LOG(LDEBUG, "Failing write as requested. see for_testing_failAllWrites");
     return false;
   }
-  if (length > (uint32_t)FILE_HARD_SANITY_LIMIT || buffer_offset > (uint32_t)FILE_HARD_SANITY_LIMIT) {
+  if (length > FILE_HARD_SANITY_LIMIT || buffer_offset > FILE_HARD_SANITY_LIMIT) {
     LOG(LFATAL, "Requested file write %d or offset %d exceeds sanity hard limit %d",
         length, buffer_offset, FILE_HARD_SANITY_LIMIT);
     return false;
   }
-  if (fwrite(buffer + buffer_offset, (size_t)1, (size_t)length, file) != length) {
+  if (fwrite(buffer + buffer_offset, (size_t) 1, (size_t) length, file) != length) {
     LOG(LWARN, "Error writing data, fhandle %d", fileno(file));
     return false;
   }
@@ -82,12 +80,12 @@ bool FileIo_write(FILE* file, const byte* buffer, uint32_t buffer_offset,
 }
 
 bool FileIo_read(FILE* file, void* buffer, uint32_t buffer_offset, uint32_t length) {
-  if (length > (uint32_t)FILE_HARD_SANITY_LIMIT) {
+  if (length > FILE_HARD_SANITY_LIMIT) {
     LOG(LFATAL, "Requested seek (%d) exceeds sanity hard limit %d", length,
         FILE_HARD_SANITY_LIMIT);
     return false;
   }
-  if (fread(buffer + buffer_offset, (size_t)1, (size_t)length, file) != length) {
+  if (fread(buffer + buffer_offset, (size_t) 1, (size_t) length, file) != length) {
     LOG(LWARN, "Error reading element from fhandle %d", fileno(file));
     return false;
   }
@@ -138,7 +136,7 @@ bool FileIo_setLength(FILE* file, uint32_t length) {
     return false;
   }
 
-  if (length > (uint32_t)FILE_HARD_SANITY_LIMIT) {
+  if (length > FILE_HARD_SANITY_LIMIT) {
     LOG(LFATAL, "Requested file size (%d) exceeds sanity hard limit %d", length,
         FILE_HARD_SANITY_LIMIT);
     return false;
@@ -155,8 +153,8 @@ bool FileIo_setLength(FILE* file, uint32_t length) {
 /** Will copy part of a file to another offset, the caller is responsible for
  * checking that there is enough data from the source to cover length.
  * The parts to transfer may not overlap.
- * TODO: if needed, overlap handling to be more accommodating.
- * TODO: investigate whether fread and fwrite make efficient use of the
+ * TODO(jochen): if needed, overlap handling to be more accommodating.
+ * TODO(jochen): investigate whether fread and fwrite make efficient use of the
  *       FILE's read cache. Use sendfile for Android, investigate for OSX.
  **/
 bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
@@ -171,8 +169,8 @@ bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
 #ifdef HAS_SENDFILE
 
   if (!FileIo_seek(file, source)) return false;
-  ssize_t wrote = sendfile(fileno(file), fileno(file), NULL, (size_t)length);
-  if (wrote == -1 || wrote != (size_t)length) {
+  ssize_t wrote = sendfile(fileno(file), fileno(file), NULL, (size_t) length);
+  if (wrote == -1 || wrote != (size_t) length) {
     LOG(LWARN, "Error in sendfile. src=%d dest=%d len=%d (%d), fhandle %d",
         source, destination, length, read, fileno(file));
     return false;
@@ -192,14 +190,14 @@ bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
     if (!FileIo_seek(file, source)) return false;
 
     uint32_t copylen = length < COPY_BUFFER_SIZE ? length : COPY_BUFFER_SIZE;
-    size_t read = fread(buffer, (size_t)1, (size_t)copylen, file);
+    size_t read = fread(buffer, (size_t) 1, (size_t) copylen, file);
     if (read < copylen) {
       LOG(LWARN, "Error reading file, src=%d dest=%d len=%d (%d), fhandle %d",
           source, destination, length, copylen, fileno(file));
       return false;
     }
     if (!FileIo_seek(file, destination)) return false;
-    size_t wrote = fwrite(buffer, (size_t)1, read, file);
+    size_t wrote = fwrite(buffer, (size_t) 1, read, file);
     if (wrote < read) {
       LOG(LWARN, "Error writing file, src=%d dest=%d len=%d (%d), fhandle %d",
           source, destination, length, read, fileno(file));

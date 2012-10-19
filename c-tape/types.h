@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef types_h
-#define types_h
+#ifndef TYPES_H_
+#define TYPES_H_
 
 #include <stdbool.h>
 #include <stdint.h>
