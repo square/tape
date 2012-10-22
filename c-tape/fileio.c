@@ -30,8 +30,8 @@
 #include "logutil.h"
 #include "types.h"
 
-// copy buffer is on stack.
-#define COPY_BUFFER_SIZE 4096
+// copy buffer is on stack, use a variable s.t. we can override value in tests.
+static uint32_t copyBufferSize = 4096;
 
 // sanity limit of 2GB
 #define FILE_HARD_SANITY_LIMIT ((uint32_t)(1<<31))
@@ -159,7 +159,6 @@ bool FileIo_setLength(FILE* file, uint32_t length) {
  **/
 bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
     uint32_t length) {
-  byte buffer[COPY_BUFFER_SIZE];
 
   if (for_testing_failAllWrites) {
     LOG(LDEBUG, "Failing write as requested. see for_testing_failAllWrites");
@@ -185,11 +184,12 @@ bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
         source, destination, length, fileno(file));
     return false;
   }
+  byte buffer[copyBufferSize];
 
   while (length > 0) {
     if (!FileIo_seek(file, source)) return false;
 
-    uint32_t copylen = length < COPY_BUFFER_SIZE ? length : COPY_BUFFER_SIZE;
+    uint32_t copylen = length < copyBufferSize ? length : copyBufferSize;
     size_t read = fread(buffer, (size_t) 1, (size_t) copylen, file);
     if (read < copylen) {
       LOG(LWARN, "Error reading file, src=%d dest=%d len=%d (%d), fhandle %d",
@@ -222,6 +222,8 @@ void _for_testing_FileIo_failAllWrites(int fail) {
   for_testing_failAllWrites = fail;
 }
 
-
-
-
+uint32_t _for_testing_setTransferToCopyBufferSize(uint32_t newSize) {
+  uint32_t old = copyBufferSize;
+  copyBufferSize = newSize;
+  return old;
+}

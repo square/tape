@@ -66,4 +66,10 @@ bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
  */
 void _for_testing_FileIo_failAllWrites(int fail);
 
+/**
+ * For testing only, set the size of the copy buffer for the transferTo function.
+ * returns the old size.
+ */
+uint32_t _for_testing_setTransferToCopyBufferSize(uint32_t newSize);
+
 #endif

@@ -127,22 +127,20 @@ struct _QueueFile {
    * Storing the file length ensures we can recover from a failed expansion
    * (i.e. if setting the file length succeeds but the process dies before the
    * data can be copied).
-   * <p/>
-   * <pre>
+   *
    *   Format:
    *     Header              (16 bytes)
    *     Element Ring Buffer (File Length - 16 bytes)
-   * <p/>
+   *
    *   Header:
    *     File Length            (4 bytes)
    *     Element Count          (4 bytes)
    *     First Element Position (4 bytes, =0 if null)
    *     Last Element Position  (4 bytes, =0 if null)
-   * <p/>
+   *
    *   Element:
    *     Length (4 bytes)
    *     Data   (Length bytes)
-   * </pre>
    */
   FILE* file;
   

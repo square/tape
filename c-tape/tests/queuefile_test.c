@@ -424,7 +424,6 @@ static void testFileExpansionCorrectlyMovesElements() {
   }
 }
 
-
 static void testFailedAdd() {
   mu_assert(QueueFile_add(queue, values[253], 0, 253));
   _for_testing_FileIo_failAllWrites(true);
@@ -476,6 +475,11 @@ static void testFailedExpansion() {
   _assertPeekCompareRemove(queue, values[99], 99);
 }
 
+static void testTransferToWithSmallBuffer() {
+  uint32_t oldBufferSize = _for_testing_setTransferToCopyBufferSize(5);
+  testFileExpansionDoesntCorruptWrappedElements();
+  _for_testing_setTransferToCopyBufferSize(oldBufferSize);
+}
 
 int main() {
   LOG_SETDEBUGFAILLEVEL_WARN;
@@ -490,6 +494,7 @@ int main() {
   mu_run_test(testFailedExpansion);
   mu_run_test(testForEach);
   mu_run_test(testPeekWithElementReader);
+  mu_run_test(testTransferToWithSmallBuffer);
 
   printf("%d tests passed.\n", tests_run);
   return 0;
