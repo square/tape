@@ -23,7 +23,7 @@ struct _QueueFile;
 typedef struct _QueueFile QueueFile;
 
 // returns NULL on error.
-QueueFile* QueueFile_new(char *filename);
+QueueFile* QueueFile_new(char* filename);
 
 /** Closes the underlying file and frees all memory including
  *  the pointer passed. */
@@ -37,13 +37,13 @@ bool QueueFile_closeAndFree(QueueFile* qf);
  * @param count  number of bytes to copy
  * @returns false if an error occurred
  */
-bool QueueFile_add(QueueFile *qf, const byte* data, uint32_t offset,
+bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
     uint32_t count);
 
 /** Reads the eldest element. Returns null if the queue is empty.
  * @param returnedLength contains the size of the returned buffer.
  * CALLER MUST FREE THE RETURNED MEMORY */
-byte* QueueFile_peek(QueueFile* qf, uint32_t *returnedLength);
+byte* QueueFile_peek(QueueFile* qf, uint32_t* returnedLength);
 
 
 struct _QueueFile_ElementStream;
@@ -63,8 +63,7 @@ typedef struct _QueueFile_ElementStream QueueFile_ElementStream;
  * the validity of stream is only guaranteed under this callback.
  * *********************************************************
  */
-bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
-    uint32_t length, uint32_t* lengthRemaining);
+bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer, uint32_t length, uint32_t* lengthRemaining);
 
 /* Reads the next byte, returns as int, or -1 if the element has ended, or there
  * was an error.
@@ -120,6 +119,6 @@ uint32_t QueueFile_size(QueueFile* qf);
 bool QueueFile_remove(QueueFile* qf);
 
 
-FILE* _for_testing_QueueFile_getFhandle(QueueFile *qf);
+FILE* _for_testing_QueueFile_getFhandle(QueueFile* qf);
 
 #endif //queuefile_h

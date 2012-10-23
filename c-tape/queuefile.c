@@ -59,11 +59,11 @@
 
 /** frees if oldPointer is not NULL, assigns newPointer. */
 #define freeAndAssign(OLD, NEW) _freeAndAssign((void**)(OLD), (void*)(NEW))
-static bool _freeAndAssign(void **oldPointer, void* newPointer);
+static bool _freeAndAssign(void** oldPointer, void* newPointer);
 
 /** frees and assigns oldPointer IFF newPointer is not NULL. */
 #define freeAndAssignNonNull(OLD, NEW) _freeAndAssignNonNull((void**)(OLD), (void*)(NEW))
-static bool _freeAndAssignNonNull(void **oldPointer, void* newPointer);
+static bool _freeAndAssignNonNull(void** oldPointer, void* newPointer);
 
 // Use macro to maintain line number
 #define NULLARG(P) ((P) == NULL ? LOG(LWARN, "Null argument passed") || 1 : 0)
@@ -102,7 +102,7 @@ Element* Element_new(uint32_t position, uint32_t length) {
   return e;
 }
 
-void Element_fprintf(Element* e, FILE *fout) {
+void Element_fprintf(Element* e, FILE* fout) {
   fprintf(fout, "Element:[position = %d, length = %d]",
           e->position, e->length);
 }
@@ -168,7 +168,7 @@ static bool QueueFile_readHeader(QueueFile* qf);
 
 
 // returns NULL on error.
-QueueFile* QueueFile_new(char *filename) {
+QueueFile* QueueFile_new(char* filename) {
   if (NULLARG(filename)) return NULL;
   QueueFile* qf = malloc(sizeof(QueueFile));
   if (CHECKOOM(qf)) return NULL;
@@ -197,12 +197,12 @@ QueueFile* QueueFile_new(char *filename) {
   pthread_mutexattr_t mta;
   pthread_mutexattr_init(&mta);
   pthread_mutexattr_settype(&mta, PTHREAD_MUTEX_RECURSIVE);
-  pthread_mutex_init (&qf->mutex, &mta);
+  pthread_mutex_init(&qf->mutex, &mta);
 
   return qf;
 }
 
-bool QueueFile_closeAndFree(QueueFile *qf) {
+bool QueueFile_closeAndFree(QueueFile* qf) {
   pthread_mutex_lock(&qf->mutex);
   bool success = !fclose(qf->file);
   if (success) {
@@ -317,7 +317,7 @@ static bool initialize(char* filename) {
     return false;
   }
 
-  char *tempname = makeTempName(filename, MAX_FILENAME_LEN);
+  char* tempname = makeTempName(filename, MAX_FILENAME_LEN);
   if (tempname == NULL) {
     LOG(LWARN, "Filename too long or out of memory: %s", filename);
     return false;
@@ -390,7 +390,7 @@ static bool QueueFile_ringWrite(QueueFile* qf, uint32_t position,
  * @param buffer   to read into
  * @param count    # of bytes to read
  */
-static bool QueueFile_ringRead(QueueFile *qf, uint32_t position, byte* buffer,
+static bool QueueFile_ringRead(QueueFile* qf, uint32_t position, byte* buffer,
     uint32_t offset, uint32_t count) {
   bool success = false;
   position = QueueFile_wrapPosition(qf, position);
@@ -555,7 +555,7 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength) {
 
 /** Reads the eldest element. Returns null if the queue is empty.
  * CALLER MUST FREE THE RETURNED MEMORY */
-byte* QueueFile_peek(QueueFile* qf, uint32_t *returnedLength) {
+byte* QueueFile_peek(QueueFile* qf, uint32_t* returnedLength) {
   if (NULLARG(qf) || NULLARG(returnedLength) || QueueFile_isEmpty(qf)) return NULL;
   pthread_mutex_lock(&qf->mutex);
   *returnedLength = 0;
@@ -576,7 +576,7 @@ byte* QueueFile_peek(QueueFile* qf, uint32_t *returnedLength) {
 
 
 struct _QueueFile_ElementStream {
-  QueueFile *qf;
+  QueueFile* qf;
   uint32_t position;
   uint32_t remaining;
 };
@@ -804,13 +804,13 @@ FILE* _for_testing_QueueFile_getFhandle(QueueFile *qf) {
 /*
  * Make a temporary string, caller must free result.
  */
-char *makeTempName(const char* filename, int maxLen) {
+char* makeTempName(const char* filename, int maxLen) {
   // Use a temp file so we don't leave a partially-initialized file.
   if (filename == NULL || maxLen < 4) {
     return NULL;
   }
   size_t len = strnlen(filename, (size_t) maxLen - 5) + 5;
-  char *tempname = malloc(len);
+  char* tempname = malloc(len);
   if (CHECKOOM(tempname)) {
     return NULL;
   }
@@ -820,7 +820,7 @@ char *makeTempName(const char* filename, int maxLen) {
   return tempname;
 }
 
-static bool _freeAndAssignNonNull(void **oldPointer, void* newPointer) {
+static bool _freeAndAssignNonNull(void** oldPointer, void* newPointer) {
   if (newPointer != NULL) {
     if (*oldPointer != NULL) {
       free(*oldPointer);
@@ -831,7 +831,7 @@ static bool _freeAndAssignNonNull(void **oldPointer, void* newPointer) {
   return false;
 }
 
-static bool _freeAndAssign(void **oldPointer, void* newPointer) {
+static bool _freeAndAssign(void** oldPointer, void* newPointer) {
   if (*oldPointer != NULL) {
     free(*oldPointer);
   }

@@ -151,7 +151,7 @@ bool FileIo_setLength(FILE* file, uint32_t length) {
 }
 
 
-bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
+bool FileIo_transferTo(FILE* file, uint32_t source, uint32_t destination,
     uint32_t length) {
   // TODO(jochen): if needed, overlap handling to be more accommodating.
   // TODO(jochen): investigate whether fread and fwrite make efficient use of the

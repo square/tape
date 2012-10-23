@@ -106,7 +106,7 @@ static void testAddAndRemoveElements() {
   time_t start = time(NULL);
 
   listHead expect = STAILQ_HEAD_INITIALIZER(expect);
-  struct listEntry_t *entry;
+  struct listEntry_t* entry;
 
   int round;
   for (round = 0; round < 5; round++) {
@@ -151,7 +151,7 @@ static void testSplitExpansion() {
   int max = 80;
 
   listHead expect = STAILQ_HEAD_INITIALIZER(expect);
-  struct listEntry_t *entry;
+  struct listEntry_t* entry;
 
   int i;
   for (i = 0; i < max; i++) {
