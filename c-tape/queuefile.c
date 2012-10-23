@@ -776,7 +776,8 @@ bool QueueFile_remove(QueueFile* qf) {
   return success;
 }
 
-/** Clears this queue. Truncates the file to the initial size.
+/** 
+ * Clears this queue. Truncates the file to the initial size.
  * @return false if an error occurred.
  */
 bool QueueFile_clear(QueueFile* qf) {
