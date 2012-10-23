@@ -764,7 +764,7 @@ bool QueueFile_remove(QueueFile* qf) {
                                  newFirstPosition, qf->last->position)) {
           if (freeAndAssignNonNull(&qf->first, Element_new(newFirstPosition,
                                                           (uint32_t) length))) {
-            qf->elementCount--;
+            --qf->elementCount;
             success = true;
           }
         }
