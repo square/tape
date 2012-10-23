@@ -101,13 +101,13 @@ off_t FileIo_getLength(FILE* file) {
   return filestat.st_size;
 }
 
-// Length must be multiple of 4.
 bool FileIo_writeZeros(FILE* file, uint32_t length) {
   if (for_testing_failAllWrites) {
     LOG(LDEBUG, "Failing write as requested. see for_testing_failAllWrites");
     return false;
   }
 
+  // Length must be multiple of 4.
   if (length % sizeof(uint32_t) != 0) {
     LOG(LFATAL, "Initial file length must be multiple of 4 bytes, got %d", length);
     return false;
@@ -128,9 +128,10 @@ bool FileIo_writeZeros(FILE* file, uint32_t length) {
   return true;
 }
 
-/** Some systems allow the file length to be adjusted using truncate, as
- * some JVMs do. */
 bool FileIo_setLength(FILE* file, uint32_t length) {
+  // Some systems allow the file length to be adjusted using truncate, as
+  // some JVMs do.
+  
   if (for_testing_failAllWrites) {
     LOG(LDEBUG, "Failing write as requested. see for_testing_failAllWrites");
     return false;
@@ -150,15 +151,10 @@ bool FileIo_setLength(FILE* file, uint32_t length) {
 }
 
 
-/** Will copy part of a file to another offset, the caller is responsible for
- * checking that there is enough data from the source to cover length.
- * The parts to transfer may not overlap.
- * TODO(jochen): if needed, overlap handling to be more accommodating.
- * TODO(jochen): investigate whether fread and fwrite make efficient use of the
- *       FILE's read cache. Use sendfile for Android, investigate for OSX.
- **/
 bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
     uint32_t length) {
+  // TODO(jochen): if needed, overlap handling to be more accommodating.
+  // TODO(jochen): investigate whether fread and fwrite make efficient use of the
 
   if (for_testing_failAllWrites) {
     LOG(LDEBUG, "Failing write as requested. see for_testing_failAllWrites");
@@ -217,7 +213,6 @@ bool FileIo_transferTo(FILE *file, uint32_t source, uint32_t destination,
   return true;
 }
 
-/** For testing only, enable or disable writes */
 void _for_testing_FileIo_failAllWrites(int fail) {
   for_testing_failAllWrites = fail;
 }
