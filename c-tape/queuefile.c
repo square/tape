@@ -538,7 +538,7 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength) {
   // tail of the queue to after the end of the old file.
   if (endOfLastElement < qf->first->position) {
     uint32_t count = endOfLastElement - Element_HEADER_LENGTH;
-    if(!FileIo_transferTo(qf->file, QueueFile_HEADER_LENGTH,
+    if (!FileIo_transferTo(qf->file, QueueFile_HEADER_LENGTH,
                           qf->fileLength, count)) {
       return false;
     }
@@ -552,12 +552,12 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength) {
                                qf->first->position, newLastPosition)) {
       return false;
     }
-    if(!freeAndAssignNonNull(&qf->last,
+    if (!freeAndAssignNonNull(&qf->last,
                              Element_new(newLastPosition, qf->last->length))) {
       return false;
     }
   } else {
-    if(!QueueFile_writeHeader(qf, newLength, qf->elementCount,
+    if (!QueueFile_writeHeader(qf, newLength, qf->elementCount,
                               qf->first->position, qf->last->position)) {
       return false;
     }
@@ -577,7 +577,7 @@ byte* QueueFile_peek(QueueFile* qf, uint32_t* returnedLength) {
   uint32_t length = qf->first->length;
   byte* data = malloc((size_t) length);
   if (CHECKOOM(data)) return NULL;
-  if(!QueueFile_ringRead(qf, qf->first->position + Element_HEADER_LENGTH,
+  if (!QueueFile_ringRead(qf, qf->first->position + Element_HEADER_LENGTH,
                          data, 0, length)) {
     free(data);
     data = NULL;
@@ -643,7 +643,7 @@ int QueueFile_readElementStreamNextByte(QueueFile_ElementStream* stream) {
   if (stream->remaining == 0) {
     return -1;
   }
-  if(!QueueFile_readElementStream(stream, &buffer, (uint32_t) sizeof(byte),
+  if (!QueueFile_readElementStream(stream, &buffer, (uint32_t) sizeof(byte),
                                   &remaining)) {
     return -1;
   }
@@ -732,7 +732,7 @@ bool QueueFile_forEach(QueueFile* qf, QueueFile_ElementReaderFunc reader) {
 
 /** Returns the number of elements in this queue, or 0 if NULL is passed. */
 uint32_t QueueFile_size(QueueFile* qf) {
-  if(NULLARG(qf)) return 0;
+  if (NULLARG(qf)) return 0;
   pthread_mutex_lock(&qf->mutex);
   uint32_t elementCount = qf->elementCount;
   pthread_mutex_unlock(&qf->mutex);
@@ -744,7 +744,7 @@ uint32_t QueueFile_size(QueueFile* qf) {
  * @return false if empty or NULL passed.
  */
 bool QueueFile_remove(QueueFile* qf) {
-  if(NULLARG(qf)) return false;
+  if (NULLARG(qf)) return false;
   pthread_mutex_lock(&qf->mutex);
 
   bool success = false;
@@ -757,12 +757,12 @@ bool QueueFile_remove(QueueFile* qf) {
                                                          qf->first->position +
                                                          Element_HEADER_LENGTH +
                                                          qf->first->length);
-      if(QueueFile_ringRead(qf, newFirstPosition, qf->buffer, 0,
+      if (QueueFile_ringRead(qf, newFirstPosition, qf->buffer, 0,
                             Element_HEADER_LENGTH)) {
         int length = readInt(qf->buffer, 0);
-        if(QueueFile_writeHeader(qf, qf->fileLength, qf->elementCount - 1,
+        if (QueueFile_writeHeader(qf, qf->fileLength, qf->elementCount - 1,
                                  newFirstPosition, qf->last->position)) {
-          if(freeAndAssignNonNull(&qf->first, Element_new(newFirstPosition,
+          if (freeAndAssignNonNull(&qf->first, Element_new(newFirstPosition,
                                                           (uint32_t) length))) {
             qf->elementCount--;
             success = true;
@@ -784,7 +784,7 @@ bool QueueFile_clear(QueueFile* qf) {
   bool success = false;
   pthread_mutex_lock(&qf->mutex);
 
-  if(QueueFile_writeHeader(qf, QueueFile_INITIAL_LENGTH, 0, 0, 0)) {
+  if (QueueFile_writeHeader(qf, QueueFile_INITIAL_LENGTH, 0, 0, 0)) {
     qf->elementCount = 0;
     if (qf->first != NULL) {
       free(qf->first);
@@ -795,7 +795,7 @@ bool QueueFile_clear(QueueFile* qf) {
     }
     qf->last = NULL;
     if (qf->fileLength > QueueFile_INITIAL_LENGTH) {
-      if(FileIo_setLength(qf->file, QueueFile_INITIAL_LENGTH)) {
+      if (FileIo_setLength(qf->file, QueueFile_INITIAL_LENGTH)) {
         qf->fileLength = QueueFile_INITIAL_LENGTH;
         success = true;
       }
