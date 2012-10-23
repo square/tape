@@ -246,9 +246,9 @@ static void writeInts(byte* buffer, uint32_t v1, uint32_t v2, uint32_t v3,
 /** Reads an unsigned int from a buffer (assumes big endian). */
 static uint32_t readInt(byte* buffer, uint32_t offset) {
   return ((buffer[offset] & 0xff) << 24)
-          + ((buffer[offset + 1] & 0xff) << 16)
-          + ((buffer[offset + 2] & 0xff) << 8)
-          + (buffer[offset + 3] & 0xff);
+         + ((buffer[offset + 1] & 0xff) << 16)
+         + ((buffer[offset + 2] & 0xff) << 8)
+         + (buffer[offset + 3] & 0xff);
 }
 
 
@@ -274,7 +274,7 @@ static bool QueueFile_readHeader(QueueFile* qf) {
   uint32_t firstOffset = readInt(qf->buffer, 8);
   uint32_t lastOffset = readInt(qf->buffer, 12);
   return freeAndAssign(&qf->first, QueueFile_readElement(qf, firstOffset)) &&
-    freeAndAssign(&qf->last, QueueFile_readElement(qf, lastOffset));
+         freeAndAssign(&qf->last, QueueFile_readElement(qf, lastOffset));
 }
 
 /**
@@ -289,7 +289,7 @@ static bool QueueFile_writeHeader(QueueFile* qf, uint32_t fileLength,
                                   uint32_t lastPosition) {
   writeInts(qf->buffer, fileLength, elementCount, firstPosition, lastPosition);
   return FileIo_seek(qf->file, 0) &&
-           FileIo_write(qf->file, qf->buffer, 0, QueueFile_HEADER_LENGTH);
+         FileIo_write(qf->file, qf->buffer, 0, QueueFile_HEADER_LENGTH);
 }
 
 
@@ -334,8 +334,8 @@ static bool initialize(char* filename) {
   //  appending 0s using FileIo_writeZeros.
   if (FileIo_setLength(tempfile, QueueFile_INITIAL_LENGTH)) {
     byte headerBuffer[QueueFile_HEADER_LENGTH];
-      writeInts(headerBuffer, QueueFile_INITIAL_LENGTH, 0, 0, 0);
-      success = FileIo_write(tempfile, headerBuffer, 0, QueueFile_HEADER_LENGTH);
+    writeInts(headerBuffer, QueueFile_INITIAL_LENGTH, 0, 0, 0);
+    success = FileIo_write(tempfile, headerBuffer, 0, QueueFile_HEADER_LENGTH);
   }
 
   fclose(tempfile);
@@ -351,7 +351,7 @@ static bool initialize(char* filename) {
 /** Wraps the position if it exceeds the end of the file. */
 static uint32_t QueueFile_wrapPosition(const QueueFile* qf, uint32_t position) {
   return position < qf->fileLength ?
-          position : QueueFile_HEADER_LENGTH + position - qf->fileLength;
+         position : QueueFile_HEADER_LENGTH + position - qf->fileLength;
 }
 
 /**
@@ -369,16 +369,16 @@ static bool QueueFile_ringWrite(QueueFile* qf, uint32_t position,
   position = QueueFile_wrapPosition(qf, position);
   if (position + count <= qf->fileLength) {
     success = FileIo_seek(qf->file, position) &&
-                FileIo_write(qf->file, buffer, offset, count);
+              FileIo_write(qf->file, buffer, offset, count);
   } else {
     // The write overlaps the EOF.
     // # of bytes to write before the EOF.
     uint32_t beforeEof = qf->fileLength - position;
     success = FileIo_seek(qf->file, position) &&
-                FileIo_write(qf->file, buffer, offset, beforeEof) &&
-                FileIo_seek(qf->file, QueueFile_HEADER_LENGTH) &&
-                FileIo_write(qf->file, buffer, offset + beforeEof,
-                    count - beforeEof);
+              FileIo_write(qf->file, buffer, offset, beforeEof) &&
+              FileIo_seek(qf->file, QueueFile_HEADER_LENGTH) &&
+              FileIo_write(qf->file, buffer, offset + beforeEof,
+                           count - beforeEof);
   }
   return success;
 }
@@ -396,17 +396,17 @@ static bool QueueFile_ringRead(QueueFile* qf, uint32_t position, byte* buffer,
   position = QueueFile_wrapPosition(qf, position);
   if (position + count <= qf->fileLength) {
     success = FileIo_seek(qf->file, position) &&
-                FileIo_read(qf->file, buffer, 0, count);
+              FileIo_read(qf->file, buffer, 0, count);
   } else {
     // The read overlaps the EOF.
     // # of bytes to read before the EOF.
     uint32_t beforeEof = qf->fileLength - position;
 
     success = FileIo_seek(qf->file, position) &&
-                FileIo_read(qf->file, buffer, offset, beforeEof) &&
-                FileIo_seek(qf->file, QueueFile_HEADER_LENGTH) &&
-                FileIo_read(qf->file, buffer, offset + beforeEof, count -
-                    beforeEof);
+              FileIo_read(qf->file, buffer, offset, beforeEof) &&
+              FileIo_seek(qf->file, QueueFile_HEADER_LENGTH) &&
+              FileIo_read(qf->file, buffer, offset + beforeEof, count -
+                          beforeEof);
   }
   return success;
 }
@@ -440,16 +440,17 @@ bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
     // Insert a new element after the current last element.
     bool wasEmpty = QueueFile_isEmpty(qf);
     uint32_t position = wasEmpty ? QueueFile_HEADER_LENGTH :
-        QueueFile_wrapPosition(qf, qf->last->position + Element_HEADER_LENGTH +
-            qf->last->length);
+                        QueueFile_wrapPosition(qf, qf->last->position +
+                                               Element_HEADER_LENGTH +
+                                               qf->last->length);
     Element* newLast = Element_new(position, count);
     // Write length & data.
     writeInt(qf->buffer, 0, count);
     if (newLast != NULL) {
       if (QueueFile_ringWrite(qf, newLast->position, qf->buffer, 0,
-            Element_HEADER_LENGTH) &&
+                              Element_HEADER_LENGTH) &&
         QueueFile_ringWrite(qf, newLast->position + Element_HEADER_LENGTH, data,
-            offset, count)) {
+                            offset, count)) {
 
         // Commit the addition. If wasEmpty, first == last.
         uint32_t firstPosition = wasEmpty ? newLast->position : qf->first->position;
@@ -481,13 +482,13 @@ static uint32_t QueueFile_usedBytes(QueueFile* qf) {
   if (qf->last->position >= qf->first->position) {
     // Contiguous queue.
     return (qf->last->position - qf->first->position)   // all but last entry
-        + Element_HEADER_LENGTH + qf->last->length // last entry
-        + QueueFile_HEADER_LENGTH;
+           + Element_HEADER_LENGTH + qf->last->length // last entry
+           + QueueFile_HEADER_LENGTH;
   } else {
     // tail < head. The queue wraps.
     return qf->last->position                      // buffer front + header
-        + Element_HEADER_LENGTH + qf->last->length // last entry
-        + qf->fileLength - qf->first->position;        // buffer end
+           + Element_HEADER_LENGTH + qf->last->length // last entry
+           + qf->fileLength - qf->first->position;        // buffer end
   }
 }
 
@@ -520,33 +521,44 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength) {
     previousLength = newLength;
   } while (remainingBytes < elementLength);
 
-// TODO(jochen): if truncate in setLength does not work for target platform, consider
-//  appending 0s using FileIo_writeZeros.
-  if (!FileIo_setLength(qf->file, newLength)) return false;
+// TODO(jochen): if truncate in setLength does not work for target platform,
+//  consider appending 0s using FileIo_writeZeros.
+  if (!FileIo_setLength(qf->file, newLength)) {
+    return false;
+  }
 
   // Calculate the position of the tail end of the data in the ring buffer
   uint32_t endOfLastElement = QueueFile_wrapPosition(qf, qf->last->position +
-      Element_HEADER_LENGTH + qf->last->length);
+                                                     Element_HEADER_LENGTH +
+                                                     qf->last->length);
 
   // If the buffer is split, we need to make it contiguous, so append the
   // tail of the queue to after the end of the old file.
   if (endOfLastElement < qf->first->position) {
     uint32_t count = endOfLastElement - Element_HEADER_LENGTH;
     if(!FileIo_transferTo(qf->file, QueueFile_HEADER_LENGTH,
-        qf->fileLength, count)) return false;
+                          qf->fileLength, count)) {
+      return false;
+    }
   }
 
   // Commit the expansion.
   if (qf->last->position < qf->first->position) {
-    uint32_t newLastPosition =
-        qf->fileLength + qf->last->position - QueueFile_HEADER_LENGTH;
+    uint32_t newLastPosition = qf->fileLength + qf->last->position -
+                               QueueFile_HEADER_LENGTH;
     if (!QueueFile_writeHeader(qf, newLength, qf->elementCount,
-        qf->first->position, newLastPosition)) return false;
+                               qf->first->position, newLastPosition)) {
+      return false;
+    }
     if(!freeAndAssignNonNull(&qf->last,
-        Element_new(newLastPosition, qf->last->length))) return false;
+                             Element_new(newLastPosition, qf->last->length))) {
+      return false;
+    }
   } else {
     if(!QueueFile_writeHeader(qf, newLength, qf->elementCount,
-        qf->first->position, qf->last->position)) return false;
+                              qf->first->position, qf->last->position)) {
+      return false;
+    }
   }
   qf->fileLength = newLength;
   return true;
@@ -564,7 +576,7 @@ byte* QueueFile_peek(QueueFile* qf, uint32_t* returnedLength) {
   byte* data = malloc((size_t) length);
   if (CHECKOOM(data)) return NULL;
   if(!QueueFile_ringRead(qf, qf->first->position + Element_HEADER_LENGTH,
-      data, 0, length)) {
+                         data, 0, length)) {
     free(data);
     data = NULL;
   }
@@ -599,14 +611,13 @@ bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
   if (NULLARG(stream) || NULLARG(buffer) || NULLARG(lengthRemaining) ||
       NULLARG(stream->qf)) return false;
   *lengthRemaining = 0;
-  if (stream->remaining == 0)
+  if (stream->remaining == 0) {
     return true;
-
+  }
   if (length > stream->remaining) length = stream->remaining;
-  if (QueueFile_ringRead(stream->qf, stream->position, buffer, 0,
-      length)) {
+  if (QueueFile_ringRead(stream->qf, stream->position, buffer, 0, length)) {
     stream->position = QueueFile_wrapPosition(stream->qf,
-        stream->position + length);
+                                              stream->position + length);
     stream->remaining -= length;
     *lengthRemaining = stream->remaining;
   } else {
@@ -631,8 +642,9 @@ int QueueFile_readElementStreamNextByte(QueueFile_ElementStream* stream) {
     return -1;
   }
   if(!QueueFile_readElementStream(stream, &buffer, (uint32_t) sizeof(byte),
-      &remaining))
+                                  &remaining)) {
     return -1;
+  }
   return (int)buffer;
 }
 
@@ -657,8 +669,8 @@ bool QueueFile_peekWithElementReader(QueueFile* qf,
       if (current != NULL) {
         QueueFile_ElementStream stream;
         stream.qf = qf;
-        stream.position = QueueFile_wrapPosition(qf,
-            current->position + Element_HEADER_LENGTH);
+        stream.position = QueueFile_wrapPosition(qf, current->position +
+                                                 Element_HEADER_LENGTH);
         stream.remaining = current->length;
         free(current);
         (*reader)(&stream, stream.remaining);
@@ -697,12 +709,13 @@ bool QueueFile_forEach(QueueFile* qf, QueueFile_ElementReader reader) {
         if (current != NULL) {
           QueueFile_ElementStream stream;
           stream.qf = qf;
-          stream.position = QueueFile_wrapPosition(qf,
-              current->position + Element_HEADER_LENGTH);
+          stream.position = QueueFile_wrapPosition(qf, current->position +
+                                                   Element_HEADER_LENGTH);
           stream.remaining = current->length;
           stopRequested = !(*reader)(&stream, stream.remaining);
           nextReadPosition = QueueFile_wrapPosition(qf, current->position +
-              Element_HEADER_LENGTH + current->length);
+                                                    Element_HEADER_LENGTH +
+                                                    current->length);
           free(current);
         } else {
           success = false;
@@ -738,15 +751,17 @@ bool QueueFile_remove(QueueFile* qf) {
       success = QueueFile_clear(qf);
     } else {
       // assert elementCount > 1
-      uint32_t newFirstPosition = QueueFile_wrapPosition(qf, qf->first->position +
-          Element_HEADER_LENGTH + qf->first->length);
+      uint32_t newFirstPosition = QueueFile_wrapPosition(qf,
+                                                         qf->first->position +
+                                                         Element_HEADER_LENGTH +
+                                                         qf->first->length);
       if(QueueFile_ringRead(qf, newFirstPosition, qf->buffer, 0,
-          Element_HEADER_LENGTH)) {
+                            Element_HEADER_LENGTH)) {
         int length = readInt(qf->buffer, 0);
         if(QueueFile_writeHeader(qf, qf->fileLength, qf->elementCount - 1,
-            newFirstPosition, qf->last->position)) {
-          if(freeAndAssignNonNull(&qf->first,
-              Element_new(newFirstPosition, (uint32_t) length))) {
+                                 newFirstPosition, qf->last->position)) {
+          if(freeAndAssignNonNull(&qf->first, Element_new(newFirstPosition,
+                                                          (uint32_t) length))) {
             qf->elementCount--;
             success = true;
           }

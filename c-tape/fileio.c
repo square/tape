@@ -79,7 +79,8 @@ bool FileIo_write(FILE* file, const byte* buffer, uint32_t buffer_offset,
   return true;
 }
 
-bool FileIo_read(FILE* file, void* buffer, uint32_t buffer_offset, uint32_t length) {
+bool FileIo_read(FILE* file, void* buffer, uint32_t buffer_offset,
+                 uint32_t length) {
   if (length > FILE_HARD_SANITY_LIMIT) {
     LOG(LFATAL, "Requested seek (%d) exceeds sanity hard limit %d", length,
         FILE_HARD_SANITY_LIMIT);
@@ -109,7 +110,8 @@ bool FileIo_writeZeros(FILE* file, uint32_t length) {
 
   // Length must be multiple of 4.
   if (length % sizeof(uint32_t) != 0) {
-    LOG(LFATAL, "Initial file length must be multiple of 4 bytes, got %d", length);
+    LOG(LFATAL, "Initial file length must be multiple of 4 bytes, got %d",
+        length);
     return false;
   }
 
@@ -154,7 +156,8 @@ bool FileIo_setLength(FILE* file, uint32_t length) {
 bool FileIo_transferTo(FILE* file, uint32_t source, uint32_t destination,
                        uint32_t length) {
   // TODO(jochen): if needed, overlap handling to be more accommodating.
-  // TODO(jochen): investigate whether fread and fwrite make efficient use of the
+  // TODO(jochen): investigate whether fread and fwrite make efficient use of
+  //               buffering in the FILE handling code.
 
   if (for_testing_failAllWrites) {
     LOG(LDEBUG, "Failing write as requested. see for_testing_failAllWrites");

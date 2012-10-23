@@ -41,11 +41,11 @@ int tests_run = 0;
 
 typedef STAILQ_HEAD(listHead_t, listEntry_t) listHead;
 static void _assertPeekCompare(QueueFile *queue, const byte* data,
-    uint32_t length);
+                               uint32_t length);
 static void _assertPeekCompareRemove(QueueFile *queue, const byte* data,
-    uint32_t length);
+                                     uint32_t length);
 static void _assertPeekCompareRemoveDequeue(QueueFile *queue,
-    listHead *expectqueue);
+                                            listHead *expectqueue);
 
 static void mu_setup() {
   int i;
@@ -131,9 +131,9 @@ static void testAddAndRemoveElements() {
   mu_assert(QueueFile_size(queue) == 15);
 
   int expectCount = 0;
-  STAILQ_FOREACH(entry, &expect, next_entry)
+  STAILQ_FOREACH(entry, &expect, next_entry) {
     ++expectCount;
-
+  }
   mu_assert(expectCount == 15);
 
   while (!STAILQ_EMPTY(&expect)) {
@@ -141,7 +141,6 @@ static void testAddAndRemoveElements() {
   }
 
   time_t stop = time(NULL);
-
   LOG(LINFO, "Ran in %lf seconds.", difftime(stop, start));
 }
 
@@ -160,13 +159,12 @@ static void testSplitExpansion() {
     STAILQ_INSERT_TAIL(&expect, entry, next_entry);
   }
 
-
   // Remove all but 1.
   for (i = 1; i < max; i++) {
     _assertPeekCompareRemoveDequeue(queue, &expect);
   }
 
-  uint32_t flen1 = (uint32_t)FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
+  off_t flen1 = FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
 
   // This should wrap around before expanding.
   for (i = 0; i < N; i++) {
@@ -179,7 +177,7 @@ static void testSplitExpansion() {
     _assertPeekCompareRemoveDequeue(queue, &expect);
   }
 
-  uint32_t flen2 = (uint32_t) FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
+  off_t flen2 = FileIo_getLength(_for_testing_QueueFile_getFhandle(queue));
   mu_assertm(flen1 == flen2, "file size should remain same");
 }
 
@@ -201,8 +199,8 @@ static bool forEachReader(QueueFile_ElementStream* stream, uint32_t length) {
     uint32_t remaining = ARR_A_SIZE;
     do {
       // i.e. read past end i.e. 3 reads of 2 > 5
-      mu_assert(QueueFile_readElementStream(stream,
-          actual + ARR_A_SIZE - remaining, 2, &remaining));
+      mu_assert(QueueFile_readElementStream(stream, actual + ARR_A_SIZE -
+                                            remaining, 2, &remaining));
       mu_assert(expectedRemaining[elementIteration] == remaining);
       ++elementIteration;
     } while (remaining > 0 && elementIteration < 4);
