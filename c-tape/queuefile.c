@@ -307,8 +307,7 @@ static Element* QueueFile_readElement(QueueFile* qf, uint32_t position) {
 }
 
 
-/** Make a temporary string, caller must free result. */
-char *makeTempName(const char* filename, int maxLen);
+char* makeTempFilename(const char* name, int maxLen);
 
 /** Atomically initializes a new file. */
 static bool initialize(char* filename) {
@@ -317,7 +316,7 @@ static bool initialize(char* filename) {
     return false;
   }
 
-  char* tempname = makeTempName(filename, MAX_FILENAME_LEN);
+  char* tempname = makeTempFilename(filename, MAX_FILENAME_LEN);
   if (tempname == NULL) {
     LOG(LWARN, "Filename too long or out of memory: %s", filename);
     return false;
@@ -816,10 +815,11 @@ FILE* _for_testing_QueueFile_getFhandle(QueueFile *qf) {
 // ---------------------------- Utility Functions ------------------------------
 
 
-/*
- * Make a temporary string, caller must free result.
+/**
+ * Make a temporary filename (appends ".tmp") at most maxLen chars long.
+ * Caller must free result.
  */
-char* makeTempName(const char* filename, int maxLen) {
+char* makeTempFilename(const char* filename, int maxLen) {
   // Use a temp file so we don't leave a partially-initialized file.
   if (filename == NULL || maxLen < 4) {
     return NULL;
