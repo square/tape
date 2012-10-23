@@ -190,38 +190,38 @@ static const byte arrB[ARR_B_SIZE] = {3, 4, 5};
 
 static int forEachIterationCount = 0;
 static bool forEachReader(QueueFile_ElementStream* stream, uint32_t length) {
-      if (forEachIterationCount == 0) {
-        mu_assert(length == ARR_A_SIZE);
-        mu_assert_notnull(stream);
+  if (forEachIterationCount == 0) {
+    mu_assert(length == ARR_A_SIZE);
+    mu_assert_notnull(stream);
 
-        // Read in small chunks to test reader.
-        byte actual[ARR_A_SIZE];
-        int elementIteration = 0;
-        uint32_t expectedRemaining[] = { 3, 1, 0 };
-        uint32_t remaining = ARR_A_SIZE;
-        do {
-          // i.e. read past end i.e. 3 reads of 2 > 5
-          mu_assert(QueueFile_readElementStream(stream,
-              actual + ARR_A_SIZE - remaining, 2, &remaining));
-          mu_assert(expectedRemaining[elementIteration] == remaining);
-          ++elementIteration;
-        } while (remaining > 0 && elementIteration < 4);
-        mu_assert(elementIteration == 3);
-        mu_assert_memcmp(actual, arrA, ARR_A_SIZE);
-      } else if (forEachIterationCount == 1) {
-        mu_assert(length == ARR_B_SIZE);
-        mu_assert_notnull(stream);
-        byte actual[ARR_B_SIZE];
-        uint32_t remaining;
-        mu_assert(QueueFile_readElementStream(stream,
-            actual, ARR_B_SIZE, &remaining));
-        mu_assert(remaining == 0);
-        mu_assert_memcmp(actual, arrB, ARR_B_SIZE);
-      } else {
-        mu_assertm(false, "Should never iterate beyond 2");
-      }
-      forEachIterationCount++;
-      return true;
+    // Read in small chunks to test reader.
+    byte actual[ARR_A_SIZE];
+    int elementIteration = 0;
+    uint32_t expectedRemaining[] = { 3, 1, 0 };
+    uint32_t remaining = ARR_A_SIZE;
+    do {
+      // i.e. read past end i.e. 3 reads of 2 > 5
+      mu_assert(QueueFile_readElementStream(stream,
+          actual + ARR_A_SIZE - remaining, 2, &remaining));
+      mu_assert(expectedRemaining[elementIteration] == remaining);
+      ++elementIteration;
+    } while (remaining > 0 && elementIteration < 4);
+    mu_assert(elementIteration == 3);
+    mu_assert_memcmp(actual, arrA, ARR_A_SIZE);
+  } else if (forEachIterationCount == 1) {
+    mu_assert(length == ARR_B_SIZE);
+    mu_assert_notnull(stream);
+    byte actual[ARR_B_SIZE];
+    uint32_t remaining;
+    mu_assert(QueueFile_readElementStream(stream,
+        actual, ARR_B_SIZE, &remaining));
+    mu_assert(remaining == 0);
+    mu_assert_memcmp(actual, arrB, ARR_B_SIZE);
+  } else {
+    mu_assertm(false, "Should never iterate beyond 2");
+  }
+  forEachIterationCount++;
+  return true;
 }
 
 static void testForEach() {
@@ -505,7 +505,7 @@ int main() {
 // ------------- utility methods ---------------
 
 static void _assertPeekCompare(QueueFile *queue, const byte* data,
-    uint32_t length) {
+                               uint32_t length) {
   uint32_t qlength;
   byte* actual = QueueFile_peek(queue, &qlength);
   mu_assert(qlength == length);
@@ -514,13 +514,13 @@ static void _assertPeekCompare(QueueFile *queue, const byte* data,
 }
 
 static void _assertPeekCompareRemove(QueueFile *queue, const byte* data,
-    uint32_t length) {
+                                     uint32_t length) {
   _assertPeekCompare(queue, data, length);
   mu_assert(QueueFile_remove(queue));
 }
 
 static void _assertPeekCompareRemoveDequeue(QueueFile *queue,
-    struct listHead_t *expectqueue) {
+                                            struct listHead_t *expectqueue) {
   struct listEntry_t *entry = STAILQ_FIRST(expectqueue);
   mu_assert_notnull(entry);
   _assertPeekCompareRemove(queue, entry->data, entry->length);

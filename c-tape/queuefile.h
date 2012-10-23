@@ -38,7 +38,7 @@ bool QueueFile_closeAndFree(QueueFile* qf);
  * @returns false if an error occurred
  */
 bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
-    uint32_t count);
+                   uint32_t count);
 
 /** Reads the eldest element. Returns null if the queue is empty.
  * @param returnedLength contains the size of the returned buffer.
@@ -63,7 +63,8 @@ typedef struct _QueueFile_ElementStream QueueFile_ElementStream;
  * the validity of stream is only guaranteed under this callback.
  * *********************************************************
  */
-bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer, uint32_t length, uint32_t* lengthRemaining);
+bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
+                                 uint32_t length, uint32_t* lengthRemaining);
 
 /* Reads the next byte, returns as int, or -1 if the element has ended, or there
  * was an error.
@@ -81,7 +82,7 @@ int QueueFile_readElementStreamNextByte(QueueFile_ElementStream* stream);
  * @return false to stop the iteration.
  */
 typedef bool (*QueueFile_ElementReader)(QueueFile_ElementStream* stream,
-    uint32_t length);
+                                        uint32_t length);
 
 
 /**
@@ -90,7 +91,7 @@ typedef bool (*QueueFile_ElementReader)(QueueFile_ElementStream* stream,
  * @return false if an error occurred.
  */
 bool QueueFile_peekWithElementReader(QueueFile* qf,
-    QueueFile_ElementReader reader);
+                                     QueueFile_ElementReader reader);
 
 
 /**

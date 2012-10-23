@@ -58,7 +58,7 @@ bool FileIo_seek(FILE* file, uint32_t position) {
 }
 
 bool FileIo_write(FILE* file, const byte* buffer, uint32_t buffer_offset,
-                    uint32_t length) {
+                  uint32_t length) {
   if (for_testing_failAllWrites) {
     LOG(LDEBUG, "Failing write as requested. see for_testing_failAllWrites");
     return false;
@@ -152,7 +152,7 @@ bool FileIo_setLength(FILE* file, uint32_t length) {
 
 
 bool FileIo_transferTo(FILE* file, uint32_t source, uint32_t destination,
-    uint32_t length) {
+                       uint32_t length) {
   // TODO(jochen): if needed, overlap handling to be more accommodating.
   // TODO(jochen): investigate whether fread and fwrite make efficient use of the
 

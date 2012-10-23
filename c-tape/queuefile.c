@@ -216,14 +216,14 @@ bool QueueFile_closeAndFree(QueueFile* qf) {
   }
   pthread_mutex_unlock(&qf->mutex);
 
-  if(success)
+  if (success)
     free(qf);
 
   return success;
 }
 
 /**
- * Stores int in buffer.
+ * Stores unsigned int in buffer (big endian).
  */
 static void writeInt(byte* buffer, uint32_t offset, uint32_t value) {
   buffer[offset] = (byte) (value >> 24);
@@ -233,7 +233,7 @@ static void writeInt(byte* buffer, uint32_t offset, uint32_t value) {
 }
 
 /**
- * Stores int values in buffer.
+ * Stores unsigned ints into a buffer, in the order of parameters passed.
  */
 static void writeInts(byte* buffer, uint32_t v1, uint32_t v2, uint32_t v3,
                       uint32_t v4) {
@@ -243,12 +243,12 @@ static void writeInts(byte* buffer, uint32_t v1, uint32_t v2, uint32_t v3,
   writeInt(buffer, 12, v4);
 }
 
-/** Reads an int from a byte[]. */
+/** Reads an unsigned int from a buffer (assumes big endian). */
 static uint32_t readInt(byte* buffer, uint32_t offset) {
   return ((buffer[offset] & 0xff) << 24)
-    + ((buffer[offset + 1] & 0xff) << 16)
-    + ((buffer[offset + 2] & 0xff) << 8)
-    + (buffer[offset + 3] & 0xff);
+          + ((buffer[offset + 1] & 0xff) << 16)
+          + ((buffer[offset + 2] & 0xff) << 8)
+          + (buffer[offset + 3] & 0xff);
 }
 
 
@@ -363,7 +363,7 @@ static uint32_t QueueFile_wrapPosition(const QueueFile* qf, uint32_t position) {
  * @param count    # of bytes to write
  */
 static bool QueueFile_ringWrite(QueueFile* qf, uint32_t position,
-    const byte* buffer,
+                                const byte* buffer,
     uint32_t offset, uint32_t count) {
   bool success = false;
   position = QueueFile_wrapPosition(qf, position);
@@ -391,7 +391,7 @@ static bool QueueFile_ringWrite(QueueFile* qf, uint32_t position,
  * @param count    # of bytes to read
  */
 static bool QueueFile_ringRead(QueueFile* qf, uint32_t position, byte* buffer,
-    uint32_t offset, uint32_t count) {
+                               uint32_t offset, uint32_t count) {
   bool success = false;
   position = QueueFile_wrapPosition(qf, position);
   if (position + count <= qf->fileLength) {
@@ -430,7 +430,7 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength);
  * @param count  number of bytes to copy
  */
 bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
-    uint32_t count) {
+                   uint32_t count) {
   if (NULLARG(qf) || NULLARG(data)) return false;
 
   bool success = false;
@@ -595,7 +595,7 @@ struct _QueueFile_ElementStream {
  * *********************************************************
  */
 bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
-    uint32_t length, uint32_t* lengthRemaining) {
+                                 uint32_t length, uint32_t* lengthRemaining) {
   if (NULLARG(stream) || NULLARG(buffer) || NULLARG(lengthRemaining) ||
       NULLARG(stream->qf)) return false;
   *lengthRemaining = 0;
@@ -642,7 +642,7 @@ int QueueFile_readElementStreamNextByte(QueueFile_ElementStream* stream) {
  * @return false if an error occurred.
  */
 bool QueueFile_peekWithElementReader(QueueFile* qf,
-    QueueFile_ElementReader reader) {
+                                     QueueFile_ElementReader reader) {
   if (NULLARG(reader) || NULLARG(qf)) return false;
   pthread_mutex_lock(&qf->mutex);
 

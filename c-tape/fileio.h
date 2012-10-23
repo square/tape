@@ -28,10 +28,10 @@ bool FileIo_seek(FILE* file, uint32_t position);
 
 /** Writes buffer to file, flushes to media. */
 bool FileIo_write(FILE* file, const byte* buffer, uint32_t buffer_offset,
-    uint32_t length);
+                  uint32_t length);
 
 bool FileIo_read(FILE* file, void* buffer, uint32_t buffer_offset,
-    uint32_t length);
+                 uint32_t length);
 
 /** @return file length or -1 on error */
 off_t FileIo_getLength(FILE* file);
@@ -58,7 +58,7 @@ bool FileIo_setLength(FILE* file, uint32_t length);
  *       FILE's read cache.
  */
 bool FileIo_transferTo(FILE* file, uint32_t source, uint32_t destination,
-    uint32_t length);
+                       uint32_t length);
 
 /**
  * For testing only, enable or disable writes, for some reason the _Bool
