@@ -26,35 +26,9 @@
 /*
  * Port of Tape project from Java. https://github.com/square/tape
  *
- * Original description:
- *
- * A reliable, efficient, file-based, FIFO queue. Additions and removals are
- * O(1). All operations are atomic. Writes are synchronous; data will be written
- * to disk before an operation returns. The underlying file is structured to
- * survive process and even system crashes. If an I/O exception is thrown during
- * a mutating change, the change is aborted. It is safe to continue to use a
- * {@code QueueFile} instance after an exception.
- * <p/>
- * <p>All operations are synchronized. In a traditional queue, the remove
- * operation returns an element. In this queue, {@link #peek} and {@link
- * #remove} are used in conjunction. Use {@code peek} to retrieve the first
- * element, and then {@code remove} to remove it after successful processing. If
- * the system crashes after {@code peek} and during processing, the element will
- * remain in the queue, to be processed when the system restarts.
- * <p/>
- * <p><strong>NOTE:</strong> The current implementation is built
- * for file systems that support atomic segment writes (like YAFFS). Most
- * conventional file systems don't support this; if the power goes out while
- * writing a segment, the segment will contain garbage and the file will be
- * corrupt. We'll add journaling support so this class can be used with more
- * file systems later.
- *
- * @author Bob Lee (bob@squareup.com)
- */
-
-
-/*
  * Integers are forced to be 32-bit, maximum file size supported is 2^32 (4GB).
+ *
+ * See description in queuefile.h.
  */
 
 /** frees if oldPointer is not NULL, assigns newPointer. */
@@ -79,13 +53,10 @@ static bool _freeAndAssignNonNull(void** oldPointer, void* newPointer);
 
 /** A pointer to an element. */
 typedef struct {
-  
   /** Position in file. */
   uint32_t position;
-  
   /** The length of the data. */
   uint32_t length;
-  
 } Element;
 
 /**
@@ -94,7 +65,7 @@ typedef struct {
  * @param position within file
  * @param length   of data
  */
-Element* Element_new(uint32_t position, uint32_t length) {
+static Element* Element_new(uint32_t position, uint32_t length) {
   Element* e = malloc(sizeof(Element));
   if (CHECKOOM(e)) return NULL;
   e->position = position;
@@ -102,7 +73,7 @@ Element* Element_new(uint32_t position, uint32_t length) {
   return e;
 }
 
-void Element_fprintf(Element* e, FILE* fout) {
+static void Element_fprintf(Element* e, FILE* fout) {
   fprintf(fout, "Element:[position = %d, length = %d]",
           e->position, e->length);
 }
@@ -166,8 +137,7 @@ struct _QueueFile {
 static bool initialize(char* filename);
 static bool QueueFile_readHeader(QueueFile* qf);
 
-
-// returns NULL on error.
+// see description in queuefile.h.
 QueueFile* QueueFile_new(char* filename) {
   if (NULLARG(filename)) return NULL;
   QueueFile* qf = malloc(sizeof(QueueFile));
@@ -202,6 +172,7 @@ QueueFile* QueueFile_new(char* filename) {
   return qf;
 }
 
+// see description in queuefile.h.
 bool QueueFile_closeAndFree(QueueFile* qf) {
   pthread_mutex_lock(&qf->mutex);
   bool success = !fclose(qf->file);
@@ -410,7 +381,7 @@ static bool QueueFile_ringRead(QueueFile* qf, uint32_t position, byte* buffer,
   return success;
 }
 
-/** Returns true if there are no entries or NULL passed. */
+// see description in queuefile.h.
 bool QueueFile_isEmpty(QueueFile* qf) {
   if (NULLARG(qf)) return true;
   pthread_mutex_lock(&qf->mutex);
@@ -421,13 +392,7 @@ bool QueueFile_isEmpty(QueueFile* qf) {
 
 static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength);
 
-/**
- * Adds an element to the end of the queue.
- *
- * @param data   to copy bytes from
- * @param offset to start from in buffer
- * @param count  number of bytes to copy
- */
+// see description in queuefile.h.
 bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
                    uint32_t count) {
   if (NULLARG(qf) || NULLARG(data)) return false;
@@ -566,9 +531,7 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength) {
   return true;
 }
 
-
-/** Reads the eldest element. Returns null if the queue is empty.
- * CALLER MUST FREE THE RETURNED MEMORY */
+// see description in queuefile.h.
 byte* QueueFile_peek(QueueFile* qf, uint32_t* returnedLength) {
   if (NULLARG(qf) || NULLARG(returnedLength) || QueueFile_isEmpty(qf)) return NULL;
   pthread_mutex_lock(&qf->mutex);
@@ -595,19 +558,7 @@ struct _QueueFile_ElementStream {
   uint32_t remaining;
 };
 
-/**
- * Read data from an element stream.
- * @param stream pointer to element stream
- * @param buffer  to copy bytes to
- * @param length  size of buffer
- * @param lengthRemaining will be set to number of bytes left.
- * @return false if an error occurred.
- * *********************************************************
- * WARNING! MUST ONLY BE USED INSIDE A CALLBACK FROM FOREACH
- * as this ensures the queuefile is under mutex lock.
- * the validity of stream is only guaranteed under this callback.
- * *********************************************************
- */
+// see description in queuefile.h.
 bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
                                  uint32_t length, uint32_t* lengthRemaining) {
   if (NULLARG(stream) || NULLARG(buffer) || NULLARG(lengthRemaining) ||
@@ -628,15 +579,7 @@ bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
   return true;
 }
 
-/* Reads the next byte, returns as int, or -1 if the element has ended, or there
- * was an error.
- *
- * *********************************************************
- * WARNING! MUST ONLY BE USED INSIDE A CALLBACK FROM FOREACH
- * as this ensures the queuefile is under mutex lock.
- * the validity of stream is only guaranteed under this callback.
- * *********************************************************
- */
+// see description in queuefile.h.
 int QueueFile_readElementStreamNextByte(QueueFile_ElementStream* stream) {
   byte buffer;
   uint32_t remaining;
@@ -650,11 +593,7 @@ int QueueFile_readElementStreamNextByte(QueueFile_ElementStream* stream) {
   return (int)buffer;
 }
 
-/**
- * Invokes the given reader once for the first element in the queue.
- * There will be no callback if the queue is empty.
- * @return false if an error occurred.
- */
+// see description in queuefile.h.
 bool QueueFile_peekWithElementReader(QueueFile* qf,
                                      QueueFile_ElementReaderFunc reader) {
   if (NULLARG(reader) || NULLARG(qf)) return false;
@@ -685,12 +624,7 @@ bool QueueFile_peekWithElementReader(QueueFile* qf,
   return success;
 }
 
-/**
- * Invokes the given reader once for each element in the queue, from eldest to
- * most recently added. Note that this is under lock.
- * There will be no callback if the queue is empty.
- * @return false if an error occurred.
- */
+// see description in queuefile.h.
 bool QueueFile_forEach(QueueFile* qf, QueueFile_ElementReaderFunc reader) {
   if (NULLARG(reader) || NULLARG(qf)) return false;
   pthread_mutex_lock(&qf->mutex);
@@ -730,7 +664,7 @@ bool QueueFile_forEach(QueueFile* qf, QueueFile_ElementReaderFunc reader) {
   return success;
 }
 
-/** Returns the number of elements in this queue, or 0 if NULL is passed. */
+// see description in queuefile.h.
 uint32_t QueueFile_size(QueueFile* qf) {
   if (NULLARG(qf)) return 0;
   pthread_mutex_lock(&qf->mutex);
@@ -739,10 +673,7 @@ uint32_t QueueFile_size(QueueFile* qf) {
   return elementCount;
 }
 
-/**
- * Removes the eldest element.
- * @return false if empty or NULL passed.
- */
+// see description in queuefile.h.
 bool QueueFile_remove(QueueFile* qf) {
   if (NULLARG(qf)) return false;
   pthread_mutex_lock(&qf->mutex);
@@ -776,10 +707,7 @@ bool QueueFile_remove(QueueFile* qf) {
   return success;
 }
 
-/** 
- * Clears this queue. Truncates the file to the initial size.
- * @return false if an error occurred.
- */
+// see description in queuefile.h.
 bool QueueFile_clear(QueueFile* qf) {
   if (NULLARG(qf)) return false;
   bool success = false;
