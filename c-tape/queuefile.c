@@ -435,7 +435,8 @@ bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
   bool success = false;
   pthread_mutex_lock(&qf->mutex);
 
-  if(QueueFile_expandIfNecessary(qf, count)) {
+  if (QueueFile_expandIfNecessary(qf, count)) {
+    
     // Insert a new element after the current last element.
     bool wasEmpty = QueueFile_isEmpty(qf);
     uint32_t position = wasEmpty ? QueueFile_HEADER_LENGTH :
@@ -443,6 +444,7 @@ bool QueueFile_add(QueueFile* qf, const byte* data, uint32_t offset,
                                                Element_HEADER_LENGTH +
                                                qf->last->length);
     Element* newLast = Element_new(position, count);
+
     // Write length & data.
     writeInt(qf->buffer, 0, count);
     if (newLast != NULL) {
@@ -513,6 +515,7 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength) {
   // Expand.
   uint32_t previousLength = qf->fileLength;
   uint32_t newLength;
+
   // Double the length until we can fit the new data.
   do {
     remainingBytes += previousLength;
@@ -520,8 +523,8 @@ static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength) {
     previousLength = newLength;
   } while (remainingBytes < elementLength);
 
-// TODO(jochen): if truncate in setLength does not work for target platform,
-//  consider appending 0s using FileIo_writeZeros.
+  // TODO(jochen): if truncate in setLength does not work for target platform,
+  //  consider appending 0s using FileIo_writeZeros.
   if (!FileIo_setLength(qf->file, newLength)) {
     return false;
   }
@@ -653,7 +656,7 @@ int QueueFile_readElementStreamNextByte(QueueFile_ElementStream* stream) {
  * @return false if an error occurred.
  */
 bool QueueFile_peekWithElementReader(QueueFile* qf,
-                                     QueueFile_ElementReader reader) {
+                                     QueueFile_ElementReaderFunc reader) {
   if (NULLARG(reader) || NULLARG(qf)) return false;
   pthread_mutex_lock(&qf->mutex);
 
@@ -688,7 +691,7 @@ bool QueueFile_peekWithElementReader(QueueFile* qf,
  * There will be no callback if the queue is empty.
  * @return false if an error occurred.
  */
-bool QueueFile_forEach(QueueFile* qf, QueueFile_ElementReader reader) {
+bool QueueFile_forEach(QueueFile* qf, QueueFile_ElementReaderFunc reader) {
   if (NULLARG(reader) || NULLARG(qf)) return false;
   pthread_mutex_lock(&qf->mutex);
 

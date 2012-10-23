@@ -81,8 +81,8 @@ int QueueFile_readElementStreamNextByte(QueueFile_ElementStream* stream);
  * Function which is called by forEach or peekWithElementReader for each element.
  * @return false to stop the iteration.
  */
-typedef bool (*QueueFile_ElementReader)(QueueFile_ElementStream* stream,
-                                        uint32_t length);
+typedef bool (*QueueFile_ElementReaderFunc)(QueueFile_ElementStream* stream,
+                                            uint32_t length);
 
 
 /**
@@ -91,7 +91,7 @@ typedef bool (*QueueFile_ElementReader)(QueueFile_ElementStream* stream,
  * @return false if an error occurred.
  */
 bool QueueFile_peekWithElementReader(QueueFile* qf,
-                                     QueueFile_ElementReader reader);
+                                     QueueFile_ElementReaderFunc reader);
 
 
 /**
@@ -100,7 +100,7 @@ bool QueueFile_peekWithElementReader(QueueFile* qf,
  * There will be no callback if the queue is empty.
  * @return false if an error occurred.
  */
-bool QueueFile_forEach(QueueFile* qf, QueueFile_ElementReader reader);
+bool QueueFile_forEach(QueueFile* qf, QueueFile_ElementReaderFunc reader);
 
 /** Returns true if there are no entries or NULL passed. */
 bool QueueFile_isEmpty(QueueFile* qf);
