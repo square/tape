@@ -36,6 +36,7 @@
   <modules>
     <module>tape</module>
     <module>tape-sample</module>
+    <module>c-tape-android</module>
   </modules>
 
   <properties>

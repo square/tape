@@ -49,6 +49,7 @@
 #ifndef QUEUEFILE_H_
 #define QUEUEFILE_H_
 
+#include "stdio.h"
 #include"types.h"
 
 struct _QueueFile;
@@ -59,7 +60,7 @@ typedef struct _QueueFile QueueFile;
  * @param filename
  * @return new queuefile or NULL on error. 
  */
-QueueFile* QueueFile_new(char* filename);
+QueueFile* QueueFile_new(const char* filename);
 
 /** 
  * Closes the underlying file and frees all memory including

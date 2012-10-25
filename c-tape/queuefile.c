@@ -134,11 +134,11 @@ struct _QueueFile {
   pthread_mutex_t mutex;
 };
 
-static bool initialize(char* filename);
+static bool initialize(const char* filename);
 static bool QueueFile_readHeader(QueueFile* qf);
 
 // see description in queuefile.h.
-QueueFile* QueueFile_new(char* filename) {
+QueueFile* QueueFile_new(const char* filename) {
   if (NULLARG(filename)) return NULL;
   QueueFile* qf = malloc(sizeof(QueueFile));
   if (CHECKOOM(qf)) return NULL;
@@ -281,7 +281,7 @@ static Element* QueueFile_readElement(QueueFile* qf, uint32_t position) {
 char* makeTempFilename(const char* name, int maxLen);
 
 /** Atomically initializes a new file. */
-static bool initialize(char* filename) {
+static bool initialize(const char* filename) {
   if (QueueFile_HEADER_LENGTH < 16) {
     LOG(LFATAL, "Configuration error, header length must be >= 16 bytes");
     return false;
