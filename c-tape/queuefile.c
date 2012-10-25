@@ -134,11 +134,11 @@ struct _QueueFile {
   pthread_mutex_t mutex;
 };
 
-static bool initialize(char* filename);
+static bool initialize(const char* filename);
 static bool QueueFile_readHeader(QueueFile* qf);
 
 // see description in queuefile.h.
-QueueFile* QueueFile_new(char* filename) {
+QueueFile* QueueFile_new(const char* filename) {
   if (NULLARG(filename)) return NULL;
   QueueFile* qf = malloc(sizeof(QueueFile));
   if (CHECKOOM(qf)) return NULL;
@@ -281,7 +281,7 @@ static Element* QueueFile_readElement(QueueFile* qf, uint32_t position) {
 char* makeTempFilename(const char* name, int maxLen);
 
 /** Atomically initializes a new file. */
-static bool initialize(char* filename) {
+static bool initialize(const char* filename) {
   if (QueueFile_HEADER_LENGTH < 16) {
     LOG(LFATAL, "Configuration error, header length must be >= 16 bytes");
     return false;
@@ -388,6 +388,15 @@ bool QueueFile_isEmpty(QueueFile* qf) {
   uint32_t elementCount = qf->elementCount == 0;
   pthread_mutex_unlock(&qf->mutex);
   return elementCount;
+}
+
+// see description in queuefile.h.
+uint32_t QueueFile_getFileLength(QueueFile* qf) {
+  if (NULLARG(qf)) return true;
+  pthread_mutex_lock(&qf->mutex);
+  uint32_t length = qf->fileLength;
+  pthread_mutex_unlock(&qf->mutex);
+  return length;
 }
 
 static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength);
@@ -559,13 +568,13 @@ struct _QueueFile_ElementStream {
 };
 
 // see description in queuefile.h.
-bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
+int64_t QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
                                  uint32_t length, uint32_t* lengthRemaining) {
   if (NULLARG(stream) || NULLARG(buffer) || NULLARG(lengthRemaining) ||
-      NULLARG(stream->qf)) return false;
+      NULLARG(stream->qf)) return -1;
   *lengthRemaining = 0;
   if (stream->remaining == 0) {
-    return true;
+    return 0;
   }
   if (length > stream->remaining) length = stream->remaining;
   if (QueueFile_ringRead(stream->qf, stream->position, buffer, 0, length)) {
@@ -574,9 +583,9 @@ bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
     stream->remaining -= length;
     *lengthRemaining = stream->remaining;
   } else {
-    return false;
+    return -1;
   }
-  return true;
+  return length;
 }
 
 // see description in queuefile.h.

@@ -36,6 +36,8 @@
   <modules>
     <module>tape</module>
     <module>tape-sample</module>
+    <module>c-tape-android</module>
+    <module>c-tape-android-sample</module>
   </modules>
 
   <properties>
@@ -156,7 +158,7 @@
         <plugin>
           <groupId>com.jayway.maven.plugins.android.generation2</groupId>
           <artifactId>android-maven-plugin</artifactId>
-          <version>3.3.2</version>
+          <version>3.4.0</version>
           <configuration>
             <sdk>
               <platform>${android.platform}</platform>

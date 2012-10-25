@@ -49,6 +49,7 @@
 #ifndef QUEUEFILE_H_
 #define QUEUEFILE_H_
 
+#include "stdio.h"
 #include"types.h"
 
 struct _QueueFile;
@@ -59,7 +60,7 @@ typedef struct _QueueFile QueueFile;
  * @param filename
  * @return new queuefile or NULL on error. 
  */
-QueueFile* QueueFile_new(char* filename);
+QueueFile* QueueFile_new(const char* filename);
 
 /** 
  * Closes the underlying file and frees all memory including
@@ -68,6 +69,12 @@ QueueFile* QueueFile_new(char* filename);
  * @return false if an error occurred
  */
 bool QueueFile_closeAndFree(QueueFile* qf);
+
+/**
+ * @param qf queuefile.
+ * @return the length of the underlying file, or 0 if NULL is passed.
+ */
+uint32_t QueueFile_getFileLength(QueueFile* qf);
 
 /**
  * Adds an element to the end of the queue.
@@ -98,7 +105,7 @@ typedef struct _QueueFile_ElementStream QueueFile_ElementStream;
  * @param buffer  to copy bytes to.
  * @param length  size of buffer.
  * @param lengthRemaining if not null, will be set to number of bytes left.
- * @return false if an error occurred.
+ * @return number of bytes read, or -1 on error.
  *
  * *********************************************************
  * WARNING! MUST ONLY BE USED INSIDE A CALLBACK FROM FOREACH
@@ -106,8 +113,9 @@ typedef struct _QueueFile_ElementStream QueueFile_ElementStream;
  * the validity of stream is only guaranteed under this callback.
  * *********************************************************
  */
-bool QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
-                                 uint32_t length, uint32_t* lengthRemaining);
+int64_t QueueFile_readElementStream(QueueFile_ElementStream* stream,
+                                    byte* buffer, uint32_t length,
+                                    uint32_t* lengthRemaining);
 
 /**
  * Reads the next byte.
