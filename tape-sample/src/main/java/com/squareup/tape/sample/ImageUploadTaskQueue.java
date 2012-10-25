@@ -6,10 +6,8 @@ import android.content.Intent;
 import com.google.gson.Gson;
 import com.squareup.otto.Bus;
 import com.squareup.otto.Produce;
-import com.squareup.tape.FileObjectQueue;
+import com.squareup.tape.*;
 import com.squareup.tape.FileObjectQueue.Converter;
-import com.squareup.tape.ObjectQueue;
-import com.squareup.tape.TaskQueue;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,9 +51,9 @@ public class ImageUploadTaskQueue extends TaskQueue<ImageUploadTask> {
 
   public static ImageUploadTaskQueue create(Context context, Gson gson, Bus bus) {
     Converter<ImageUploadTask> converter = new GsonConverter<ImageUploadTask>(gson, ImageUploadTask.class);
-    File queueFile = new File(context.getFilesDir(), FILENAME);
     FileObjectQueue<ImageUploadTask> delegate;
     try {
+      QueueFile queueFile = new QueueFileImpl(new File(context.getFilesDir(), FILENAME));
       delegate = new FileObjectQueue<ImageUploadTask>(queueFile, converter);
     } catch (IOException e) {
       throw new RuntimeException("Unable to create file queue.", e);

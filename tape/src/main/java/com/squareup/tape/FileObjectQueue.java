@@ -25,14 +25,12 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
   /** Reusable byte output buffer. */
   private final DirectByteArrayOutputStream bytes = new DirectByteArrayOutputStream();
   /** Keep file around for error reporting. */
-  private final File file;
   private final Converter<T> converter;
   private Listener<T> listener;
 
-  public FileObjectQueue(File file, Converter<T> converter) throws IOException {
-    this.file = file;
+  public FileObjectQueue(QueueFile queueFile, Converter<T> converter) throws IOException {
     this.converter = converter;
-    this.queueFile = new QueueFile(file);
+    this.queueFile = queueFile;
   }
 
   @Override public int size() {
@@ -46,7 +44,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
       queueFile.add(bytes.getArray(), 0, bytes.size());
       if (listener != null) listener.onAdd(this, entry);
     } catch (IOException e) {
-      throw new FileException("Failed to add entry.", e, file);
+      throw new FileException("Failed to add entry.", e, queueFile);
     }
   }
 
@@ -56,7 +54,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
       if (bytes == null) return null;
       return converter.from(bytes);
     } catch (IOException e) {
-      throw new FileException("Failed to peek.", e, file);
+      throw new FileException("Failed to peek.", e, queueFile);
     }
   }
 
@@ -65,7 +63,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
       queueFile.remove();
       if (listener != null) listener.onRemove(this);
     } catch (IOException e) {
-      throw new FileException("Failed to remove.", e, file);
+      throw new FileException("Failed to remove.", e, queueFile);
     }
   }
 
@@ -82,7 +80,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
           }
         });
       } catch (IOException e) {
-        throw new FileException("Unable to iterate over QueueFile contents.", e, file);
+        throw new FileException("Unable to iterate over QueueFile contents.", e, queueFile);
       }
     }
     this.listener = listener;

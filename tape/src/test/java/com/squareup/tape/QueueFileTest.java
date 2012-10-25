@@ -53,12 +53,12 @@ public class QueueFileTest {
 
   @Test public void testAddOneElement() throws IOException {
     // This test ensures that we update 'first' correctly.
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = new QueueFileImpl(file);
     byte[] expected = values[253];
     queue.add(expected);
     assertThat(queue.peek()).isEqualTo(expected);
     queue.close();
-    queue = new QueueFile(file);
+    queue = new QueueFileImpl(file);
     assertThat(queue.peek()).isEqualTo(expected);
   }
 
@@ -68,7 +68,7 @@ public class QueueFileTest {
     Queue<byte[]> expected = new LinkedList<byte[]>();
 
     for (int round = 0; round < 5; round++) {
-      QueueFile queue = new QueueFile(file);
+      QueueFile queue = new QueueFileImpl(file);
       for (int i = 0; i < N; i++) {
         queue.add(values[i]);
         expected.add(values[i]);
@@ -84,7 +84,7 @@ public class QueueFileTest {
     }
 
     // Remove and validate remaining 15 elements.
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = new QueueFileImpl(file);
     assertThat(queue.size()).isEqualTo(15);
     assertThat(queue.size()).isEqualTo(expected.size());
     while (!expected.isEmpty()) {
@@ -105,7 +105,7 @@ public class QueueFileTest {
     int max = 80;
 
     Queue<byte[]> expected = new LinkedList<byte[]>();
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = new QueueFileImpl(file);
 
     for (int i = 0; i < max; i++) {
       expected.add(values[i]);
@@ -133,12 +133,12 @@ public class QueueFileTest {
   }
 
   @Test public void testFailedAdd() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = new QueueFileImpl(file);
     queueFile.add(values[253]);
     queueFile.close();
 
     final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf);
+    queueFile = new QueueFileImpl(braf);
 
     try {
       queueFile.add(values[252]);
@@ -152,7 +152,7 @@ public class QueueFileTest {
 
     queueFile.close();
 
-    queueFile = new QueueFile(file);
+    queueFile = new QueueFileImpl(file);
     Assertions.assertThat(queueFile.size()).isEqualTo(2);
     assertThat(queueFile.peek()).isEqualTo(values[253]);
     queueFile.remove();
@@ -160,12 +160,12 @@ public class QueueFileTest {
   }
 
   @Test public void testFailedRemoval() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = new QueueFileImpl(file);
     queueFile.add(values[253]);
     queueFile.close();
 
     final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf);
+    queueFile = new QueueFileImpl(braf);
 
     try {
       queueFile.remove();
@@ -174,7 +174,7 @@ public class QueueFileTest {
 
     queueFile.close();
 
-    queueFile = new QueueFile(file);
+    queueFile = new QueueFileImpl(file);
     assertThat(queueFile.size()).isEqualTo(1);
     assertThat(queueFile.peek()).isEqualTo(values[253]);
 
@@ -184,12 +184,12 @@ public class QueueFileTest {
   }
 
   @Test public void testFailedExpansion() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = new QueueFileImpl(file);
     queueFile.add(values[253]);
     queueFile.close();
 
     final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf);
+    queueFile = new QueueFileImpl(braf);
 
     try {
       // This should trigger an expansion which should fail.
@@ -199,11 +199,11 @@ public class QueueFileTest {
 
     queueFile.close();
 
-    queueFile = new QueueFile(file);
+    queueFile = new QueueFileImpl(file);
 
     assertThat(queueFile.size()).isEqualTo(1);
     assertThat(queueFile.peek()).isEqualTo(values[253]);
-    assertThat(queueFile.fileLength).isEqualTo(4096);
+    assertThat(queueFile.getFileLength()).isEqualTo(4096);
 
     queueFile.add(values[99]);
     queueFile.remove();
@@ -211,13 +211,13 @@ public class QueueFileTest {
   }
 
   @Test public void testPeekWithElementReader() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = new QueueFileImpl(file);
     final byte[] a = {1, 2};
     queueFile.add(a);
     final byte[] b = {3, 4, 5};
     queueFile.add(b);
 
-    queueFile.peek(new QueueFile.ElementReader() {
+    queueFile.peek(new QueueFileImpl.ElementReader() {
       @Override public void read(InputStream in, int length) throws IOException {
         assertThat(length).isEqualTo(2);
         byte[] actual = new byte[length];
@@ -226,7 +226,7 @@ public class QueueFileTest {
       }
     });
 
-    queueFile.peek(new QueueFile.ElementReader() {
+    queueFile.peek(new QueueFileImpl.ElementReader() {
       @Override public void read(InputStream in, int length) throws IOException {
         assertThat(length).isEqualTo(2);
         assertThat(in.read()).isEqualTo(1);
@@ -237,7 +237,7 @@ public class QueueFileTest {
 
     queueFile.remove();
 
-    queueFile.peek(new QueueFile.ElementReader() {
+    queueFile.peek(new QueueFileImpl.ElementReader() {
       @Override public void read(InputStream in, int length) throws IOException {
         assertThat(length).isEqualTo(3);
         byte[] actual = new byte[length];
@@ -251,7 +251,7 @@ public class QueueFileTest {
   }
 
   @Test public void testForEach() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = new QueueFileImpl(file);
 
     final byte[] a = {1, 2};
     queueFile.add(a);
@@ -259,7 +259,7 @@ public class QueueFileTest {
     queueFile.add(b);
 
     final int[] iteration = new int[]{0};
-    QueueFile.ElementReader elementReader = new QueueFile.ElementReader() {
+    QueueFile.ElementReader elementReader = new QueueFileImpl.ElementReader() {
       @Override public void read(InputStream in, int length) throws IOException {
         if (iteration[0] == 0) {
           assertThat(length).isEqualTo(2);
@@ -291,7 +291,7 @@ public class QueueFileTest {
    */
   @Test public void testFileExpansionDoesntCorruptWrappedElements()
       throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = new QueueFileImpl(file);
 
     // Create test data - 1k blocks marked consecutively 1, 2, 3, 4 and 5.
     byte[][] values = new byte[5][];
@@ -340,7 +340,7 @@ public class QueueFileTest {
    * expansion correctly update all their positions?
    */
   @Test public void testFileExpansionCorrectlyMovesElements() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = new QueueFileImpl(file);
 
     // Create test data - 1k blocks marked consecutively 1, 2, 3, 4 and 5.
     byte[][] values = new byte[5][];
