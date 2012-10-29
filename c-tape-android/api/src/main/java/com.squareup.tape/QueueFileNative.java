@@ -1,4 +1,4 @@
-package com.squareup.tape.native_;
+package com.squareup.tape;
 
 import com.squareup.tape.QueueFile;
 import com.squareup.tape.QueueFile.ElementReader;
@@ -79,7 +79,10 @@ public class QueueFileNative implements QueueFile {
     // objC code here
   ]-*/;
 
+  public static void main(String [ ] args) {
+    System.out.println("###################### hello ####################");
+  }
   static {
-      System.loadLibrary("c-tape-android");
+      System.loadLibrary("c-tape-android-native");
   }
 }

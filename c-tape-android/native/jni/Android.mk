@@ -21,11 +21,11 @@
 LOCAL_PATH := $(call my-dir)
 LOCAL_C_FILES := queuefilenative.c jniutils.c
 
-OTHER_C_PATH := $(LOCAL_PATH)/../../c-tape
+OTHER_C_PATH := $(LOCAL_PATH)/../../../c-tape
 OTHER_C_FILES := fileio.c logutil.c queuefile.c
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := c-tape-android
+LOCAL_MODULE := c-tape-android-native
 LOCAL_CFLAGS := -D__ANDROID__
 LOCAL_C_INCLUDES := $(abspath $(OTHER_C_PATH))
 LOCAL_SRC_FILES := $(LOCAL_C_FILES) $(addprefix ../$(OTHER_C_PATH)/, $(OTHER_C_FILES)) 
