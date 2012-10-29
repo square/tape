@@ -2,6 +2,7 @@
 package com.squareup.tape;
 
 import com.squareup.tape.QueueFile;
+import com.squareup.tape.QueueFileNative;
 import org.fest.assertions.Assertions;
 import org.junit.After;
 import org.junit.Before;
@@ -34,8 +35,8 @@ public class QueueFileNativeTest {
   }
 
   @Test public void testAddOneElement() throws IOException {
-//    System.out.println(System.getProperty("java.library.path"));
-//    QueueFile queue = new QueueFileNative("/invalid2@#$123/ - - .");
-//    queue.close();
+    System.out.println(System.getProperty("java.library.path") + "############## LIBRARY PATH #############");
+    QueueFile queue = new QueueFileNative("/invalid2@#$123/ - - .");
+    queue.close();
   }
 }
