@@ -48,7 +48,7 @@
                 <version>2.12.4</version>
                 <configuration>
                     <!--<forkMode>once</forkMode>-->
-                    <argLine>-Djava.library.path=${project.parent.build.directory}/../native/target</argLine>
+                    <argLine>-Djava.library.path=${project.parent.build.directory}/../../native/target</argLine>
                 </configuration>
             </plugin>
         </plugins>
