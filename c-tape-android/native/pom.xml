@@ -5,7 +5,7 @@
 
   <parent>
     <groupId>com.squareup</groupId>
-    <artifactId>c-tape-android-parent</artifactId>
+    <artifactId>c-tape-android</artifactId>
     <version>1.0.1-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>

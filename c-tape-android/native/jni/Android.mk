@@ -15,11 +15,14 @@
 #
 # TODO(jochen): consider building a library in c-tape/jni.
 # generated the queuefilenative.h:
-#  javah -classpath target/classes -o jni/queuefilenative.h com.squareup.tape.native_.QueueFileNative
+#  javah -classpath target/classes -o jni/queuefilenative.h com.squareup.tape.QueueFileNative
+#
+# $(warning hello)
 
 
 LOCAL_PATH := $(call my-dir)
 LOCAL_C_FILES := queuefilenative.c jniutils.c
+
 
 OTHER_C_PATH := $(LOCAL_PATH)/../../../c-tape
 OTHER_C_FILES := fileio.c logutil.c queuefile.c
@@ -28,7 +31,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := c-tape-android-native
 LOCAL_CFLAGS := -D__ANDROID__
 LOCAL_C_INCLUDES := $(abspath $(OTHER_C_PATH))
-LOCAL_SRC_FILES := $(LOCAL_C_FILES) $(addprefix ../$(OTHER_C_PATH)/, $(OTHER_C_FILES)) 
+LOCAL_SRC_FILES := $(LOCAL_C_FILES) $(addprefix ../$(OTHER_C_PATH)/, $(OTHER_C_FILES))
 LOCAL_LDLIBS := -llog
 include $(BUILD_SHARED_LIBRARY)
 

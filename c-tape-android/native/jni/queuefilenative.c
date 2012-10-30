@@ -47,8 +47,7 @@ jobject wrapCPointer(JNIEnv *env, QueueFile* p) {
   return (*env)->NewDirectByteBuffer(env, (void*) p, 0);
 }
 
-
-JNIEXPORT jobject JNICALL Java_com_squareup_tape_native_1_QueueFileNative_nativeNew
+JNIEXPORT jobject JNICALL Java_com_squareup_tape_QueueFileNative_nativeNew
   (JNIEnv *env, jobject thisz, jstring filename) {
 
   const char* fname = (*env)->GetStringUTFChars(env, filename, NULL);
@@ -65,65 +64,74 @@ JNIEXPORT jobject JNICALL Java_com_squareup_tape_native_1_QueueFileNative_native
   return wrappedPointer;
 };
 
-JNIEXPORT jint JNICALL Java_com_squareup_tape_native_QueueFileNative_getFileLength
+JNIEXPORT jint JNICALL Java_com_squareup_tape_QueueFileNative_getFileLength
   (JNIEnv *env, jobject thiz) {
   return 0;
 };
 
-JNIEXPORT void JNICALL Java_com_squareup_tape_native_QueueFileNative_add___3B
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_add___3B
   (JNIEnv *env, jobject thiz, jbyteArray array) {
 
 };
 
-JNIEXPORT void JNICALL Java_com_squareup_tape_native_QueueFileNative_add___3BII
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_add___3BII
   (JNIEnv *env, jobject thiz, jbyteArray array, jint offset, jint count) {
 
 };
 
-JNIEXPORT jboolean JNICALL Java_com_squareup_tape_native_QueueFileNative_isEmpty
+JNIEXPORT jboolean JNICALL Java_com_squareup_tape_QueueFileNative_isEmpty
   (JNIEnv *env, jobject thiz) {
   return false;
 };
 
-JNIEXPORT jbyteArray JNICALL Java_com_squareup_tape_native_QueueFileNative_peek__
+JNIEXPORT jbyteArray JNICALL Java_com_squareup_tape_QueueFileNative_peek__
   (JNIEnv *env, jobject thiz) {
   return NULL;
 };
 
-JNIEXPORT void JNICALL Java_com_squareup_tape_native_QueueFileNative_peek__Lcom_squareup_tape_QueueFile_ElementReader_2
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_peek__Lcom_squareup_tape_QueueFile_ElementReader_2
   (JNIEnv *env, jobject thiz, jobject reader) {
 
 };
 
-JNIEXPORT void JNICALL Java_com_squareup_tape_native_QueueFileNative_forEach
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_forEach
   (JNIEnv *env, jobject thiz, jobject reader) {
 
 };
 
-JNIEXPORT jint JNICALL Java_com_squareup_tape_native_QueueFileNative_size
+JNIEXPORT jint JNICALL Java_com_squareup_tape_QueueFileNative_size
   (JNIEnv *env, jobject thiz) {
   return 0;
 };
 
-JNIEXPORT void JNICALL Java_com_squareup_tape_native_QueueFileNative_remove
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_remove
   (JNIEnv *env, jobject thiz) {
 
 };
 
-JNIEXPORT void JNICALL Java_com_squareup_tape_native_QueueFileNative_clear
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_clear
   (JNIEnv *env, jobject thiz) {
 
 };
 
-JNIEXPORT void JNICALL Java_com_squareup_tape_native_QueueFileNative_close
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_close
   (JNIEnv *env, jobject thiz) {
 
 };
 
-JNIEXPORT jstring JNICALL Java_com_squareup_tape_native_QueueFileNative_toString
+JNIEXPORT jstring JNICALL Java_com_squareup_tape_QueueFileNative_toString
   (JNIEnv *env, jobject thiz) {
   return NULL;
 };
+
+void foo() {
+
+}
+
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved)
+{
+    return JNI_VERSION_1_6;
+}
 
 #ifdef __cplusplus
 }
