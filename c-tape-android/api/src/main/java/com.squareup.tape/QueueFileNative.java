@@ -15,7 +15,9 @@ import java.nio.channels.FileChannel;
 ]-*/
 
 public class QueueFileNative implements QueueFile {
-  ByteBuffer nativeObj;
+  
+  // NOTE: this object is accessed from native code.
+  private ByteBuffer nativeObj;
 
   /**
    * Make SURE you call close() on every object, otherwise the native code will not free
@@ -24,6 +26,7 @@ public class QueueFileNative implements QueueFile {
    * @throws IOException
    */
   public QueueFileNative(String filename) throws IOException {
+    // Stash value for native code to use later.
     nativeObj = nativeNew(filename);
   }
 
@@ -35,14 +38,22 @@ public class QueueFileNative implements QueueFile {
     // objC code here
   ]-*/;
 
-  public native void add(byte[] data) throws IOException /*-[
-    // objC code here
-  ]-*/;
+  public void add(byte[] data) throws IOException {
+    add(data, 0, data.length);
+  }
+    
+  public void add(byte[] data, int offset, int count)
+      throws IOException {
+    if (count + offset > data.length) {
+      throw new IOException("Add attempted with count exceeding length" +
+                            " of data array: " + (count + offset) +
+                            " exceeds length " + data.length);
+    }
+    addUnchecked(data, offset, count);
+  }
 
-  public native void add(byte[] data, int offset, int count) throws IOException /*-[
-    // objC code here
-  ]-*/;
-
+  private native void addUnchecked(byte[] data, int offset, int count);
+                                
   public native boolean isEmpty() /*-[
     // objC code here
   ]-*/;
@@ -51,13 +62,12 @@ public class QueueFileNative implements QueueFile {
     // objC code here
   ]-*/;
 
-  public native void peek(ElementReader reader) throws IOException /*-[
-    // objC code here
-  ]-*/;
+  public void peek(ElementReader reader) throws IOException {
+    
+  }
 
-  public native void forEach(ElementReader reader) throws IOException /*-[
-    // objC code here
-  ]-*/;
+  public void forEach(ElementReader reader) throws IOException {
+  }
 
   public native int size() /*-[
     // objC code here
@@ -79,10 +89,10 @@ public class QueueFileNative implements QueueFile {
     // objC code here
   ]-*/;
 
-  public static void main(String [ ] args) {
-    System.out.println("###################### hello ####################");
-  }
+  private static native void initIDs();
+  
   static {
-      System.loadLibrary("c-tape-android-native");
+    System.loadLibrary("c-tape-android-native");
+    initIDs();
   }
 }

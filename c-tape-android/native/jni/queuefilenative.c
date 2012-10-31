@@ -36,97 +36,110 @@ extern "C" {
 #endif
 
 #include "queuefile.h"
+#include "logutil.h"
 #include "jniutils.h"
 
-QueueFile* getCPointer(JNIEnv *env, jobject directBuffer) {
-  return (QueueFile*) (*env)->GetDirectBufferAddress(env, directBuffer);
+// cached ID for nativeObj field.
+static jfieldID nativeObjId;
+
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_initIDs(
+    JNIEnv *env, jclass cls) {
+  nativeObjId = (*env)->GetFieldID(env, cls, "nativeObj", "Ljava/nio/ByteBuffer;");
 }
 
-jobject wrapCPointer(JNIEnv *env, QueueFile* p) {
+static QueueFile* getCPointer(JNIEnv *env, jobject thiz) {
+  jobject directBuffer = (*env)->GetObjectField(env, thiz, nativeObjId);
+  if (directBuffer == NULL) {
+    LOG(LWARN, "Bad native object");
+    throwIoException(env, "bad native queuefile object.");
+    return NULL;
+  }
+  QueueFile* qf = (QueueFile*) (*env)->GetDirectBufferAddress(env, directBuffer);
+  if (qf == NULL) {
+    LOG(LWARN, "Bad native object");
+    throwIoException(env, "bad native object: %p", qf);
+  }
+  return qf;
+}
+
+static jobject wrapCPointer(JNIEnv *env, QueueFile* p) {
   // Allocate DBB of size 0 since we don't want anyone messing with it.
   return (*env)->NewDirectByteBuffer(env, (void*) p, 0);
 }
 
+  
 JNIEXPORT jobject JNICALL Java_com_squareup_tape_QueueFileNative_nativeNew
-  (JNIEnv *env, jobject thisz, jstring filename) {
-
+    (JNIEnv *env, jobject thisz, jstring filename) {
   const char* fname = (*env)->GetStringUTFChars(env, filename, NULL);
   QueueFile *qf = QueueFile_new(fname);
-  (*env)->ReleaseStringUTFChars(env, filename, fname);
-
-  jobject wrappedPointer = 0;
+  jobject wrappedPointer = NULL;
   if (qf == NULL) {
-    throwIoException(env, "Could not create queuefile %s", fname);
+    throwIoException(env, "Could not create queuefile: %s", fname);
   } else {
-    jobject wrappedPointer = wrapCPointer(env, qf);
+    wrappedPointer = wrapCPointer(env, qf);
   }
-
+  (*env)->ReleaseStringUTFChars(env, filename, fname);
   return wrappedPointer;
 };
 
-JNIEXPORT jint JNICALL Java_com_squareup_tape_QueueFileNative_getFileLength
-  (JNIEnv *env, jobject thiz) {
-  return 0;
+JNIEXPORT jint JNICALL Java_com_squareup_tape_QueueFileNative_getFileLength(
+    JNIEnv *env, jobject thiz) {
+  QueueFile* qf = getCPointer(env, thiz);
+  if (qf == NULL) return;
+  return QueueFile_getFileLength(qf);
+}
+  
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_addUnchecked(
+    JNIEnv *env, jobject thiz, jbyteArray data, jint offset, jint length) {
+  QueueFile* qf = getCPointer(env, thiz);
+  if (qf == NULL) return;
+  //####jochen
+}
+  
+JNIEXPORT jboolean JNICALL Java_com_squareup_tape_QueueFileNative_isEmpty(
+    JNIEnv *env, jobject thiz) {
+  QueueFile* qf = getCPointer(env, thiz);
+  if (qf == NULL) return;
+  return (jboolean)QueueFile_isEmpty(qf);
 };
 
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_add___3B
-  (JNIEnv *env, jobject thiz, jbyteArray array) {
-
+JNIEXPORT jint JNICALL Java_com_squareup_tape_QueueFileNative_size(
+    JNIEnv *env, jobject thiz) {
+  QueueFile* qf = getCPointer(env, thiz);
+  return (jint)QueueFile_size(qf);
 };
 
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_add___3BII
-  (JNIEnv *env, jobject thiz, jbyteArray array, jint offset, jint count) {
-
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_remove(
+    JNIEnv *env, jobject thiz) {
+  QueueFile* qf = getCPointer(env, thiz);
+  if (qf == NULL) return;
+  if (!QueueFile_remove(qf)) throwIoException(env, "Error removing item");
 };
 
-JNIEXPORT jboolean JNICALL Java_com_squareup_tape_QueueFileNative_isEmpty
-  (JNIEnv *env, jobject thiz) {
-  return false;
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_clear(
+    JNIEnv *env, jobject thiz) {
+  QueueFile* qf = getCPointer(env, thiz);
+  if (qf == NULL) return;
+  if (!QueueFile_clear(qf)) throwIoException(env, "Error clearing queue.");
 };
 
-JNIEXPORT jbyteArray JNICALL Java_com_squareup_tape_QueueFileNative_peek__
-  (JNIEnv *env, jobject thiz) {
-  return NULL;
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_close(
+    JNIEnv *env, jobject thiz) {
+  QueueFile* qf = getCPointer(env, thiz);
+  if (qf == NULL) return;
+  if (!QueueFile_closeAndFree(qf)) throwIoException(env, "Error closing queue.");
 };
 
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_peek__Lcom_squareup_tape_QueueFile_ElementReader_2
-  (JNIEnv *env, jobject thiz, jobject reader) {
-
-};
-
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_forEach
-  (JNIEnv *env, jobject thiz, jobject reader) {
-
-};
-
-JNIEXPORT jint JNICALL Java_com_squareup_tape_QueueFileNative_size
-  (JNIEnv *env, jobject thiz) {
-  return 0;
-};
-
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_remove
-  (JNIEnv *env, jobject thiz) {
-
-};
-
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_clear
-  (JNIEnv *env, jobject thiz) {
-
-};
-
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_close
-  (JNIEnv *env, jobject thiz) {
-
-};
-
-JNIEXPORT jstring JNICALL Java_com_squareup_tape_QueueFileNative_toString
-  (JNIEnv *env, jobject thiz) {
-  return NULL;
+JNIEXPORT jstring JNICALL Java_com_squareup_tape_QueueFileNative_toString(
+  JNIEnv *env, jobject thiz) {
+  // TODO(jochen): implement this.
+  char msg[] = "toString() to be implemented";
+  return (*env)->NewStringUTF(env, msg);
 };
 
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved)
 {
-    return JNI_VERSION_1_6;
+  return JNI_VERSION_1_6;
 }
 
 #ifdef __cplusplus

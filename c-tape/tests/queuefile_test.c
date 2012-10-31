@@ -144,6 +144,11 @@ static void testAddAndRemoveElements() {
   LOG(LINFO, "Ran in %lf seconds.", difftime(stop, start));
 }
 
+static void testFileLength() {
+  mu_assert(FileIo_getLength(_for_testing_QueueFile_getFhandle(queue)) ==
+            QueueFile_getFileLength(queue));
+}
+
 /** Tests queue expansion when the data crosses EOF. */
 static void testSplitExpansion() {
   // This should result in 3560 bytes.
@@ -483,6 +488,7 @@ int main() {
   LOG_SETDEBUGFAILLEVEL_WARN;
   mu_run_test(testSimpleAddOneElement);
   mu_run_test(testAddOneElement);
+  mu_run_test(testFileLength);
   mu_run_test(testAddAndRemoveElements);
   mu_run_test(testSplitExpansion);
   mu_run_test(testFileExpansionDoesntCorruptWrappedElements);

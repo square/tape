@@ -390,6 +390,15 @@ bool QueueFile_isEmpty(QueueFile* qf) {
   return elementCount;
 }
 
+// see description in queuefile.h.
+uint32_t QueueFile_getFileLength(QueueFile* qf) {
+  if (NULLARG(qf)) return true;
+  pthread_mutex_lock(&qf->mutex);
+  uint32_t length = qf->fileLength;
+  pthread_mutex_unlock(&qf->mutex);
+  return length;
+}
+
 static bool QueueFile_expandIfNecessary(QueueFile* qf, uint32_t dataLength);
 
 // see description in queuefile.h.

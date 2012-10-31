@@ -25,18 +25,10 @@ JNIEXPORT jint JNICALL Java_com_squareup_tape_QueueFileNative_getFileLength
 
 /*
  * Class:     com_squareup_tape_QueueFileNative
- * Method:    add
- * Signature: ([B)V
- */
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_add___3B
-  (JNIEnv *, jobject, jbyteArray);
-
-/*
- * Class:     com_squareup_tape_QueueFileNative
- * Method:    add
+ * Method:    addUnchecked
  * Signature: ([BII)V
  */
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_add___3BII
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_addUnchecked
   (JNIEnv *, jobject, jbyteArray, jint, jint);
 
 /*
@@ -52,24 +44,8 @@ JNIEXPORT jboolean JNICALL Java_com_squareup_tape_QueueFileNative_isEmpty
  * Method:    peek
  * Signature: ()[B
  */
-JNIEXPORT jbyteArray JNICALL Java_com_squareup_tape_QueueFileNative_peek__
+JNIEXPORT jbyteArray JNICALL Java_com_squareup_tape_QueueFileNative_peek
   (JNIEnv *, jobject);
-
-/*
- * Class:     com_squareup_tape_QueueFileNative
- * Method:    peek
- * Signature: (Lcom/squareup/tape/QueueFile/ElementReader;)V
- */
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_peek__Lcom_squareup_tape_QueueFile_ElementReader_2
-  (JNIEnv *, jobject, jobject);
-
-/*
- * Class:     com_squareup_tape_QueueFileNative
- * Method:    forEach
- * Signature: (Lcom/squareup/tape/QueueFile/ElementReader;)V
- */
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_forEach
-  (JNIEnv *, jobject, jobject);
 
 /*
  * Class:     com_squareup_tape_QueueFileNative
@@ -110,6 +86,14 @@ JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_close
  */
 JNIEXPORT jstring JNICALL Java_com_squareup_tape_QueueFileNative_toString
   (JNIEnv *, jobject);
+
+/*
+ * Class:     com_squareup_tape_QueueFileNative
+ * Method:    initIDs
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_initIDs
+  (JNIEnv *, jclass);
 
 #ifdef __cplusplus
 }

@@ -71,6 +71,12 @@ QueueFile* QueueFile_new(const char* filename);
 bool QueueFile_closeAndFree(QueueFile* qf);
 
 /**
+ * @param qf queuefile.
+ * @return the length of the underlying file, or 0 if NULL is passed.
+ */
+uint32_t QueueFile_getFileLength(QueueFile* qf);
+
+/**
  * Adds an element to the end of the queue.
  * @param qf queuefile
  * @param data to copy bytes from
