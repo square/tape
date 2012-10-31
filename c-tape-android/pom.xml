@@ -16,20 +16,56 @@
     <packaging>pom</packaging>
 
     <modules>
-      <module>api</module>
       <module>native</module>
-    </modules>  
+      <module>api</module>
+      <module>api-test</module>
+    </modules>
+
     <dependencies>
-        <dependency>
-            <groupId>com.squareup</groupId>
-            <artifactId>c-tape</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.squareup</groupId>
-            <artifactId>tape</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+      <dependency>
+        <groupId>com.squareup</groupId>
+        <artifactId>tape</artifactId>
+        <version>${project.version}</version>
+      </dependency>
     </dependencies>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.8.1</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.android</groupId>
+        <artifactId>android</artifactId>
+        <version>2.3.3</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.android</groupId>
+        <artifactId>android-test</artifactId>
+        <version>2.3.3</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>com.jayway.maven.plugins.android.generation2</groupId>
+          <artifactId>android-maven-plugin</artifactId>
+          <version>3.3.2</version>
+
+          <configuration>
+            <!--<sdk>-->
+              <!--<platform>16</platform>-->
+            <!--</sdk>-->
+            <undeployBeforeDeploy>true</undeployBeforeDeploy>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
 
 </project>

@@ -14,14 +14,6 @@
   <packaging>so</packaging>
   <name>C Tape native code</name>
 
-  <dependencies>
-    <dependency>
-        <groupId>com.squareup</groupId>
-        <artifactId>c-tape</artifactId>
-        <version>${project.version}</version>
-    </dependency>
-  </dependencies>
-
   <build>
     <plugins>
       <plugin>
