@@ -57,10 +57,10 @@ JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_nativePeekWithRead
 
 /*
  * Class:     com_squareup_tape_QueueFileNative
- * Method:    forEach
- * Signature: (Lcom/squareup/tape/QueueFile/ElementReader;)V
+ * Method:    nativeForEach
+ * Signature: (Lcom/squareup/tape/QueueFileNative/NativeCallback;)V
  */
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_forEach
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_nativeForEach
   (JNIEnv *, jobject, jobject);
 
 /*
@@ -119,6 +119,14 @@ JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_initIDs
 JNIEXPORT jint JNICALL Java_com_squareup_tape_QueueFileNative_nativeReadElementStream
   (JNIEnv *, jclass, jobject, jbyteArray, jint, jint);
 
+/*
+ * Class:     com_squareup_tape_QueueFileNative
+ * Method:    nativeReadElementStreamNextByte
+ * Signature: (Ljava/nio/ByteBuffer;)I
+ */
+JNIEXPORT jint JNICALL Java_com_squareup_tape_QueueFileNative_nativeReadElementStreamNextByte
+  (JNIEnv *, jclass, jobject);
+
 #ifdef __cplusplus
 }
 #endif
@@ -130,7 +138,6 @@ JNIEXPORT jint JNICALL Java_com_squareup_tape_QueueFileNative_nativeReadElementS
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 /*
  * Class:     com_squareup_tape_QueueFileNative_NativeCallback
  * Method:    initIDs

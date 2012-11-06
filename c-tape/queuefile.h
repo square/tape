@@ -122,6 +122,7 @@ int64_t QueueFile_readElementStream(QueueFile_ElementStream* stream,
  * @param stream pointer to element stream.
  * @return as int, or -1 if the element has ended, or on error.
  *
+ * TODO(jochen): this is not buffered, consider adding buffering.
  * *********************************************************
  * WARNING! MUST ONLY BE USED INSIDE A CALLBACK FROM FOREACH
  * as this ensures the queuefile is under mutex lock.

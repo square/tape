@@ -66,7 +66,7 @@ public class QueueFileNative implements QueueFile {
     // objC code here
   ]-*/;
 
-  private native void nativePeekWithReader(NativeCallback eis) throws
+  private native void nativePeekWithReader(NativeCallback ncb) throws
       IOException /*-[
     // objC code here
   ]-*/;
@@ -76,10 +76,14 @@ public class QueueFileNative implements QueueFile {
     nativePeekWithReader(new NativeCallback(reader));
   }
 
-  @Override
-  public native void forEach(ElementReader reader) throws IOException /*-[
+  private native void nativeForEach(NativeCallback ncb) throws IOException /*-[
     // objC code here
   ]-*/;
+
+  @Override
+  public void forEach(ElementReader reader) throws IOException {
+    nativeForEach(new NativeCallback(reader));
+  }
 
   @Override
   public native int size() /*-[
@@ -114,7 +118,11 @@ public class QueueFileNative implements QueueFile {
   }
 
   private static native int nativeReadElementStream(ByteBuffer streamHandle, byte[] buffer, int offset, int length)
-      throws  IOException/*-[
+      throws  IOException /*-[
+    // objC code here
+  ]-*/;
+
+  private static native int nativeReadElementStreamNextByte(ByteBuffer streamHandle)  throws  IOException /*-[
     // objC code here
   ]-*/;
 
@@ -142,12 +150,11 @@ public class QueueFileNative implements QueueFile {
             throw new ArrayIndexOutOfBoundsException("read buffer won't fit length");
           }
           int bytesRead = nativeReadElementStream(streamHandle, buffer, offset, length);
-          //###jochen NOTE: this point IS reached.
           return bytesRead;
         }
 
         @Override public int read() throws IOException {
-          return -1; // ####jochen - IMPLEMENT THIS
+          return nativeReadElementStreamNextByte(streamHandle);
         }
       }, length);
     }

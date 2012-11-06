@@ -371,7 +371,6 @@ static bool QueueFile_ringRead(QueueFile* qf, uint32_t position, byte* buffer,
     // The read overlaps the EOF.
     // # of bytes to read before the EOF.
     uint32_t beforeEof = qf->fileLength - position;
-
     success = FileIo_seek(qf->file, position) &&
               FileIo_read(qf->file, buffer, offset, beforeEof) &&
               FileIo_seek(qf->file, QueueFile_HEADER_LENGTH) &&
@@ -568,8 +567,9 @@ struct _QueueFile_ElementStream {
 };
 
 // see description in queuefile.h.
-int64_t QueueFile_readElementStream(QueueFile_ElementStream* stream, byte* buffer,
-                                 uint32_t length, uint32_t* lengthRemaining) {
+int64_t QueueFile_readElementStream(QueueFile_ElementStream* stream,
+                                    byte* buffer, uint32_t length,
+                                    uint32_t* lengthRemaining) {
   if (NULLARG(stream) || NULLARG(buffer) || NULLARG(lengthRemaining) ||
       NULLARG(stream->qf)) return -1;
   *lengthRemaining = 0;

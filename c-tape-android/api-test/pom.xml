@@ -50,7 +50,7 @@
         <configuration>
           <test>
             <!--<testsize>small|medium|large</testsize>-->
-            <testSize>small</testSize>
+            <testSize>medium</testSize>
             <createReport>true</createReport>
           </test>
         </configuration>

@@ -124,36 +124,37 @@ public class QueueFileNativeTests extends AndroidTestCase {
     assertThat(queueFile.size()).isEqualTo(1);
   }
   
-//  public void testForEach() throws IOException {
-//    final byte[] a = {1, 2};
-//    queueFile.add(a);
-//    final byte[] b = {3, 4, 5};
-//    queueFile.add(b);
-//    
-//    final int[] iteration = new int[]{0};
-//    ElementReader elementReader = new ElementReader() {
-//      @Override public void read(InputStream in, int length) throws IOException {
-//        if (iteration[0] == 0) {
-//          assertThat(length).isEqualTo(2);
-//          byte[] actual = new byte[length];
-//          in.read(actual);
-//          assertThat(actual).isEqualTo(a);
-//        } else if (iteration[0] == 1) {
-//          assertThat(length).isEqualTo(3);
-//          byte[] actual = new byte[length];
-//          in.read(actual);
-//          assertThat(actual).isEqualTo(b);
-//        } else {
-//          fail();
-//        }
-//        iteration[0]++;
-//      }
-//    };
-//    
-//    queueFile.forEach(elementReader);
-//    
-//    assertThat(queueFile.peek()).isEqualTo(a);
-//    assertThat(iteration[0]).isEqualTo(2);
-//  }
+  public void testForEach() throws IOException {
+    final byte[] a = {1, 2};
+    queueFile.add(a);
+    final byte[] b = {3, 4, 5};
+    queueFile.add(b);
+    assertThat(queueFile.size()).isEqualTo(2);
+
+    final int[] iteration = new int[]{0};
+    ElementReader elementReader = new ElementReader() {
+      @Override public void read(InputStream in, int length) throws IOException {
+        if (iteration[0] == 0) {
+          assertThat(length).isEqualTo(2);
+          byte[] actual = new byte[length];
+          in.read(actual);
+          assertThat(actual).isEqualTo(a);
+        } else if (iteration[0] == 1) {
+          assertThat(length).isEqualTo(3);
+          byte[] actual = new byte[length];
+          in.read(actual);
+          assertThat(actual).isEqualTo(b);
+        } else {
+          fail();
+        }
+        iteration[0]++;
+      }
+    };
+
+    queueFile.forEach(elementReader);
+
+    assertThat(queueFile.peek()).isEqualTo(a);
+    assertEquals(2, iteration[0]);
+  }
   
 }

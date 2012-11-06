@@ -175,16 +175,12 @@ JNIEXPORT void JNICALL
     jobject streamHandle = wrapCPointer(env, stream);
     if ((*env)->ExceptionCheck(env) || streamHandle == NULL) return false;
     jclass cls = (*env)->GetObjectClass(env, nativeCallbackObj);
-    LOG(LWARN, "ABOUT TO CALLBACK #########jochen %p %p %p %p cls:%p", nativeCallbackObj, callbackFuncId, streamHandle, stream, cls);
     (*env)->CallVoidMethod(env, nativeCallbackObj, callbackFuncId,
                              streamHandle, (jint) length);
-    LOG(LWARN, "DONE WITH CALLBACK ###jochen");
     if ((*env)->ExceptionCheck(env)) return false;
     return true;
   }
-     
   QueueFile_peekWithElementReader(qf, peekReader);
-  LOG(LWARN, "DONE PEEKING ###jochen");
 }
 
 // return -1 if at end of stream, else number of bytes actually read.
@@ -192,19 +188,21 @@ JNIEXPORT jint JNICALL
     Java_com_squareup_tape_QueueFileNative_nativeReadElementStream(
     JNIEnv *env, jclass cls, jobject streamHandle, jbyteArray data,
     jint offset, jint length) {
-      LOG(LWARN, "1READ STREAM #########jochen %p %p %p %p %d", cls, streamHandle, data, offset, length);
-    if (streamHandle == NULL || data == NULL) {
-      throwIoException(env, "Null pointer passed.");
-      return -1;
-    }
-      LOG(LWARN, "2READ STREAM #########jochen %p %p %p %p %d", cls, streamHandle, data, offset, length);
+      
+  if (streamHandle == NULL || data == NULL) {
+    throwIoException(env, "Null pointer passed.");
+    return -1;
+  }
   QueueFile_ElementStream* stream = unwrapCPointer(env, streamHandle);
-  if ((*env)->ExceptionCheck(env) || stream == NULL) return;
+  if ((*env)->ExceptionCheck(env) || stream == NULL) return -1;
+
+  jboolean isCopy;
+  jbyte* buffer = (*env)->GetByteArrayElements(env, data, &isCopy);
+  if ((*env)->ExceptionCheck(env)) return -1;
   
-      LOG(LWARN, "READ STREAM #########jochen %p %p %p %p %d %p", cls, streamHandle, data, offset, length, stream);
   uint32_t lengthRemaining = -1;
   int64_t bytesRead = QueueFile_readElementStream(stream,
-                                                  ((byte*) data) + offset,
+                                                  ((byte*) buffer) + offset,
                                                   length, &lengthRemaining);
   jint retval = -1;
   if (bytesRead == -1) {
@@ -215,13 +213,44 @@ JNIEXPORT jint JNICALL
     // weird error condition, or length was 0!
     throwIoException(env, "error reading from stream or unexpected length? asked to read %d", length);
   }
-      LOG(LWARN, "###jochen returned %d", retval);
+  (*env)->ReleaseByteArrayElements(env, data, buffer, retval > 0 ? JNI_COMMIT :
+                                   JNI_ABORT);
+  if ((*env)->ExceptionCheck(env)) return -1;
   return retval;
 }
+
+JNIEXPORT jint JNICALL
+    Java_com_squareup_tape_QueueFileNative_nativeReadElementStreamNextByte(
+    JNIEnv *env, jclass cls, jobject streamHandle) {
+
+  if (streamHandle == NULL) {
+    throwIoException(env, "Null pointer passed.");
+    return -1;
+  }
+  QueueFile_ElementStream* stream = unwrapCPointer(env, streamHandle);
+  if ((*env)->ExceptionCheck(env) || stream == NULL) return -1;
+
+  return QueueFile_readElementStreamNextByte(stream);
+}
+
+JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_nativeForEach(
+    JNIEnv *env, jobject thiz, jobject nativeCallbackObj) {
   
-JNIEXPORT void JNICALL Java_com_squareup_tape_QueueFileNative_forEach(
-    JNIEnv *env, jobject thisz, jobject reader) {
-  //###jochen - finish this.
+  QueueFile* qf = getCPointer(env, thiz, nativeObjId);
+  if (qf == NULL) return;
+  if ((*env)->ExceptionCheck(env)) return;
+  
+  // Inner function: env and nativeCallbackObj are curried.
+  bool forEachReader(QueueFile_ElementStream* stream, uint32_t length) {
+    jobject streamHandle = wrapCPointer(env, stream);
+    if ((*env)->ExceptionCheck(env) || streamHandle == NULL) return false;
+    jclass cls = (*env)->GetObjectClass(env, nativeCallbackObj);
+    (*env)->CallVoidMethod(env, nativeCallbackObj, callbackFuncId,
+                           streamHandle, (jint) length);
+    if ((*env)->ExceptionCheck(env)) return false;
+    return true;
+  }
+  QueueFile_forEach(qf, forEachReader);
 }
 
 JNIEXPORT jint JNICALL Java_com_squareup_tape_QueueFileNative_size(
