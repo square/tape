@@ -49,8 +49,8 @@ import java.util.logging.Logger;
  *
  * @author Bob Lee (bob@squareup.com)
  */
-public class QueueFileImpl implements QueueFile {
-  private static final Logger LOGGER = Logger.getLogger(QueueFileImpl.class.getName());
+public class QueueFileJava implements QueueFile {
+  private static final Logger LOGGER = Logger.getLogger(QueueFileJava.class.getName());
 
   /** Initial file size in bytes. */
   private static final int INITIAL_LENGTH = 4096; // one file system block
@@ -109,14 +109,14 @@ public class QueueFileImpl implements QueueFile {
    * Constructs a new queue backed by the given file. Only one {@code QueueFile}
    * instance should access a given file at a time.
    */
-  public QueueFileImpl(File file) throws IOException {
+  public QueueFileJava(File file) throws IOException {
     if (!file.exists()) initialize(file);
     raf = open(file);
     readHeader();
   }
 
   /** For testing. */
-  QueueFileImpl(RandomAccessFile raf) throws IOException {
+  QueueFileJava(RandomAccessFile raf) throws IOException {
     this.raf = raf;
     readHeader();
   }

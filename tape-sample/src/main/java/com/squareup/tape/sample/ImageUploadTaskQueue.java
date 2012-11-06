@@ -10,7 +10,7 @@ import com.squareup.tape.FileObjectQueue;
 import com.squareup.tape.FileObjectQueue.Converter;
 import com.squareup.tape.ObjectQueue;
 import com.squareup.tape.QueueFile;
-import com.squareup.tape.QueueFileImpl;
+import com.squareup.tape.QueueFileJava;
 import com.squareup.tape.TaskQueue;
 
 import java.io.File;
@@ -57,7 +57,7 @@ public class ImageUploadTaskQueue extends TaskQueue<ImageUploadTask> {
     Converter<ImageUploadTask> converter = new GsonConverter<ImageUploadTask>(gson, ImageUploadTask.class);
     FileObjectQueue<ImageUploadTask> delegate;
     try {
-      QueueFile queueFile = new QueueFileImpl(new File(context.getFilesDir(), FILENAME));
+      QueueFile queueFile = new QueueFileJava(new File(context.getFilesDir(), FILENAME));
       delegate = new FileObjectQueue<ImageUploadTask>(queueFile, converter);
     } catch (IOException e) {
       throw new RuntimeException("Unable to create file queue.", e);
