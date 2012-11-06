@@ -25,13 +25,12 @@ import static org.fest.assertions.Fail.fail;
 public class QueueFileNativeTests extends AndroidTestCase {
 
   private QueueFileNative queueFile;
-  private String queueFilename;
+  private final static String queueFilename = "unittest.queue";
   private byte[] testData;
 
   @Override
   protected void setUp() throws IOException {
-    queueFilename = getContext().getFilesDir().toString() + "unittest.queue";
-    queueFile = new QueueFileNative(queueFilename);
+    queueFile = new QueueFileNative(getContext().getFilesDir().toString(), queueFilename);
     queueFile.clear();
     assertNotNull(queueFile);
     testData = new byte[100];
@@ -43,6 +42,8 @@ public class QueueFileNativeTests extends AndroidTestCase {
   @Override
   protected void tearDown() throws IOException {
     queueFile.close();
+    File file = new File(getContext().getFilesDir().toString(), queueFilename);
+    file.delete();
   }
 
   
@@ -57,6 +58,13 @@ public class QueueFileNativeTests extends AndroidTestCase {
     } catch (IOException expected) {
       // expected
     }
+  }
+
+  public void testCombinedFileName() throws IOException {
+    QueueFileNative badQueue = new QueueFileNative(getContext().getFilesDir().toString(), "foobar.queue");
+    badQueue.close();
+    File file = new File(getContext().getFilesDir().toString(), "foobar.queue");
+    file.delete();
   }
 
 //  @SmallTest

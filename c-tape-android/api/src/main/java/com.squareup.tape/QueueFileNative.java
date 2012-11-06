@@ -2,6 +2,8 @@ package com.squareup.tape;
 
 import com.squareup.tape.QueueFile;
 import com.squareup.tape.QueueFile.ElementReader;
+
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
@@ -29,6 +31,18 @@ public class QueueFileNative implements QueueFile {
   public QueueFileNative(String filename) throws IOException {
     // Stash value for native code to use later.
     nativeObj = nativeNew(filename);
+  }
+
+  /**
+   * Make SURE you call close() on every object, otherwise the native code will not free
+   * associated resources (memory and file handle).
+   * @param path
+   * @param filename
+   * @throws IOException
+   */
+  public QueueFileNative(String path, String filename) throws IOException {
+    // Stash value for native code to use later.
+    nativeObj = nativeNew(new File(path, filename).getPath());
   }
 
   private native ByteBuffer nativeNew(String filename) /*-[

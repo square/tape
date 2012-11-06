@@ -149,11 +149,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_squareup_tape_QueueFileNative_peek__(
   //               the additional memcpy here, direct buffers aren't freed in
   //               the JVM, so can't use DirectByteBuffer with data.
 
-  LOG(LWARN, "got data with %d bytes", returnedLength);
   jbyteArray newData = (*env)->NewByteArray(env, returnedLength);
   if (!(*env)->ExceptionCheck(env) && newData != NULL) {
     (*env)->SetByteArrayRegion(env, newData, 0, returnedLength, (jbyte*) data);
-    LOG(LWARN, "copied data with %d bytes", returnedLength);
   }
   free(data);
   return newData;
