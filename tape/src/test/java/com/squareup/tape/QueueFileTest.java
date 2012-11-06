@@ -184,7 +184,7 @@ public class QueueFileTest {
   }
 
   @Test public void testFailedExpansion() throws IOException {
-    QueueFile queueFile = new QueueFileImpl(file);
+    QueueFileImpl  queueFile = new QueueFileImpl(file);
     queueFile.add(values[253]);
     queueFile.close();
 

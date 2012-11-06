@@ -44,15 +44,12 @@ import java.io.InputStream;
  */
 public interface QueueFile {
 
-  /** for testing */
-  int getFileLength();
-
   /**
    * Adds an element to the end of the queue.
    *
    * @param data to copy bytes from
    */
-  public void add(byte[] data) throws IOException;
+  void add(byte[] data) throws IOException;
   
   /**
    * Adds an element to the end of the queue.
@@ -63,45 +60,43 @@ public interface QueueFile {
    * @throws IndexOutOfBoundsException if {@code offset < 0} or {@code count < 0}, or if {@code offset + count} is
    *                                   bigger than the length of {@code buffer}.
    */
-  public void add(byte[] data, int offset, int count) throws IOException;
+  void add(byte[] data, int offset, int count) throws IOException;
   
 
   /** Reads the eldest element. Returns null if the queue is empty. */
-  public byte[] peek() throws IOException;
+  byte[] peek() throws IOException;
 
   /** Invokes reader with the eldest element, if an element is available. */
-  public void peek(ElementReader reader) throws IOException;
+  void peek(ElementReader reader) throws IOException;
 
   /**
    * Invokes the given reader once for each element in the queue, from eldest to
    * most recently added.
    */
-  public void forEach(ElementReader reader) throws IOException;
+  void forEach(ElementReader reader) throws IOException;
 
 
   /** Returns the number of elements in this queue. */
-  public int size();
+  int size();
 
   /**
    * Removes the eldest element.
    *
    * @throws java.util.NoSuchElementException if the queue is empty
    */
-  public void remove() throws IOException;
+  void remove() throws IOException;
 
   /** Clears this queue. Truncates the file to the initial size. */
-  public void clear() throws IOException;
+  void clear() throws IOException;
 
   /** Closes the underlying file. */
-  public void close() throws IOException;
-
-  @Override public String toString();
+  void close() throws IOException;
 
    /**
    * Reads queue elements. Enables partial reads as opposed to reading all of
    * the bytes into a byte[].
    */
-  public interface ElementReader {
+  interface ElementReader {
 
     /*
      * TODO: Support remove() call from read().

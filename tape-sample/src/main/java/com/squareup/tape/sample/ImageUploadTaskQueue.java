@@ -6,8 +6,12 @@ import android.content.Intent;
 import com.google.gson.Gson;
 import com.squareup.otto.Bus;
 import com.squareup.otto.Produce;
-import com.squareup.tape.*;
+import com.squareup.tape.FileObjectQueue;
 import com.squareup.tape.FileObjectQueue.Converter;
+import com.squareup.tape.ObjectQueue;
+import com.squareup.tape.QueueFile;
+import com.squareup.tape.QueueFileImpl;
+import com.squareup.tape.TaskQueue;
 
 import java.io.File;
 import java.io.IOException;

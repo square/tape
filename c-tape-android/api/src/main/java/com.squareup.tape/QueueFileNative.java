@@ -35,7 +35,6 @@ public class QueueFileNative implements QueueFile {
     // objC code here
   ]-*/;
 
-  @Override
   public native int getFileLength() /*-[
     // objC code here
   ]-*/;

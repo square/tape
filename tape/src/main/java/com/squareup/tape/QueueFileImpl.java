@@ -88,7 +88,8 @@ public class QueueFileImpl implements QueueFile {
   /** Cached file length. Always a power of 2. */
   private int fileLength;
 
-  public int getFileLength() {
+  /** for testing */
+  int getFileLength() {
     return fileLength;
   }
 
