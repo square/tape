@@ -35,14 +35,17 @@ public class QueueFileNative implements QueueFile {
     // objC code here
   ]-*/;
 
+  @Override
   public native int getFileLength() /*-[
     // objC code here
   ]-*/;
 
+  @Override
   public void add(byte[] data) throws IOException {
     add(data, 0, data.length);
   }
-    
+
+  @Override
   public void add(byte[] data, int offset, int count)
       throws IOException {
     if (count + offset > data.length) {
@@ -54,11 +57,12 @@ public class QueueFileNative implements QueueFile {
   }
 
   private native void addUnchecked(byte[] data, int offset, int count);
-                                
+
   public native boolean isEmpty() /*-[
     // objC code here
   ]-*/;
 
+  @Override
   public native byte[] peek() throws IOException /*-[
     // objC code here
   ]-*/;
@@ -68,30 +72,37 @@ public class QueueFileNative implements QueueFile {
     // objC code here
   ]-*/;
 
+  @Override
   public void peek(ElementReader reader) throws IOException {
     nativePeekWithReader(new NativeCallback(reader));
   }
 
+  @Override
   public native void forEach(ElementReader reader) throws IOException /*-[
     // objC code here
   ]-*/;
 
+  @Override
   public native int size() /*-[
     // objC code here
   ]-*/;
 
+  @Override
   public native void remove() throws IOException /*-[
     // objC code here
   ]-*/;
 
+  @Override
   public native void clear() throws IOException /*-[
     // objC code here
   ]-*/;
 
+  @Override
   public native void close() throws IOException /*-[
     // objC code here
   ]-*/;
 
+  @Override
   public native String toString() /*-[
     // objC code here
   ]-*/;

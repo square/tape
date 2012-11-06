@@ -2,6 +2,7 @@ package com.squareup.tape;
 
 import android.content.Context;
 import android.test.AndroidTestCase;
+import android.test.suitebuilder.annotation.MediumTest;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Log;
 import com.squareup.tape.QueueFile.ElementReader;
@@ -20,11 +21,8 @@ import static org.fest.assertions.Fail.fail;
  * Unit tests for the API calls. Rigorous testing of Queue functionality is 
  * done in native tests.
  */
+@MediumTest
 public class QueueFileNativeTests extends AndroidTestCase {
-
-  public QueueFileNativeTests() {
-    super();
-  }
 
   private QueueFileNative queueFile;
   private String queueFilename;
@@ -35,7 +33,7 @@ public class QueueFileNativeTests extends AndroidTestCase {
     queueFilename = getContext().getFilesDir().toString() + "unittest.queue";
     queueFile = new QueueFileNative(queueFilename);
     queueFile.clear();
-    assertTrue(queueFile != null);
+    assertNotNull(queueFile);
     testData = new byte[100];
     for (byte i = 0; i < 100; i++) {
       testData[i] = i;
@@ -48,17 +46,15 @@ public class QueueFileNativeTests extends AndroidTestCase {
   }
 
   
-  @SmallTest
   public void testEmptyQueueSize() throws IOException {
-    assertTrue(queueFile.size() == 0);
+    assertEquals(0, queueFile.size());
   }
 
-  @SmallTest
   public void testBadFileNameException() {
     try {
       QueueFileNative badQueue = new QueueFileNative("/// ~! !@#$$#%$%&&%^*");
-      fail();
-    } catch (IOException e) {
+      fail("should not be able to create queue with invalid file name");
+    } catch (IOException expected) {
       // expected
     }
   }
@@ -75,17 +71,15 @@ public class QueueFileNativeTests extends AndroidTestCase {
 //    }
 //  }
   
-  @SmallTest
   public void testSimpleAddAndPeek() throws IOException {
     queueFile.add(testData);
-    assertTrue(queueFile.size() == 1);
+    assertEquals(1, queueFile.size());
     byte retval[] = queueFile.peek();
     assertThat(retval).isEqualTo(testData);
     queueFile.remove();
-    assertTrue(queueFile.size() == 0);
+    assertEquals(0, queueFile.size());
   }
 
-  @SmallTest
   public void testPeekWithElementReader() throws IOException {
     final byte[] a = {1, 2};
     queueFile.add(a);
@@ -130,7 +124,6 @@ public class QueueFileNativeTests extends AndroidTestCase {
     assertThat(queueFile.size()).isEqualTo(1);
   }
   
-//  @SmallTest
 //  public void testForEach() throws IOException {
 //    final byte[] a = {1, 2};
 //    queueFile.add(a);
