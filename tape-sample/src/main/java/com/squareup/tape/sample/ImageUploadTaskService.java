@@ -37,7 +37,7 @@ public class ImageUploadTaskService extends Service implements Callback {
       running = true;
       task.execute(this);
     } else {
-      Log.i(TAG, "Service starting!");
+      Log.i(TAG, "Service stopping!");
       stopSelf(); // No more tasks are present. Stop.
     }
   }
