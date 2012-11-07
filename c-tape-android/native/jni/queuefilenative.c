@@ -140,7 +140,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_squareup_tape_QueueFileNative_peek__(
   uint32_t returnedLength;
   byte* data = QueueFile_peek(qf, &returnedLength);
   if (data == NULL) {
-    throwIoException(env, "Could not peek on queue.");
+    if (!QueueFile_isEmpty(qf)) {
+      throwIoException(env, "Could not peek on queue.");
+    }
     return NULL;
   }
 
