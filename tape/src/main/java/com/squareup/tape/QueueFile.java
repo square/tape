@@ -489,8 +489,8 @@ public class QueueFile {
     elementCount = 0;
     first = Element.NULL;
     last = Element.NULL;
-    fileLength = INITIAL_LENGTH;
     if (fileLength > INITIAL_LENGTH) setLength(INITIAL_LENGTH);
+    fileLength = INITIAL_LENGTH;
   }
 
   /** Closes the underlying file. */
