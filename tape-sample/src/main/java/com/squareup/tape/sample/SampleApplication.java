@@ -17,7 +17,7 @@ public class SampleApplication extends Application {
 
   @Override public void onCreate() {
     super.onCreate();
-    objectGraph = ObjectGraph.get(new SampleModule(this));
+    objectGraph = ObjectGraph.create(new SampleModule(this));
   }
 
   public void inject(Object object) {
