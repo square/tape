@@ -6,9 +6,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 import static org.fest.assertions.Assertions.assertThat;
@@ -217,8 +222,12 @@ public class QueueFileTest {
     final byte[] b = {3, 4, 5};
     queueFile.add(b);
 
-    queueFile.peek(new QueueFileJava.ElementReader() {
+    final AtomicInteger peeks = new AtomicInteger(0);
+
+    queueFile.peek(new QueueFile.ElementReader() {
       @Override public void read(InputStream in, int length) throws IOException {
+        peeks.incrementAndGet();
+
         assertThat(length).isEqualTo(2);
         byte[] actual = new byte[length];
         in.read(actual);
@@ -228,6 +237,8 @@ public class QueueFileTest {
 
     queueFile.peek(new QueueFileJava.ElementReader() {
       @Override public void read(InputStream in, int length) throws IOException {
+        peeks.incrementAndGet();
+
         assertThat(length).isEqualTo(2);
         assertThat(in.read()).isEqualTo(1);
         assertThat(in.read()).isEqualTo(2);
@@ -239,6 +250,8 @@ public class QueueFileTest {
 
     queueFile.peek(new QueueFileJava.ElementReader() {
       @Override public void read(InputStream in, int length) throws IOException {
+        peeks.incrementAndGet();
+
         assertThat(length).isEqualTo(3);
         byte[] actual = new byte[length];
         in.read(actual);
@@ -246,6 +259,7 @@ public class QueueFileTest {
       }
     });
 
+    assertThat(peeks.get()).isEqualTo(3);
     assertThat(queueFile.peek()).isEqualTo(b);
     assertThat(queueFile.size()).isEqualTo(1);
   }
