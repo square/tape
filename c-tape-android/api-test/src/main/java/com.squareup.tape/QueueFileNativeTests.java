@@ -7,6 +7,7 @@ import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Log;
 import com.squareup.tape.QueueFile.ElementReader;
 import com.squareup.tape.QueueFileNative;
+import org.junit.Ignore;
 
 import java.io.File;
 import java.io.IOException;
@@ -67,17 +68,17 @@ public class QueueFileNativeTests extends AndroidTestCase {
     file.delete();
   }
 
-//  @SmallTest
-//  public void testDoubleClose() throws IOException {
-//    QueueFileNative newQueue = new QueueFileNative(queueFilename + "2");
-//    newQueue.close();
-//    try {
-//      newQueue.close();
-//      fail();
-//    } catch (IOException e) {
-//      // expected
-//    }
-//  }
+  @Ignore
+  public void testDoubleClose() throws IOException {
+    QueueFileNative newQueue = new QueueFileNative(queueFilename + "2");
+    newQueue.close();
+    try {
+      newQueue.close();
+      fail();
+    } catch (IOException e) {
+      // expected
+    }
+  }
   
   public void testSimpleAddAndPeek() throws IOException {
     queueFile.add(testData);
