@@ -20,7 +20,7 @@ public interface ObjectQueue<T> {
    */
   T peek();
 
-  /** Removes and returns the head of the queue. */
+  /** Removes the head of the queue. */
   void remove();
 
   /**
