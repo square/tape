@@ -10,6 +10,7 @@ import com.squareup.tape.Task;
 import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Random;
 
 import static com.github.kevinsawicki.http.HttpRequest.post;
 
@@ -22,6 +23,7 @@ public class ImageUploadTask implements Task<ImageUploadTask.Callback> {
   private static final String IMGUR_UPLOAD_URL = "http://api.imgur.com/2/upload";
   private static final Pattern IMGUR_URL_REGEX = Pattern.compile("<imgur_page>(.+?)</imgur_page>");
   private static final Handler MAIN_THREAD = new Handler(Looper.getMainLooper());
+  private static final int RETRY_WAIT = 2000;
 
   public interface Callback {
     void onSuccess(String url);
@@ -39,8 +41,13 @@ public class ImageUploadTask implements Task<ImageUploadTask.Callback> {
     new Thread(new Runnable() {
       @Override public void run() {
         try {
+          // Simulate a failure 1 in 2 times
+          String apiKey = IMGUR_API_KEY;
+          if (new Random().nextBoolean()) {
+            apiKey = "foobar";
+          }
           HttpRequest request = post(IMGUR_UPLOAD_URL)
-              .part("key", IMGUR_API_KEY)
+              .part("key", apiKey)
               .part("image", file);
 
           if (request.ok()) {
@@ -56,7 +63,16 @@ public class ImageUploadTask implements Task<ImageUploadTask.Callback> {
               }
             });
           } else {
-            Log.i(TAG, "Upload failed :(  Will retry.");
+            Log.i(TAG, String.format(
+                  "Upload failed :(  Will retry in %d seconds.",
+                  RETRY_WAIT / 1000));
+
+            try {
+              Thread.sleep(RETRY_WAIT);
+            } catch (InterruptedException e) {
+              e.printStackTrace();
+              throw new RuntimeException(e);
+            }
 
             // Get back to the main thread before invoking a callback.
             MAIN_THREAD.post(new Runnable() {

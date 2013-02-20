@@ -16,7 +16,10 @@ public class ImageUploadTaskService extends Service implements Callback {
   @Inject ImageUploadTaskQueue queue;
   @Inject Bus bus;
 
+  private static final int MAX_RETRIES = 5;
+
   private boolean running;
+  private int numRetries = 0;
 
   @Override public void onCreate() {
     super.onCreate();
@@ -34,6 +37,7 @@ public class ImageUploadTaskService extends Service implements Callback {
 
     ImageUploadTask task = queue.peek();
     if (task != null) {
+      Log.i(TAG, "Attempt: " + numRetries);
       running = true;
       task.execute(this);
     } else {
@@ -45,11 +49,21 @@ public class ImageUploadTaskService extends Service implements Callback {
   @Override public void onSuccess(final String url) {
     running = false;
     queue.remove();
-    bus.post(new ImageUploadSuccessEvent(url));
+    bus.post(new ImageUploadSuccessEvent(url, numRetries));
+    numRetries = 0;
     executeNext();
   }
 
   @Override public void onFailure() {
+    numRetries++;
+    running = false;
+    if (numRetries >= MAX_RETRIES) {
+      bus.post(new ImageUploadFailureEvent(numRetries));
+      Log.i(TAG, "Service stopping!");
+      stopSelf();
+    } else {
+      executeNext();
+    }
   }
 
   @Override public IBinder onBind(Intent intent) {

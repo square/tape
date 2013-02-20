@@ -7,4 +7,5 @@
   <string name="status">%s uploads pending.</string>
   <string name="task_added">Added new upload task.</string>
   <string name="task_completed">An upload task completed.</string>
+  <string name="task_failed">Upload task failed after %d retries</string>
 </resources>
