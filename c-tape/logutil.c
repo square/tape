@@ -14,12 +14,23 @@
  * limitations under the License.
  */
 
-#include <execinfo.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef __ANDROID__
+
+#include <android/log.h>
+#define ANDROID_LOGGING_TAG "c-tape-lib"
+#define MAX_MESSAGE_LENGTH 1024
+
+#else
+
+#include <execinfo.h>
+
+#endif //__ANDROID__
 
 #include "logutil.h"
 
@@ -41,20 +52,34 @@ int _log_vprintf(enum loglevel level, char* file, int line, char* msg, ...) {
   if (currentloglevel <= level) {
     va_list args;
     va_start (args, msg);
-    fprintf (stdout, "%s:%d [%d] ", file, line, level);
-    vfprintf (stdout, msg, args);
-    fprintf (stdout, "\n");
+
+    #ifdef __ANDROID__
+      
+      char buf[MAX_MESSAGE_LENGTH];
+      int n = vsnprintf(buf, MAX_MESSAGE_LENGTH, msg, args);
+      //####jochen TODO: translate internal logging levels
+      __android_log_print(ANDROID_LOG_WARN, ANDROID_LOGGING_TAG, "%s:%d [%d]  %s", file, line, level, buf);
+      
+    #else
+      
+      fprintf (stdout, "%s:%d [%d] ", file, line, level);
+      vfprintf (stdout, msg, args);
+      fprintf (stdout, "\n");
+      if (currentloglevel >= currentDebugFailloglevel) {
+        fprintf(stdout, "*** quitting, logged above debug fail level, see LOG_SETDEBUGFAILLEVEL_WARN or LOG_SETDEBUGFAILLEVEL_FATAL\n");
+        printStackTrace();
+        abort();
+      }
+      
+    #endif
     va_end (args);
 
-    if (currentloglevel >= currentDebugFailloglevel) {
-      fprintf(stdout, "*** quitting, logged above debug fail level, see LOG_SETDEBUGFAILLEVEL_WARN or LOG_SETDEBUGFAILLEVEL_FATAL\n");
-      printStackTrace();
-      abort();
-    }
     return 1;
   }
   return 0;
 }
+
+#ifndef __ANDROID__
 
 static void printStackTrace() {
   void* addrlist[100];
@@ -69,3 +94,5 @@ static void printStackTrace() {
     fprintf(stderr, "%s\n", symbols[i]);
   free(symbols);
 }
+
+#endif

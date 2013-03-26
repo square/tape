@@ -144,6 +144,11 @@ static void testAddAndRemoveElements() {
   LOG(LINFO, "Ran in %lf seconds.", difftime(stop, start));
 }
 
+static void testFileLength() {
+  mu_assert(FileIo_getLength(_for_testing_QueueFile_getFhandle(queue)) ==
+            QueueFile_getFileLength(queue));
+}
+
 /** Tests queue expansion when the data crosses EOF. */
 static void testSplitExpansion() {
   // This should result in 3560 bytes.
@@ -200,7 +205,7 @@ static bool forEachReader(QueueFile_ElementStream* stream, uint32_t length) {
     do {
       // i.e. read past end i.e. 3 reads of 2 > 5
       mu_assert(QueueFile_readElementStream(stream, actual + ARR_A_SIZE -
-                                            remaining, 2, &remaining));
+                                            remaining, 2, &remaining) > 0);
       mu_assert(expectedRemaining[elementIteration] == remaining);
       ++elementIteration;
     } while (remaining > 0 && elementIteration < 4);
@@ -212,7 +217,7 @@ static bool forEachReader(QueueFile_ElementStream* stream, uint32_t length) {
     byte actual[ARR_B_SIZE];
     uint32_t remaining;
     mu_assert(QueueFile_readElementStream(stream,
-        actual, ARR_B_SIZE, &remaining));
+        actual, ARR_B_SIZE, &remaining) == ARR_B_SIZE);
     mu_assert(remaining == 0);
     mu_assert_memcmp(actual, arrB, ARR_B_SIZE);
   } else {
@@ -236,7 +241,8 @@ static bool peekReaderAblock(QueueFile_ElementStream* stream, uint32_t length) {
   mu_assert(length == ARR_A_SIZE);
   byte actual[length];
   uint32_t remaining;
-  mu_assert(QueueFile_readElementStream(stream, actual, length, &remaining));
+  mu_assert(QueueFile_readElementStream(stream, actual, length, &remaining) ==
+            length);
   mu_assert(remaining == 0);
   mu_assert_memcmp(actual, arrA, length);
   return true;
@@ -257,7 +263,8 @@ static bool peekReaderBblock(QueueFile_ElementStream* stream, uint32_t length) {
   mu_assert(length == ARR_B_SIZE);
   byte actual[length];
   uint32_t remaining;
-  mu_assert(QueueFile_readElementStream(stream, actual, length, &remaining));
+  mu_assert(QueueFile_readElementStream(stream, actual, length, &remaining) ==
+            length);
   mu_assert(remaining == 0);
   mu_assert_memcmp(actual, arrB, length);
   return true;
@@ -483,6 +490,7 @@ int main() {
   LOG_SETDEBUGFAILLEVEL_WARN;
   mu_run_test(testSimpleAddOneElement);
   mu_run_test(testAddOneElement);
+  mu_run_test(testFileLength);
   mu_run_test(testAddAndRemoveElements);
   mu_run_test(testSplitExpansion);
   mu_run_test(testFileExpansionDoesntCorruptWrappedElements);

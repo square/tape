@@ -76,7 +76,7 @@ public class SerializedConverterTest {
     testFile = copyTestFile(EMPTY_SERIALIZED_QUEUE);
 
     // Should throw an exception.
-    FileObjectQueue<String> qf = new FileObjectQueue<String>(testFile, new SerializedConverter<String>() {
+    FileObjectQueue<String> qf = new FileObjectQueue<String>(new QueueFileJava(testFile), new SerializedConverter<String>() {
       @Override public void toStream(String o, OutputStream bytes) throws IOException {
         throw new IOException("fake Permission denied");
       }
@@ -89,6 +89,6 @@ public class SerializedConverterTest {
 
   private static <T extends Serializable> ObjectQueue<T> createQueue(File file) throws IOException {
     SerializedConverter<T> converter = new SerializedConverter<T>();
-    return new FileObjectQueue<T>(file, converter);
+    return new FileObjectQueue<T>(new QueueFileJava(file), converter);
   }
 }
