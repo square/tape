@@ -53,11 +53,11 @@ public class ImageQueueServiceListener implements ObjectQueue.Listener&lt;ImageU
     this.context = context;
   }
 
-  @Override public void onAdd(ObjectQueue&lt;ImageUploadTask>, ImageUploadTask task) {
+  @Override public void onAdd(ObjectQueue&lt;ImageUploadTask> queue, ImageUploadTask task) {
     context.startService(new Intent(context, ImageQueueService.class));
   }
 
-  @Override public void onRemove(ObjectQueue&lt;ImageUploadTask>) {}
+  @Override public void onRemove(ObjectQueue&lt;ImageUploadTask> queue) {}
 }
 
 /** Service which iterates through pending upload tasks one-by-one. */
