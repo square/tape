@@ -6,6 +6,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -13,6 +14,12 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
@@ -296,6 +303,45 @@ public class QueueFileTest {
 
     assertThat(queueFile.peek()).isEqualTo(a);
     assertThat(iteration[0]).isEqualTo(2);
+  }
+
+  @Test public void testForEachStreamCopy() throws IOException, TimeoutException,
+      ExecutionException, InterruptedException {
+    final QueueFile queueFile = new QueueFile(file);
+    queueFile.add(new byte[] {1, 2});
+    queueFile.add(new byte[] {3, 4, 5});
+
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final byte[] buffer = new byte[8];
+    
+    final QueueFile.ElementReader elementReader = new QueueFile.ElementReader() {
+      @Override public void read(InputStream in, int length) throws IOException {
+        // A common idiom for copying data between two streams, but it depends on the
+        // InputStream correctly returning -1 when no more data is available
+        int count;
+        while ((count = in.read(buffer)) != -1) {
+          baos.write(buffer, 0, count);
+        }
+      }
+    };
+
+    // Not ideal, but the case we're testing results in an infinite loop, and we want the
+    // test to fail instead of running forever...
+    final ExecutorService executor = Executors.newSingleThreadExecutor();
+    
+    try {
+      executor.submit(new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          queueFile.forEach(elementReader);
+          return null;
+        }
+      }).get(5, TimeUnit.SECONDS);
+      
+      assertThat(baos.toByteArray()).isEqualTo(new byte[] {1, 2, 3, 4, 5});
+    } finally {
+      executor.shutdown();
+    }
   }
 
   /**
