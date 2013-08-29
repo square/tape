@@ -14,12 +14,6 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
@@ -305,8 +299,7 @@ public class QueueFileTest {
     assertThat(iteration[0]).isEqualTo(2);
   }
 
-  @Test public void testForEachStreamCopy() throws IOException, TimeoutException,
-      ExecutionException, InterruptedException {
+  @Test public void testForEachStreamCopy() throws IOException {
     final QueueFile queueFile = new QueueFile(file);
     queueFile.add(new byte[] {1, 2});
     queueFile.add(new byte[] {3, 4, 5});
@@ -320,28 +313,23 @@ public class QueueFileTest {
         // InputStream correctly returning -1 when no more data is available
         int count;
         while ((count = in.read(buffer)) != -1) {
+          if (count == 0) {
+            // In the past, the ElementInputStream.read(byte[], int, int) method would return 0
+            // when no more bytes were available for reading. This test detects that error.
+            //
+            // Note: 0 is a valid return value for InputStream.read(byte[], int, int), which happens
+            // when the passed length is zero. We could trigger that through InputStream.read(byte[])
+            // by passing a zero-length buffer. However, since we won't do that during this test,
+            // we can safely assume that a return value of 0 indicates the past error in logic.
+            fail("This test should never receive a result of 0 from InputStream.read(byte[])");
+          }
           baos.write(buffer, 0, count);
         }
       }
     };
 
-    // Not ideal, but the case we're testing results in an infinite loop, and we want the
-    // test to fail instead of running forever...
-    final ExecutorService executor = Executors.newSingleThreadExecutor();
-    
-    try {
-      executor.submit(new Callable<Void>() {
-        @Override
-        public Void call() throws Exception {
-          queueFile.forEach(elementReader);
-          return null;
-        }
-      }).get(5, TimeUnit.SECONDS);
-      
-      assertThat(baos.toByteArray()).isEqualTo(new byte[] {1, 2, 3, 4, 5});
-    } finally {
-      executor.shutdown();
-    }
+    queueFile.forEach(elementReader);
+    assertThat(baos.toByteArray()).isEqualTo(new byte[] {1, 2, 3, 4, 5});
   }
 
   /**
