@@ -247,7 +247,7 @@ public class QueueFile {
     position = wrapPosition(position);
     if (position + count <= fileLength) {
       raf.seek(position);
-      raf.readFully(buffer, 0, count);
+      raf.readFully(buffer, offset, count);
     } else {
       // The read overlaps the EOF.
       // # of bytes to read before the EOF.

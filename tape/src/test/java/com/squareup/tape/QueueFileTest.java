@@ -298,6 +298,27 @@ public class QueueFileTest {
     assertThat(queueFile.peek()).isEqualTo(a);
     assertThat(iteration[0]).isEqualTo(2);
   }
+  
+  @Test public void testForEachReadWithOffset() throws IOException {
+      QueueFile queueFile = new QueueFile(file);
+
+      queueFile.add(new byte[] {1, 2});
+      queueFile.add(new byte[] {3, 4, 5});
+      
+      final byte[] actual = new byte[5];
+      final int[] offset = new int[] {0};
+
+      QueueFile.ElementReader elementReader = new QueueFile.ElementReader() {
+        @Override public void read(InputStream in, int length) throws IOException {  
+          in.read(actual, offset[0], length);
+          offset[0] += length;
+        }
+      };
+
+      queueFile.forEach(elementReader);
+
+      assertThat(actual).isEqualTo(new byte[] {1, 2, 3, 4, 5});
+    }
 
   @Test public void testForEachStreamCopy() throws IOException {
     final QueueFile queueFile = new QueueFile(file);
