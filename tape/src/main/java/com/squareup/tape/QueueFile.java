@@ -441,11 +441,15 @@ public class QueueFile {
       if ((offset | length) < 0 || length > buffer.length - offset) {
         throw new ArrayIndexOutOfBoundsException();
       }
-      if (length > remaining) length = remaining;
-      ringRead(position, buffer, offset, length);
-      position = wrapPosition(position + length);
-      remaining -= length;
-      return length;
+      if (remaining > 0) {
+        if (length > remaining) length = remaining;
+        ringRead(position, buffer, offset, length);
+        position = wrapPosition(position + length);
+        remaining -= length;
+        return length;
+      } else {
+        return -1;
+      }
     }
 
     @Override public int read() throws IOException {
