@@ -34,6 +34,11 @@ public class ImageUploadTask implements Task<ImageUploadTask.Callback> {
     this.file = file;
   }
 
+  // Gson needs a no-args constructor
+  private ImageUploadTask() {
+    this(null);
+  }
+
   @Override public void execute(final Callback callback) {
     // Image uploading is slow. Execute HTTP POST on a background thread.
     new Thread(new Runnable() {
