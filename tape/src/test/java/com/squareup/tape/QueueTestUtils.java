@@ -9,7 +9,7 @@ import java.io.InputStream;
 
 import static org.junit.Assert.assertTrue;
 
-public class QueueTestUtils {
+final class QueueTestUtils {
   static final String TRUNCATED_ONE_ENTRY_SERIALIZED_QUEUE = "/truncated-one-entry-serialized-queue";
   static final String TRUNCATED_EMPTY_SERIALIZED_QUEUE = "/truncated-empty-serialized-queue";
   static final String ONE_ENTRY_SERIALIZED_QUEUE = "/one-entry-serialized-queue";

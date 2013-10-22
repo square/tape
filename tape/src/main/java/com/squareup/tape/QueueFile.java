@@ -153,7 +153,8 @@ public class QueueFile {
     raf.readFully(buffer);
     fileLength = readInt(buffer, 0);
     if (fileLength > raf.length()) {
-      throw new IOException("File is truncated. Expected length: " + fileLength + ", Actual length: " + raf.length());
+      throw new IOException(
+          "File is truncated. Expected length: " + fileLength + ", Actual length: " + raf.length());
     }
     elementCount = readInt(buffer, 4);
     int firstOffset = readInt(buffer, 8);
@@ -169,7 +170,8 @@ public class QueueFile {
    * variables *after* this call succeeds. Assumes segment writes are atomic in
    * the underlying file system.
    */
-  private void writeHeader(int fileLength, int elementCount, int firstPosition, int lastPosition) throws IOException {
+  private void writeHeader(int fileLength, int elementCount, int firstPosition, int lastPosition)
+      throws IOException {
     writeInts(buffer, fileLength, elementCount, firstPosition, lastPosition);
     raf.seek(0);
     raf.write(buffer);
@@ -208,8 +210,7 @@ public class QueueFile {
 
   /** Wraps the position if it exceeds the end of the file. */
   private int wrapPosition(int position) {
-    return position < fileLength ? position
-        : HEADER_LENGTH + position - fileLength;
+    return position < fileLength ? position : HEADER_LENGTH + position - fileLength;
   }
 
   /**
@@ -217,8 +218,8 @@ public class QueueFile {
    * write if position is past the end of the file or if buffer overlaps it.
    *
    * @param position in file to write to
-   * @param buffer   to write from
-   * @param count    # of bytes to write
+   * @param buffer to write from
+   * @param count # of bytes to write
    */
   private void ringWrite(int position, byte[] buffer, int offset, int count) throws IOException {
     position = wrapPosition(position);
@@ -240,8 +241,8 @@ public class QueueFile {
    * Reads count bytes into buffer from file. Wraps if necessary.
    *
    * @param position in file to read from
-   * @param buffer   to read into
-   * @param count    # of bytes to read
+   * @param buffer to read into
+   * @param count # of bytes to read
    */
   private void ringRead(int position, byte[] buffer, int offset, int count) throws IOException {
     position = wrapPosition(position);
@@ -271,11 +272,12 @@ public class QueueFile {
   /**
    * Adds an element to the end of the queue.
    *
-   * @param data   to copy bytes from
+   * @param data to copy bytes from
    * @param offset to start from in buffer
-   * @param count  number of bytes to copy
-   * @throws IndexOutOfBoundsException if {@code offset < 0} or {@code count < 0}, or if {@code offset + count} is
-   *                                   bigger than the length of {@code buffer}.
+   * @param count number of bytes to copy
+   * @throws IndexOutOfBoundsException if {@code offset < 0} or {@code count < 0}, or if {@code
+   * offset + count} is
+   * bigger than the length of {@code buffer}.
    */
   public synchronized void add(byte[] data, int offset, int count) throws IOException {
     nonNull(data, "buffer");
@@ -287,7 +289,8 @@ public class QueueFile {
 
     // Insert a new element after the current last element.
     boolean wasEmpty = isEmpty();
-    int position = wasEmpty ? HEADER_LENGTH : wrapPosition(last.position + Element.HEADER_LENGTH + last.length);
+    int position = wasEmpty ? HEADER_LENGTH
+        : wrapPosition(last.position + Element.HEADER_LENGTH + last.length);
     Element newLast = new Element(position, count);
 
     // Write length.
@@ -549,7 +552,7 @@ public class QueueFile {
      * Constructs a new element.
      *
      * @param position within file
-     * @param length   of data
+     * @param length of data
      */
     Element(int position, int length) {
       this.position = position;
@@ -557,9 +560,13 @@ public class QueueFile {
     }
 
     @Override public String toString() {
-      return getClass().getSimpleName() + "["
-          + "position = " + position
-          + ", length = " + length + "]";
+      return getClass().getSimpleName()
+          + "["
+          + "position = "
+          + position
+          + ", length = "
+          + length
+          + "]";
     }
   }
 
@@ -576,9 +583,9 @@ public class QueueFile {
     /**
      * Called once per element.
      *
-     * @param in     stream of element data. Reads as many bytes as requested,
-     *               unless fewer than the request number of bytes remains, in
-     *               which case it reads all the remaining bytes. Not buffered.
+     * @param in stream of element data. Reads as many bytes as requested,
+     * unless fewer than the request number of bytes remains, in
+     * which case it reads all the remaining bytes. Not buffered.
      * @param length of element data in bytes
      */
     void read(InputStream in, int length) throws IOException;
