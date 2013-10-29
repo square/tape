@@ -11,11 +11,6 @@ import java.io.OutputStream;
  * Base queue class, implements common functionality for a QueueFile-backed
  * queue manager.  This class is not thread safe; instances should be kept
  * thread-confined.
- * <p>
- * The {@link #add( Object )}, {@link #peek()}, {@link #remove()}, and
- * {@link #setListener(ObjectQueue.Listener)} methods may throw a
- * {@link FileException} if the underlying {@link QueueFile} experiences an
- * {@link java.io.IOException}.
  *
  * @param <T> The type of elements in the queue.
  */
@@ -39,51 +34,35 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     return queueFile.size();
   }
 
-  @Override public final void add(T entry) {
-    try {
-      bytes.reset();
-      converter.toStream(entry, bytes);
-      queueFile.add(bytes.getArray(), 0, bytes.size());
-      if (listener != null) listener.onAdd(this, entry);
-    } catch (IOException e) {
-      throw new FileException("Failed to add entry.", e, file);
-    }
+  @Override public final void add(T entry) throws IOException {
+    bytes.reset();
+    converter.toStream(entry, bytes);
+    queueFile.add(bytes.getArray(), 0, bytes.size());
+    if (listener != null) listener.onAdd(this, entry);
   }
 
-  @Override public T peek() {
-    try {
-      byte[] bytes = queueFile.peek();
-      if (bytes == null) return null;
-      return converter.from(bytes);
-    } catch (IOException e) {
-      throw new FileException("Failed to peek.", e, file);
-    }
+  @Override public T peek() throws IOException {
+    byte[] bytes = queueFile.peek();
+    if (bytes == null) return null;
+    return converter.from(bytes);
   }
 
-  @Override public final void remove() {
-    try {
-      queueFile.remove();
-      if (listener != null) listener.onRemove(this);
-    } catch (IOException e) {
-      throw new FileException("Failed to remove.", e, file);
-    }
+  @Override public final void remove() throws IOException {
+    queueFile.remove();
+    if (listener != null) listener.onRemove(this);
   }
 
-  @Override public void setListener(final Listener<T> listener) {
+  @Override public void setListener(final Listener<T> listener) throws IOException {
     if (listener != null) {
-      try {
-        queueFile.forEach(new QueueFile.ElementReader() {
-          @Override
-          public void read(InputStream in, int length) throws IOException {
-            byte[] data = new byte[length];
-            in.read(data, 0, length);
+      queueFile.forEach(new QueueFile.ElementReader() {
+        @Override
+        public void read(InputStream in, int length) throws IOException {
+          byte[] data = new byte[length];
+          in.read(data, 0, length);
 
-            listener.onAdd(FileObjectQueue.this, converter.from(data));
-          }
-        });
-      } catch (IOException e) {
-        throw new FileException("Unable to iterate over QueueFile contents.", e, file);
-      }
+          listener.onAdd(FileObjectQueue.this, converter.from(data));
+        }
+      });
     }
     this.listener = listener;
   }

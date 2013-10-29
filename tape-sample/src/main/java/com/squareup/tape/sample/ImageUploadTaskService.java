@@ -9,6 +9,7 @@ import com.squareup.otto.Bus;
 import com.squareup.tape.sample.ImageUploadTask.Callback;
 
 import javax.inject.Inject;
+import java.io.IOException;
 
 public class ImageUploadTaskService extends Service implements Callback {
   private static final String TAG = "Tape:ImageUploadTaskService";
@@ -32,7 +33,12 @@ public class ImageUploadTaskService extends Service implements Callback {
   private void executeNext() {
     if (running) return; // Only one task at a time.
 
-    ImageUploadTask task = queue.peek();
+    ImageUploadTask task;
+    try {
+      task = queue.peek();
+    } catch (IOException e) {
+      throw new RuntimeException("Error reading task.", e);
+    }
     if (task != null) {
       running = true;
       task.execute(this);
@@ -44,7 +50,11 @@ public class ImageUploadTaskService extends Service implements Callback {
 
   @Override public void onSuccess(final String url) {
     running = false;
-    queue.remove();
+    try {
+      queue.remove();
+    } catch (IOException e) {
+      throw new RuntimeException("Error removing task.", e);
+    }
     bus.post(new ImageUploadSuccessEvent(url));
     executeNext();
   }
