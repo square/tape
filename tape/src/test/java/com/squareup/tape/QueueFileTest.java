@@ -68,6 +68,39 @@ public class QueueFileTest {
     assertThat(queue.peek()).isEqualTo(expected);
   }
 
+  @Test public void testClearErases() throws IOException {
+    QueueFile queue = new QueueFile(file);
+    byte[] expected = values[253];
+    queue.add(expected);
+
+    // Confirm that the data was in the file before we cleared.
+    byte[] data = new byte[expected.length];
+    queue.raf.seek(QueueFile.Element.HEADER_LENGTH + 16);
+    queue.raf.readFully(data, 0, expected.length);
+    assertThat(data).isEqualTo(expected);
+
+    queue.clear();
+
+    // Should have been erased.
+    queue.raf.seek(QueueFile.Element.HEADER_LENGTH + 16);
+    queue.raf.readFully(data, 0, expected.length);
+    assertThat(data).isEqualTo(new byte[expected.length]);
+  }
+
+  @Test public void testClearDoesNotCorrupt() throws IOException {
+    QueueFile queue = new QueueFile(file);
+    byte[] stuff = values[253];
+    queue.add(stuff);
+    queue.clear();
+
+    queue = new QueueFile(file);
+    assertThat(queue.isEmpty()).isTrue();
+    assertThat(queue.peek()).isNull();
+
+    queue.add(values[25]);
+    assertThat(queue.peek()).isEqualTo(values[25]);
+  }
+
   @Test public void testAddAndRemoveElements() throws IOException {
     long start = System.nanoTime();
 
@@ -298,18 +331,18 @@ public class QueueFileTest {
     assertThat(queueFile.peek()).isEqualTo(a);
     assertThat(iteration[0]).isEqualTo(2);
   }
-  
+
   @Test public void testForEachReadWithOffset() throws IOException {
       QueueFile queueFile = new QueueFile(file);
 
       queueFile.add(new byte[] {1, 2});
       queueFile.add(new byte[] {3, 4, 5});
-      
+
       final byte[] actual = new byte[5];
       final int[] offset = new int[] {0};
 
       QueueFile.ElementReader elementReader = new QueueFile.ElementReader() {
-        @Override public void read(InputStream in, int length) throws IOException {  
+        @Override public void read(InputStream in, int length) throws IOException {
           in.read(actual, offset[0], length);
           offset[0] += length;
         }
@@ -327,7 +360,7 @@ public class QueueFileTest {
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final byte[] buffer = new byte[8];
-    
+
     final QueueFile.ElementReader elementReader = new QueueFile.ElementReader() {
       @Override public void read(InputStream in, int length) throws IOException {
         // A common idiom for copying data between two streams, but it depends on the

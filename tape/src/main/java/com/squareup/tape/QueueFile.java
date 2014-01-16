@@ -82,8 +82,10 @@ public class QueueFile {
    *     Length (4 bytes)
    *     Data   (Length bytes)
    * </pre>
+   *
+   * Visible for testing.
    */
-  private final RandomAccessFile raf;
+  final RandomAccessFile raf;
 
   /** Cached file length. Always a power of 2. */
   int fileLength;
@@ -489,6 +491,8 @@ public class QueueFile {
 
   /** Clears this queue. Truncates the file to the initial size. */
   public synchronized void clear() throws IOException {
+    raf.seek(0);
+    raf.write(new byte[INITIAL_LENGTH]);
     writeHeader(INITIAL_LENGTH, 0, 0, 0);
     elementCount = 0;
     first = Element.NULL;
