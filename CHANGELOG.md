@@ -1,6 +1,12 @@
 Change Log
 ==========
 
+Version 1.2.0 *(2014-01-16)*
+----------------------------
+
+ * New: Eagerly zero out bytes when `clear()` is invoked.
+
+
 Version 1.1.1 *(2013-10-21)*
 ----------------------------
 
