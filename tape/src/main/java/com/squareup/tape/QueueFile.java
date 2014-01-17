@@ -25,6 +25,8 @@ import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static java.lang.Math.min;
+
 /**
  * A reliable, efficient, file-based, FIFO queue. Additions and removals are
  * O(1). All operations are atomic. Writes are synchronous; data will be written
@@ -54,6 +56,9 @@ public class QueueFile {
 
   /** Initial file size in bytes. */
   private static final int INITIAL_LENGTH = 4096; // one file system block
+
+  /** A block of nothing to write over old data. */
+  private static final byte[] ZEROES = new byte[INITIAL_LENGTH];
 
   /** Length of header in bytes. */
   static final int HEADER_LENGTH = 16;
@@ -235,6 +240,15 @@ public class QueueFile {
       raf.write(buffer, offset, beforeEof);
       raf.seek(HEADER_LENGTH);
       raf.write(buffer, offset + beforeEof, count - beforeEof);
+    }
+  }
+
+  private void ringErase(int position, int length) throws IOException {
+    while (length > 0) {
+      int chunk = min(length, ZEROES.length);
+      ringWrite(position, ZEROES, 0, chunk);
+      length -= chunk;
+      position += chunk;
     }
   }
 
@@ -480,7 +494,11 @@ public class QueueFile {
       clear();
     } else {
       // assert elementCount > 1
-      int newFirstPosition = wrapPosition(first.position + Element.HEADER_LENGTH + first.length);
+      int firstTotalLength = Element.HEADER_LENGTH + first.length;
+
+      ringErase(first.position, firstTotalLength);
+
+      int newFirstPosition = wrapPosition(first.position + firstTotalLength);
       ringRead(newFirstPosition, buffer, 0, Element.HEADER_LENGTH);
       int length = readInt(buffer, 0);
       writeHeader(fileLength, elementCount - 1, newFirstPosition, last.position);
@@ -492,7 +510,7 @@ public class QueueFile {
   /** Clears this queue. Truncates the file to the initial size. */
   public synchronized void clear() throws IOException {
     raf.seek(0);
-    raf.write(new byte[INITIAL_LENGTH]);
+    raf.write(ZEROES);
     writeHeader(INITIAL_LENGTH, 0, 0, 0);
     elementCount = 0;
     first = Element.NULL;

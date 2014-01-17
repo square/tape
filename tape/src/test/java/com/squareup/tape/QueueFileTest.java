@@ -17,6 +17,8 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
+import static com.squareup.tape.QueueFile.Element;
+import static com.squareup.tape.QueueFile.HEADER_LENGTH;
 import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.Fail.fail;
 
@@ -75,14 +77,14 @@ public class QueueFileTest {
 
     // Confirm that the data was in the file before we cleared.
     byte[] data = new byte[expected.length];
-    queue.raf.seek(QueueFile.Element.HEADER_LENGTH + 16);
+    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, expected.length);
     assertThat(data).isEqualTo(expected);
 
     queue.clear();
 
     // Should have been erased.
-    queue.raf.seek(QueueFile.Element.HEADER_LENGTH + 16);
+    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, expected.length);
     assertThat(data).isEqualTo(new byte[expected.length]);
   }
@@ -99,6 +101,73 @@ public class QueueFileTest {
 
     queue.add(values[25]);
     assertThat(queue.peek()).isEqualTo(values[25]);
+  }
+
+  @Test public void removeErasesEagerly() throws IOException {
+    QueueFile queue = new QueueFile(file);
+
+    byte[] firstStuff = values[127];
+    queue.add(firstStuff);
+
+    byte[] secondStuff = values[253];
+    queue.add(secondStuff);
+
+    // Confirm that first stuff was in the file before we remove.
+    byte[] data = new byte[firstStuff.length];
+    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.readFully(data, 0, firstStuff.length);
+    assertThat(data).isEqualTo(firstStuff);
+
+    queue.remove();
+
+    // Next record is intact
+    assertThat(queue.peek()).isEqualTo(secondStuff);
+
+    // First should have been erased.
+    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.readFully(data, 0, firstStuff.length);
+    assertThat(data).isEqualTo(new byte[firstStuff.length]);
+  }
+
+  @Test public void removeDoesNotCorrupt() throws IOException {
+    QueueFile queue = new QueueFile(file);
+
+    queue.add(values[127]);
+    byte[] secondStuff = values[253];
+    queue.add(secondStuff);
+    queue.remove();
+
+    queue = new QueueFile(file);
+    assertThat(queue.peek()).isEqualTo(secondStuff);
+  }
+
+  @Test public void removingBigDamnBlocksErasesEffectively() throws IOException {
+    byte[] bigBoy = new byte[7000];
+    for (int i = 0; i < 7000; i += 100) {
+      System.arraycopy(values[100], 0, bigBoy, i, values[100].length);
+    }
+
+    QueueFile queue = new QueueFile(file);
+
+    queue.add(bigBoy);
+    byte[] secondStuff = values[123];
+    queue.add(secondStuff);
+
+    // Confirm that bigBoy was in the file before we remove.
+    byte[] data = new byte[bigBoy.length];
+    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.readFully(data, 0, bigBoy.length);
+    assertThat(data).isEqualTo(bigBoy);
+
+    queue.remove();
+
+    // Next record is intact
+    assertThat(queue.peek()).isEqualTo(secondStuff);
+
+    // First should have been erased.
+    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.readFully(data, 0, bigBoy.length);
+    assertThat(data).isEqualTo(new byte[bigBoy.length]);
   }
 
   @Test public void testAddAndRemoveElements() throws IOException {
