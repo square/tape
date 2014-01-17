@@ -55,7 +55,7 @@
   <scm>
     <url>http://github.com/square/tape</url>
     <connection>scm:git:git://github.com/square/tape.git</connection>
-    <developerConnection>scg:git:git@github.com:square/tape.git</developerConnection>
+    <developerConnection>scm:git:git@github.com:square/tape.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
 
