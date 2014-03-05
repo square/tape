@@ -375,7 +375,7 @@ public class QueueFile {
     int endOfLastElement = wrapPosition(last.position + Element.HEADER_LENGTH + last.length);
 
     // If the buffer is split, we need to make it contiguous
-    if (endOfLastElement < first.position) {
+    if (endOfLastElement <= first.position) {
       FileChannel channel = raf.getChannel();
       channel.position(fileLength); // destination position
       int count = endOfLastElement - Element.HEADER_LENGTH;
