@@ -1,11 +1,7 @@
 // Copyright 2010 Square, Inc.
 package com.squareup.tape;
 
-import org.fest.assertions.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import com.squareup.tape.QueueFile.Element;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -16,8 +12,11 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
+import org.fest.assertions.Assertions;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-import static com.squareup.tape.QueueFile.Element;
 import static com.squareup.tape.QueueFile.HEADER_LENGTH;
 import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.Fail.fail;
@@ -127,6 +126,20 @@ public class QueueFileTest {
     queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, firstStuff.length);
     assertThat(data).isEqualTo(new byte[firstStuff.length]);
+  }
+
+  @Test public void testZeroSizeInHeaderComplains() throws IOException {
+    RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
+    emptyFile.setLength(4096);
+    emptyFile.getChannel().force(true);
+    emptyFile.close();
+
+    try {
+      new QueueFile(file);
+      fail("Should have complained about bad header length");
+    } catch (IOException ex) {
+      assertThat(ex).hasMessage("File is corrupt; length stored in header is 0.");
+    }
   }
 
   @Test public void removeDoesNotCorrupt() throws IOException {
