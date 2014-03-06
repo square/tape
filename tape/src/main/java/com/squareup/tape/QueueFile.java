@@ -161,6 +161,8 @@ public class QueueFile {
     fileLength = readInt(buffer, 0);
     if (fileLength > raf.length()) {
       throw new IOException("File is truncated. Expected length: " + fileLength + ", Actual length: " + raf.length());
+    } else if (fileLength == 0) {
+      throw new IOException("File is corrupt; length stored in header is 0.");
     }
     elementCount = readInt(buffer, 4);
     int firstOffset = readInt(buffer, 8);
