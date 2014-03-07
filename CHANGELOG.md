@@ -1,6 +1,12 @@
 Change Log
 ==========
 
+Version 1.2.1 *(2014-03-06)*
+----------------------------
+
+ * New: `QueueFile` instances throw an `IOException` on creation if a corrupt header is found.
+
+
 Version 1.2.0 *(2014-01-16)*
 ----------------------------
 
