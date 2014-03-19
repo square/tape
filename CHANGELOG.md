@@ -1,6 +1,12 @@
 Change Log
 ==========
 
+Version 1.2.2 *(2014-03-18)*
+----------------------------
+
+ * Fix: Prevent corruption when expanding a perfectly saturated queue.
+
+
 Version 1.2.1 *(2014-03-06)*
 ----------------------------
 
