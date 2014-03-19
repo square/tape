@@ -14,7 +14,7 @@ import java.io.Writer;
 
 /**
  * Use GSON to serialize classes to a bytes.
- * <p/>
+ * <p>
  * Note: This will only work when concrete classes are specified for {@code T}. If you want to specify an interface for
  * {@code T} then you need to also include the concrete class name in the serialized byte array so that you can
  * deserialize to the appropriate type.

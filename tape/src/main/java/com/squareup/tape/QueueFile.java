@@ -34,14 +34,14 @@ import static java.lang.Math.min;
  * survive process and even system crashes. If an I/O exception is thrown during
  * a mutating change, the change is aborted. It is safe to continue to use a
  * {@code QueueFile} instance after an exception.
- * <p/>
+ *
  * <p>All operations are synchronized. In a traditional queue, the remove
  * operation returns an element. In this queue, {@link #peek} and {@link
  * #remove} are used in conjunction. Use {@code peek} to retrieve the first
  * element, and then {@code remove} to remove it after successful processing. If
  * the system crashes after {@code peek} and during processing, the element will
  * remain in the queue, to be processed when the system restarts.
- * <p/>
+ *
  * <p><strong>NOTE:</strong> The current implementation is built
  * for file systems that support atomic segment writes (like YAFFS). Most
  * conventional file systems don't support this; if the power goes out while
