@@ -14,7 +14,7 @@ import java.io.OutputStream;
  * <p>
  * The {@link #add( Object )}, {@link #peek()}, {@link #remove()}, and
  * {@link #setListener(ObjectQueue.Listener)} methods may throw a
- * {@link FileException} if the underlying {@link QueueFile} experiences an
+ * {@link FileException} if the underlying {@link QueueFileImpl} experiences an
  * {@link java.io.IOException}.
  *
  * @param <T> The type of elements in the queue.
@@ -32,10 +32,16 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
   public FileObjectQueue(File file, Converter<T> converter) throws IOException {
     this.file = file;
     this.converter = converter;
-    this.queueFile = new QueueFile(file);
+    this.queueFile = QueueFileFactory.open(file);
   }
 
-  @Override public int size() {
+  public FileObjectQueue(File file, Converter<T> converter, QueueFile queueFile) throws IOException {
+    this.file = file;
+    this.converter = converter;
+    this.queueFile = queueFile;
+  }
+
+  @Override public long size() {
     return queueFile.size();
   }
 
@@ -72,7 +78,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
   @Override public void setListener(final Listener<T> listener) {
     if (listener != null) {
       try {
-        queueFile.forEach(new QueueFile.ElementReader() {
+        queueFile.forEach(new QueueFileImpl.ElementReader() {
           @Override
           public void read(InputStream in, int length) throws IOException {
             byte[] data = new byte[length];

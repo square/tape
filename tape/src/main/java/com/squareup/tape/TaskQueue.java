@@ -33,7 +33,7 @@ public class TaskQueue<T extends Task> implements ObjectQueue<T> {
     return task;
   }
 
-  @Override public int size() {
+  @Override public long size() {
     return delegate.size();
   }
 

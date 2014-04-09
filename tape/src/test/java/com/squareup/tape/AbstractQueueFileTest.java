@@ -1,35 +1,34 @@
-// Copyright 2010 Square, Inc.
 package com.squareup.tape;
 
-import com.squareup.tape.QueueFile.Element;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
 import org.fest.assertions.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static com.squareup.tape.QueueFile.HEADER_LENGTH;
+import java.io.*;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
+
 import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.Fail.fail;
 
 /**
- * Tests for QueueFile.
+ * Tests for an AbstractQueueFile.
  *
  * @author Bob Lee (bob@squareup.com)
  */
 @SuppressWarnings({"ResultOfMethodCallIgnored"})
-public class QueueFileTest {
-  private static final Logger logger =
-      Logger.getLogger(QueueFileTest.class.getName());
+public abstract class AbstractQueueFileTest {
+
+  private static final Logger logger = Logger.getLogger(AbstractQueueFileTest.class.getName());
+  
+  protected abstract AbstractQueueFile getQueueFile(File file) throws IOException;
+
+  protected abstract AbstractQueueFile getQueueFile(RandomAccessFile raf) throws IOException;
+
+  protected abstract int getHeaderLength() throws IOException;
 
   /**
    * Takes up 33401 bytes in the queue (N*(N+1)/2+4*N). Picked 254 instead of
@@ -47,54 +46,59 @@ public class QueueFileTest {
     }
   }
 
-  private File file;
+  protected File file;
 
-  @Before public void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     file = File.createTempFile("test.queue", null);
     file.delete();
   }
 
-  @After public void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     file.delete();
   }
 
-  @Test public void testAddOneElement() throws IOException {
+  @Test
+  public void testAddOneElement() throws IOException {
     // This test ensures that we update 'first' correctly.
-    QueueFile queue = new QueueFile(file);
+    AbstractQueueFile queue = getQueueFile(file);
     byte[] expected = values[253];
     queue.add(expected);
     assertThat(queue.peek()).isEqualTo(expected);
     queue.close();
-    queue = new QueueFile(file);
+    queue = getQueueFile(file);
     assertThat(queue.peek()).isEqualTo(expected);
   }
 
-  @Test public void testClearErases() throws IOException {
-    QueueFile queue = new QueueFile(file);
+  @Test
+  public void testClearErases() throws IOException {
+    AbstractQueueFile queue = getQueueFile(file);
     byte[] expected = values[253];
     queue.add(expected);
 
     // Confirm that the data was in the file before we cleared.
     byte[] data = new byte[expected.length];
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(getHeaderLength() + AbstractQueueFile.Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, expected.length);
     assertThat(data).isEqualTo(expected);
 
     queue.clear();
 
     // Should have been erased.
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(getHeaderLength() + AbstractQueueFile.Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, expected.length);
     assertThat(data).isEqualTo(new byte[expected.length]);
   }
 
-  @Test public void testClearDoesNotCorrupt() throws IOException {
-    QueueFile queue = new QueueFile(file);
+  @Test
+  public void testClearDoesNotCorrupt() throws IOException {
+    AbstractQueueFile queue = getQueueFile(file);
     byte[] stuff = values[253];
     queue.add(stuff);
     queue.clear();
 
-    queue = new QueueFile(file);
+    queue = getQueueFile(file);
     assertThat(queue.isEmpty()).isTrue();
     assertThat(queue.peek()).isNull();
 
@@ -102,8 +106,9 @@ public class QueueFileTest {
     assertThat(queue.peek()).isEqualTo(values[25]);
   }
 
-  @Test public void removeErasesEagerly() throws IOException {
-    QueueFile queue = new QueueFile(file);
+  @Test
+  public void removeErasesEagerly() throws IOException {
+    AbstractQueueFile queue = getQueueFile(file);
 
     byte[] firstStuff = values[127];
     queue.add(firstStuff);
@@ -113,7 +118,7 @@ public class QueueFileTest {
 
     // Confirm that first stuff was in the file before we remove.
     byte[] data = new byte[firstStuff.length];
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(getHeaderLength() + AbstractQueueFile.Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, firstStuff.length);
     assertThat(data).isEqualTo(firstStuff);
 
@@ -123,44 +128,47 @@ public class QueueFileTest {
     assertThat(queue.peek()).isEqualTo(secondStuff);
 
     // First should have been erased.
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(getHeaderLength() + AbstractQueueFile.Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, firstStuff.length);
     assertThat(data).isEqualTo(new byte[firstStuff.length]);
   }
 
-  @Test public void testZeroSizeInHeaderComplains() throws IOException {
+  @Test
+  public void testZeroSizeInHeaderComplains() throws IOException {
     RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
     emptyFile.setLength(4096);
     emptyFile.getChannel().force(true);
     emptyFile.close();
 
     try {
-      new QueueFile(file);
+      getQueueFile(file);
       fail("Should have complained about bad header length");
     } catch (IOException ex) {
       assertThat(ex).hasMessage("File is corrupt; length stored in header is 0.");
     }
   }
 
-  @Test public void removeDoesNotCorrupt() throws IOException {
-    QueueFile queue = new QueueFile(file);
+  @Test
+  public void removeDoesNotCorrupt() throws IOException {
+    AbstractQueueFile queue = getQueueFile(file);
 
     queue.add(values[127]);
     byte[] secondStuff = values[253];
     queue.add(secondStuff);
     queue.remove();
 
-    queue = new QueueFile(file);
+    queue = getQueueFile(file);
     assertThat(queue.peek()).isEqualTo(secondStuff);
   }
 
-  @Test public void removingBigDamnBlocksErasesEffectively() throws IOException {
+  @Test
+  public void removingBigDamnBlocksErasesEffectively() throws IOException {
     byte[] bigBoy = new byte[7000];
     for (int i = 0; i < 7000; i += 100) {
       System.arraycopy(values[100], 0, bigBoy, i, values[100].length);
     }
 
-    QueueFile queue = new QueueFile(file);
+    AbstractQueueFile queue = getQueueFile(file);
 
     queue.add(bigBoy);
     byte[] secondStuff = values[123];
@@ -168,7 +176,7 @@ public class QueueFileTest {
 
     // Confirm that bigBoy was in the file before we remove.
     byte[] data = new byte[bigBoy.length];
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(getHeaderLength() + AbstractQueueFile.Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, bigBoy.length);
     assertThat(data).isEqualTo(bigBoy);
 
@@ -178,18 +186,19 @@ public class QueueFileTest {
     assertThat(queue.peek()).isEqualTo(secondStuff);
 
     // First should have been erased.
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(getHeaderLength() + AbstractQueueFile.Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, bigBoy.length);
     assertThat(data).isEqualTo(new byte[bigBoy.length]);
   }
 
-  @Test public void testAddAndRemoveElements() throws IOException {
+  @Test
+  public void testAddAndRemoveElements() throws IOException {
     long start = System.nanoTime();
 
     Queue<byte[]> expected = new LinkedList<byte[]>();
 
     for (int round = 0; round < 5; round++) {
-      QueueFile queue = new QueueFile(file);
+      AbstractQueueFile queue = getQueueFile(file);
       for (int i = 0; i < N; i++) {
         queue.add(values[i]);
         expected.add(values[i]);
@@ -205,7 +214,7 @@ public class QueueFileTest {
     }
 
     // Remove and validate remaining 15 elements.
-    QueueFile queue = new QueueFile(file);
+    AbstractQueueFile queue = getQueueFile(file);
     assertThat(queue.size()).isEqualTo(15);
     assertThat(queue.size()).isEqualTo(expected.size());
     while (!expected.isEmpty()) {
@@ -220,13 +229,16 @@ public class QueueFileTest {
     logger.info("Ran in " + ((System.nanoTime() - start) / 1000000) + "ms.");
   }
 
-  /** Tests queue expansion when the data crosses EOF. */
-  @Test public void testSplitExpansion() throws IOException {
+  /**
+   * Tests queue expansion when the data crosses EOF.
+   */
+  @Test
+  public void testSplitExpansion() throws IOException {
     // This should result in 3560 bytes.
     int max = 80;
 
     Queue<byte[]> expected = new LinkedList<byte[]>();
-    QueueFile queue = new QueueFile(file);
+    AbstractQueueFile queue = getQueueFile(file);
 
     for (int i = 0; i < max; i++) {
       expected.add(values[i]);
@@ -253,13 +265,14 @@ public class QueueFileTest {
     queue.close();
   }
 
-  @Test public void testFailedAdd() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+  @Test
+  public void testFailedAdd() throws IOException {
+    AbstractQueueFile queueFile = getQueueFile(file);
     queueFile.add(values[253]);
     queueFile.close();
 
     final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf);
+    queueFile = getQueueFile(braf);
 
     try {
       queueFile.add(values[252]);
@@ -273,20 +286,21 @@ public class QueueFileTest {
 
     queueFile.close();
 
-    queueFile = new QueueFile(file);
+    queueFile = getQueueFile(file);
     Assertions.assertThat(queueFile.size()).isEqualTo(2);
     assertThat(queueFile.peek()).isEqualTo(values[253]);
     queueFile.remove();
     assertThat(queueFile.peek()).isEqualTo(values[251]);
   }
 
-  @Test public void testFailedRemoval() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+  @Test
+  public void testFailedRemoval() throws IOException {
+    AbstractQueueFile queueFile = getQueueFile(file);
     queueFile.add(values[253]);
     queueFile.close();
 
     final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf);
+    queueFile = getQueueFile(braf);
 
     try {
       queueFile.remove();
@@ -295,7 +309,7 @@ public class QueueFileTest {
 
     queueFile.close();
 
-    queueFile = new QueueFile(file);
+    queueFile = getQueueFile(file);
     assertThat(queueFile.size()).isEqualTo(1);
     assertThat(queueFile.peek()).isEqualTo(values[253]);
 
@@ -304,13 +318,14 @@ public class QueueFileTest {
     assertThat(queueFile.peek()).isEqualTo(values[99]);
   }
 
-  @Test public void testFailedExpansion() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+  @Test
+  public void testFailedExpansion() throws IOException {
+    AbstractQueueFile queueFile = getQueueFile(file);
     queueFile.add(values[253]);
     queueFile.close();
 
     final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf);
+    queueFile = getQueueFile(braf);
 
     try {
       // This should trigger an expansion which should fail.
@@ -320,7 +335,7 @@ public class QueueFileTest {
 
     queueFile.close();
 
-    queueFile = new QueueFile(file);
+    queueFile = getQueueFile(file);
 
     assertThat(queueFile.size()).isEqualTo(1);
     assertThat(queueFile.peek()).isEqualTo(values[253]);
@@ -331,8 +346,9 @@ public class QueueFileTest {
     assertThat(queueFile.peek()).isEqualTo(values[99]);
   }
 
-  @Test public void testPeekWithElementReader() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+  @Test
+  public void testPeekWithElementReader() throws IOException {
+    AbstractQueueFile queueFile = getQueueFile(file);
     final byte[] a = {1, 2};
     queueFile.add(a);
     final byte[] b = {3, 4, 5};
@@ -340,8 +356,9 @@ public class QueueFileTest {
 
     final AtomicInteger peeks = new AtomicInteger(0);
 
-    queueFile.peek(new QueueFile.ElementReader() {
-      @Override public void read(InputStream in, int length) throws IOException {
+    queueFile.peek(new AbstractQueueFile.ElementReader() {
+      @Override
+      public void read(InputStream in, int length) throws IOException {
         peeks.incrementAndGet();
 
         assertThat(length).isEqualTo(2);
@@ -351,8 +368,9 @@ public class QueueFileTest {
       }
     });
 
-    queueFile.peek(new QueueFile.ElementReader() {
-      @Override public void read(InputStream in, int length) throws IOException {
+    queueFile.peek(new AbstractQueueFile.ElementReader() {
+      @Override
+      public void read(InputStream in, int length) throws IOException {
         peeks.incrementAndGet();
 
         assertThat(length).isEqualTo(2);
@@ -364,8 +382,9 @@ public class QueueFileTest {
 
     queueFile.remove();
 
-    queueFile.peek(new QueueFile.ElementReader() {
-      @Override public void read(InputStream in, int length) throws IOException {
+    queueFile.peek(new AbstractQueueFile.ElementReader() {
+      @Override
+      public void read(InputStream in, int length) throws IOException {
         peeks.incrementAndGet();
 
         assertThat(length).isEqualTo(3);
@@ -380,8 +399,9 @@ public class QueueFileTest {
     assertThat(queueFile.size()).isEqualTo(1);
   }
 
-  @Test public void testForEach() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+  @Test
+  public void testForEach() throws IOException {
+    AbstractQueueFile queueFile = getQueueFile(file);
 
     final byte[] a = {1, 2};
     queueFile.add(a);
@@ -389,8 +409,9 @@ public class QueueFileTest {
     queueFile.add(b);
 
     final int[] iteration = new int[]{0};
-    QueueFile.ElementReader elementReader = new QueueFile.ElementReader() {
-      @Override public void read(InputStream in, int length) throws IOException {
+    AbstractQueueFile.ElementReader elementReader = new AbstractQueueFile.ElementReader() {
+      @Override
+      public void read(InputStream in, int length) throws IOException {
         if (iteration[0] == 0) {
           assertThat(length).isEqualTo(2);
           byte[] actual = new byte[length];
@@ -414,37 +435,41 @@ public class QueueFileTest {
     assertThat(iteration[0]).isEqualTo(2);
   }
 
-  @Test public void testForEachReadWithOffset() throws IOException {
-      QueueFile queueFile = new QueueFile(file);
+  @Test
+  public void testForEachReadWithOffset() throws IOException {
+    AbstractQueueFile queueFile = getQueueFile(file);
 
-      queueFile.add(new byte[] {1, 2});
-      queueFile.add(new byte[] {3, 4, 5});
+    queueFile.add(new byte[]{1, 2});
+    queueFile.add(new byte[]{3, 4, 5});
 
-      final byte[] actual = new byte[5];
-      final int[] offset = new int[] {0};
+    final byte[] actual = new byte[5];
+    final int[] offset = new int[]{0};
 
-      QueueFile.ElementReader elementReader = new QueueFile.ElementReader() {
-        @Override public void read(InputStream in, int length) throws IOException {
-          in.read(actual, offset[0], length);
-          offset[0] += length;
-        }
-      };
+    AbstractQueueFile.ElementReader elementReader = new AbstractQueueFile.ElementReader() {
+      @Override
+      public void read(InputStream in, int length) throws IOException {
+        in.read(actual, offset[0], length);
+        offset[0] += length;
+      }
+    };
 
-      queueFile.forEach(elementReader);
+    queueFile.forEach(elementReader);
 
-      assertThat(actual).isEqualTo(new byte[] {1, 2, 3, 4, 5});
-    }
+    assertThat(actual).isEqualTo(new byte[]{1, 2, 3, 4, 5});
+  }
 
-  @Test public void testForEachStreamCopy() throws IOException {
-    final QueueFile queueFile = new QueueFile(file);
-    queueFile.add(new byte[] {1, 2});
-    queueFile.add(new byte[] {3, 4, 5});
+  @Test
+  public void testForEachStreamCopy() throws IOException {
+    final AbstractQueueFile queueFile = getQueueFile(file);
+    queueFile.add(new byte[]{1, 2});
+    queueFile.add(new byte[]{3, 4, 5});
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final byte[] buffer = new byte[8];
 
-    final QueueFile.ElementReader elementReader = new QueueFile.ElementReader() {
-      @Override public void read(InputStream in, int length) throws IOException {
+    final AbstractQueueFile.ElementReader elementReader = new AbstractQueueFile.ElementReader() {
+      @Override
+      public void read(InputStream in, int length) throws IOException {
         // A common idiom for copying data between two streams, but it depends on the
         // InputStream correctly returning -1 when no more data is available
         int count;
@@ -465,17 +490,18 @@ public class QueueFileTest {
     };
 
     queueFile.forEach(elementReader);
-    assertThat(baos.toByteArray()).isEqualTo(new byte[] {1, 2, 3, 4, 5});
+    assertThat(baos.toByteArray()).isEqualTo(new byte[]{1, 2, 3, 4, 5});
   }
 
   /**
    * Exercise a bug where wrapped elements were getting corrupted when the
-   * QueueFile was forced to expand in size and a portion of the final Element
+   * AbstractQueueFile was forced to expand in size and a portion of the final Element
    * had been wrapped into space at the beginning of the file.
    */
-  @Test public void testFileExpansionDoesntCorruptWrappedElements()
+  @Test
+  public void testFileExpansionDoesntCorruptWrappedElements()
       throws IOException {
-    QueueFile queue = new QueueFile(file);
+    AbstractQueueFile queue = getQueueFile(file);
 
     // Create test data - 1k blocks marked consecutively 1, 2, 3, 4 and 5.
     byte[][] values = new byte[5][];
@@ -518,13 +544,14 @@ public class QueueFileTest {
 
   /**
    * Exercise a bug where wrapped elements were getting corrupted when the
-   * QueueFile was forced to expand in size and a portion of the final Element
+   * AbstractQueueFile was forced to expand in size and a portion of the final Element
    * had been wrapped into space at the beginning of the file - if multiple
    * Elements have been written to empty buffer space at the start does the
    * expansion correctly update all their positions?
    */
-  @Test public void testFileExpansionCorrectlyMovesElements() throws IOException {
-    QueueFile queue = new QueueFile(file);
+  @Test
+  public void testFileExpansionCorrectlyMovesElements() throws IOException {
+    AbstractQueueFile queue = getQueueFile(file);
 
     // Create test data - 1k blocks marked consecutively 1, 2, 3, 4 and 5.
     byte[][] values = new byte[5][];
@@ -584,50 +611,6 @@ public class QueueFileTest {
   }
 
   /**
-   * Exercise a bug where an expanding queue file where the start and end positions
-   * are the same causes corruption.
-   */
-  @Test public void testSaturatedFileExpansionMovesElements() throws IOException {
-    QueueFile queue = new QueueFile(file);
-
-    // Create test data - 1016-byte blocks marked consecutively 1, 2, 3, 4, 5 and 6,
-    // four of which perfectly fill the queue file, taking into account the file header
-    // and the item headers.
-    // Each item is of length
-    // (QueueFile.INITIAL_LENGTH - QueueFile.HEADER_LENGTH) / 4 - element_header_length
-    // = 1016 bytes
-    byte[][] values = new byte[6][];
-    for (int blockNum = 0; blockNum < values.length; blockNum++) {
-      values[blockNum] = new byte[1016];
-      for (int i = 0; i < values[blockNum].length; i++) {
-        values[blockNum][i] = (byte) (blockNum + 1);
-      }
-    }
-
-    // Saturate the queue file
-    queue.add(values[0]);
-    queue.add(values[1]);
-    queue.add(values[2]);
-    queue.add(values[3]);
-
-    // Remove an element and add a new one so that the position of the start and
-    // end of the queue are equal
-    queue.remove();
-    queue.add(values[4]);
-
-    // Cause the queue file to expand
-    queue.add(values[5]);
-
-    // Make sure values are not corrupted
-    for (int i = 1; i < 6; i++) {
-      assertThat(queue.peek()).isEqualTo(values[i]);
-      queue.remove();
-    }
-
-    queue.close();
-  }
-
-  /**
    * A RandomAccessFile that can break when you go to write the COMMITTED
    * status.
    */
@@ -639,7 +622,8 @@ public class QueueFileTest {
       super(file, mode);
     }
 
-    @Override public void write(byte[] buffer) throws IOException {
+    @Override
+    public void write(byte[] buffer) throws IOException {
       if (rejectCommit && getFilePointer() == 0) {
         throw new IOException("No commit for you!");
       }
