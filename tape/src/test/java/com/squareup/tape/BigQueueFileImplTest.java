@@ -12,7 +12,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Tests for BigQueueFileImpl.
  *
- * @author Bob Lee (bob@squareup.com)
+ * @author Clement Pang (me@clementpang.com)
  */
 @SuppressWarnings({"ResultOfMethodCallIgnored"})
 public class BigQueueFileImplTest extends AbstractQueueFileTest {
