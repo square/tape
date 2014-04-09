@@ -87,4 +87,9 @@ public class BigQueueFileImpl extends AbstractQueueFile {
     raf.seek(0);
     raf.write(buffer);
   }
+
+  @Override
+  protected long getMaxFileSize() {
+    return Long.MAX_VALUE;
+  }
 }

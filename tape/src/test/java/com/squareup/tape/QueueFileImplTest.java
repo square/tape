@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import static org.fest.assertions.Assertions.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Tests for QueueFile.
@@ -29,6 +31,40 @@ public class QueueFileImplTest extends AbstractQueueFileTest {
   @Override
   protected int getHeaderLength() throws IOException {
     return QueueFileImpl.HEADER_LENGTH;
+  }
+
+  /**
+   * This is unfortunately going to be a pretty slow test.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testLargerThan2GFails() throws IOException {
+    QueueFileImpl impl = new QueueFileImpl(file);
+    byte[] expected = new byte[1048576]; // 1M
+    long added = 0;
+    for (long i = 0; i < Integer.MAX_VALUE - 1048576; i += 1048576) {
+      impl.add(expected);
+      added++;
+    }
+    // exceed the 2G boundary.
+    try {
+      impl.add(expected);
+      fail("should not be able to add an element");
+    } catch (IOException ex) {
+      // expected
+    }
+    assertTrue(impl.usedBytes() < Integer.MAX_VALUE);
+
+    impl = new QueueFileImpl(file);
+    // now drain the queue to make sure it still works.
+    long removed = 0;
+    while (!impl.isEmpty()) {
+      assertThat(impl.peek()).isEqualTo(expected);
+      impl.remove();
+      removed++;
+    }
+    assertTrue(removed == added);
   }
 
   /**

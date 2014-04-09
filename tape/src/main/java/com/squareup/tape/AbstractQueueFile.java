@@ -212,6 +212,8 @@ public abstract class AbstractQueueFile implements QueueFile {
   protected abstract void writeHeader(RandomAccessFile raf, long fileLength, long elementCount, long firstPosition,
                                       long lastPosition) throws IOException;
 
+  protected abstract long getMaxFileSize();
+
   /**
    * Returns the number of used bytes.
    */
@@ -337,7 +339,10 @@ public abstract class AbstractQueueFile implements QueueFile {
     // Double the length until we can fit the new data.
     do {
       remainingBytes += previousLength;
-      newLength = previousLength << 1;
+      newLength = Math.min(getMaxFileSize(), previousLength << 1);
+      if (newLength == previousLength) {
+        throw new IOException("cannot expand file anymore");
+      }
       previousLength = newLength;
     } while (remainingBytes < elementLength);
 
