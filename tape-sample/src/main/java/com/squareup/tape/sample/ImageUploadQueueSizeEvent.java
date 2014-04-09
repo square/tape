@@ -2,9 +2,9 @@
 package com.squareup.tape.sample;
 
 public class ImageUploadQueueSizeEvent {
-  public final int size;
+  public final long size;
 
-  public ImageUploadQueueSizeEvent(int size) {
+  public ImageUploadQueueSizeEvent(long size) {
     this.size = size;
   }
 }
