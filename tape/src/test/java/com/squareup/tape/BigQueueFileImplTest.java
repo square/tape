@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import static org.fest.assertions.Assertions.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for BigQueueFileImpl.
@@ -29,6 +30,38 @@ public class BigQueueFileImplTest extends AbstractQueueFileTest {
   @Override
   protected int getHeaderLength() throws IOException {
     return BigQueueFileImpl.HEADER_LENGTH;
+  }
+
+  /**
+   * This is unfortunately going to be a pretty slow test.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testLargerThan2G() throws IOException {
+    BigQueueFileImpl impl = new BigQueueFileImpl(file);
+    byte[] expected = new byte[1048576]; // 1M
+    long added = 0;
+    for (long i = 0; i < Integer.MAX_VALUE; i += 1048576) {
+      impl.add(expected);
+      added++;
+    }
+    // exceed the 2G boundary.
+    impl.add(expected);
+    impl.add(expected);
+    added += 2;
+    assertTrue(impl.usedBytes() > Integer.MAX_VALUE);
+    assertTrue(file.length() > Integer.MAX_VALUE);
+
+    impl = new BigQueueFileImpl(file);
+    // now drain the queue.
+    long removed = 0;
+    while (!impl.isEmpty()) {
+      assertThat(impl.peek()).isEqualTo(expected);
+      impl.remove();
+      removed++;
+    }
+    assertTrue(removed == added);
   }
 
   /**

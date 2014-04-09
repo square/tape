@@ -215,7 +215,7 @@ public abstract class AbstractQueueFile implements QueueFile {
   /**
    * Returns the number of used bytes.
    */
-  private long usedBytes() {
+  long usedBytes() {
     if (elementCount == 0) return headerLength;
 
     if (last.position >= first.position) {
