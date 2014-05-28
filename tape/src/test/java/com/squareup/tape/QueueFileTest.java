@@ -628,6 +628,32 @@ public class QueueFileTest {
   }
 
   /**
+   * Exercise a bug where opening a queue whose first or last element's header
+   * was non contiguous throws an {@link java.io.EOFException}.
+   */
+  @Test public void testReadHeadersFromNonContiguousQueueWorks() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+
+    // Fill the queue up to `length - 2` (i.e. remainingBytes() == 2).
+    for (int i = 0; i < 15; i++) {
+      queueFile.add(values[N - 1]);
+    }
+    queueFile.add(values[219]);
+
+    // Remove first item so we have room to add another one without growing the file.
+    queueFile.remove();
+
+    // Add any element element and close the queue.
+    queueFile.add(values[6]);
+    int queueSize = queueFile.size();
+    queueFile.close();
+
+    // File should not be corrupted.
+    QueueFile queueFile2 = new QueueFile(file);
+    assertThat(queueFile2.size()).isEqualTo(queueSize);
+  }
+
+  /**
    * A RandomAccessFile that can break when you go to write the COMMITTED
    * status.
    */

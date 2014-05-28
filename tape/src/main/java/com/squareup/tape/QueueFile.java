@@ -187,8 +187,9 @@ public class QueueFile {
   /** Returns the Element for the given offset. */
   private Element readElement(int position) throws IOException {
     if (position == 0) return Element.NULL;
-    raf.seek(position);
-    return new Element(position, raf.readInt());
+    ringRead(position, buffer, 0, Element.HEADER_LENGTH);
+    int length = readInt(buffer, 0);
+    return new Element(position, length);
   }
 
   /** Atomically initializes a new file. */
