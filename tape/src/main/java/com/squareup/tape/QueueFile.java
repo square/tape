@@ -381,7 +381,7 @@ public class QueueFile {
     if (endOfLastElement <= first.position) {
       FileChannel channel = raf.getChannel();
       channel.position(fileLength); // destination position
-      int count = endOfLastElement - Element.HEADER_LENGTH;
+      int count = endOfLastElement - HEADER_LENGTH;
       if (channel.transferTo(HEADER_LENGTH, count, channel) != count) {
         throw new AssertionError("Copied insufficient number of bytes!");
       }
