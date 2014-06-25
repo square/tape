@@ -35,7 +35,12 @@ You can also depend on the .jar through Maven:
 </dependency>
 ```
 
+or Gradle:
+```groovy
+compile 'com.squareup:tape:VERSION'
+```
 
+where `VERSION` is replaced by an actual version number such as `1.2.2`.
 
 License
 -------
