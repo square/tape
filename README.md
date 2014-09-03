@@ -13,7 +13,7 @@ an I/O exception is thrown during a mutating change, the change is aborted.
 for file systems that support atomic segment writes (like YAFFS). Most
 conventional file systems don't support this; if the power goes out while
 writing a segment, the segment will contain garbage and the file will be
-corrupt. We'll add journaling support so this class can be used with more
+corrupt. We'll add journaling support so `QueueFile` can be used with more
 file systems later.
 
 An `ObjectQueue` represents an ordering of arbitrary objects which can be backed
