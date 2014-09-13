@@ -14,7 +14,7 @@ public class TaskQueueTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void correctTaskQueueInstanceIsPassedToTheListener() {
+  public void correctTaskQueueInstanceIsPassedToTheListener() throws Exception {
     ObjectQueue.Listener<Task<String>> mockListener = mock(ObjectQueue.Listener.class);
 
     // Register a listener on the taskQueue instance.

@@ -1,6 +1,8 @@
 // Copyright 2011 Square, Inc.
 package com.squareup.tape;
 
+import java.io.IOException;
+
 /**
  * A queue of objects.
  *
@@ -12,23 +14,23 @@ public interface ObjectQueue<T> {
   int size();
 
   /** Enqueues an entry that can be processed at any time. */
-  void add(T entry);
+  void add(T entry) throws IOException;
 
   /**
    * Returns the head of the queue, or {@code null} if the queue is empty. Does not modify the
    * queue.
    */
-  T peek();
+  T peek() throws IOException;
 
   /** Removes the head of the queue. */
-  void remove();
+  void remove() throws IOException;
 
   /**
    * Sets a listener on this queue. Invokes {@link Listener#onAdd} once for each entry that's
    * already in the queue. If an error occurs while reading the data, the listener will not receive
    * further notifications.
    */
-  void setListener(Listener<T> listener);
+  void setListener(Listener<T> listener) throws IOException;
 
   /**
    * Listens for changes to the queue.

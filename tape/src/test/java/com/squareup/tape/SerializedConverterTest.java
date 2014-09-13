@@ -71,7 +71,7 @@ public class SerializedConverterTest {
     createQueue(tmp);
   }
 
-  @Test(expected = FileException.class)
+  @Test(expected = IOException.class)
   public void testAddWithReadOnlyFile_missesMonitor() throws Exception {
     testFile = copyTestFile(EMPTY_SERIALIZED_QUEUE);
 

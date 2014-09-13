@@ -16,6 +16,7 @@ import com.squareup.otto.Subscribe;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.io.IOException;
 
 import static android.content.Intent.ACTION_PICK;
 import static android.provider.MediaStore.MediaColumns.DATA;
@@ -64,7 +65,11 @@ public class SampleActivity extends Activity {
       cursor.close();
 
       // Add the image upload task to the queue.
-      queue.add(new ImageUploadTask(image));
+      try {
+        queue.add(new ImageUploadTask(image));
+      } catch (IOException e) {
+        throw new RuntimeException("Error enqueuing task.", e);
+      }
       Toast.makeText(this, R.string.task_added, LENGTH_SHORT).show();
     }
   }

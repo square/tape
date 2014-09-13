@@ -35,13 +35,13 @@ public class ImageUploadTaskQueue extends TaskQueue<ImageUploadTask> {
     context.startService(new Intent(context, ImageUploadTaskService.class));
   }
 
-  @Override public void add(ImageUploadTask entry) {
+  @Override public void add(ImageUploadTask entry) throws IOException {
     super.add(entry);
     bus.post(produceSizeChanged());
     startService();
   }
 
-  @Override public void remove() {
+  @Override public void remove() throws IOException {
     super.remove();
     bus.post(produceSizeChanged());
   }
