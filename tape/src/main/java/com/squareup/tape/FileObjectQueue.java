@@ -69,6 +69,14 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     }
   }
 
+  public final void close() {
+    try {
+      queueFile.close();
+    } catch (IOException e) {
+      throw new FileException("Failed to close.", e, file);
+    }
+  }
+
   @Override public void setListener(final Listener<T> listener) {
     if (listener != null) {
       try {
