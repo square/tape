@@ -23,16 +23,17 @@ prepares and executes enqueued tasks.
 Download
 --------
 
-Downloadable .jars can be found on the [GitHub download page][2].
-
-You can also depend on the .jar through Maven:
-
+Download [the latest JAR][2] or grab via Maven:
 ```xml
 <dependency>
-    <groupId>com.squareup</groupId>
-    <artifactId>tape</artifactId>
-    <version>(insert latest version)</version>
+  <groupId>com.squareup</groupId>
+  <artifactId>tape</artifactId>
+  <version>1.2.2</version>
 </dependency>
+```
+or Gradle:
+```groovy
+compile 'com.squareup:tape:1.2.2'
 ```
 
 
@@ -57,4 +58,4 @@ License
 
 
  [1]: http://square.github.com/tape/
- [2]: http://github.com/square/tape/downloads
+ [2]: http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=com.squareup&a=tape&v=LATEST
