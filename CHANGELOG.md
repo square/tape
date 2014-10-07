@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+Version 1.2.3 *(2014-10-07)*
+----------------------------
+
+ * `close()` method on `FileObjectQueue` now closes underlying `QueueFile`.
+ * Fix: Properly move and zero out bytes during copy opertaions.
+
+
 Version 1.2.2 *(2014-03-18)*
 ----------------------------
 

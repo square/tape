@@ -28,12 +28,12 @@ Download [the latest JAR][2] or grab via Maven:
 <dependency>
   <groupId>com.squareup</groupId>
   <artifactId>tape</artifactId>
-  <version>1.2.2</version>
+  <version>1.2.3</version>
 </dependency>
 ```
 or Gradle:
 ```groovy
-compile 'com.squareup:tape:1.2.2'
+compile 'com.squareup:tape:1.2.3'
 ```
 
 
