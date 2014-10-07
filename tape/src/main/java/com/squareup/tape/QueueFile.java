@@ -385,6 +385,7 @@ public class QueueFile {
       if (channel.transferTo(HEADER_LENGTH, count, channel) != count) {
         throw new AssertionError("Copied insufficient number of bytes!");
       }
+      ringErase(HEADER_LENGTH, count);
     }
 
     // Commit the expansion.

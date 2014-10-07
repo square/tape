@@ -584,6 +584,56 @@ public class QueueFileTest {
   }
 
   /**
+   * Exercise a bug where file expansion would leave garbage at the start of the header
+   * and after the last element.
+   */
+  @Test public void testFileExpansionCorrectlyZeroesData()
+      throws IOException {
+    QueueFile queue = new QueueFile(file);
+
+    // Create test data - 1k blocks marked consecutively 1, 2, 3, 4 and 5.
+    byte[][] values = new byte[5][];
+    for (int blockNum = 0; blockNum < values.length; blockNum++) {
+      values[blockNum] = new byte[1024];
+      for (int i = 0; i < values[blockNum].length; i++) {
+        values[blockNum][i] = (byte) (blockNum + 1);
+      }
+    }
+
+    // First, add the first two blocks to the queue, remove one leaving a
+    // 1K space at the beginning of the buffer.
+    queue.add(values[0]);
+    queue.add(values[1]);
+    queue.remove();
+
+    // The trailing end of block "4" will be wrapped to the start of the buffer.
+    queue.add(values[2]);
+    queue.add(values[3]);
+
+    // Cause buffer to expand as there isn't space between the end of block "4"
+    // and the start of block "2". Internally the queue will cause block "4"
+    // to be contiguous. There was a bug where the start of the buffer still
+    // contained the tail end of block "4", and garbage was copied after the tail
+    // end of the last element.
+    queue.add(values[4]);
+
+    // Read from header to first element and make sure it's zeroed.
+    int firstElementPadding = 1028;
+    byte[] data = new byte[firstElementPadding];
+    queue.raf.seek(HEADER_LENGTH);
+    queue.raf.readFully(data, 0, firstElementPadding);
+    assertThat(data).containsOnly((byte) 0x00);
+
+    // Read from the last element to the end and make sure it's zeroed.
+    int endOfLastElement = HEADER_LENGTH + firstElementPadding + 4 * (Element.HEADER_LENGTH + 1024);
+    int readLength = (int) (queue.raf.length() - endOfLastElement);
+    data = new byte[readLength];
+    queue.raf.seek(endOfLastElement);
+    queue.raf.readFully(data, 0, readLength);
+    assertThat(data).containsOnly((byte) 0x00);
+  }
+
+  /**
    * Exercise a bug where an expanding queue file where the start and end positions
    * are the same causes corruption.
    */
