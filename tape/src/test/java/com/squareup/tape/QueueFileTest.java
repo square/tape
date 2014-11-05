@@ -13,9 +13,10 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import org.fest.assertions.Assertions;
-import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import static com.squareup.tape.QueueFile.HEADER_LENGTH;
 import static org.fest.assertions.Assertions.assertThat;
@@ -26,14 +27,12 @@ import static org.fest.assertions.Fail.fail;
  *
  * @author Bob Lee (bob@squareup.com)
  */
-@SuppressWarnings({"ResultOfMethodCallIgnored"})
-public class QueueFileTest {
-  private static final Logger logger =
-      Logger.getLogger(QueueFileTest.class.getName());
+@SuppressWarnings({ "ResultOfMethodCallIgnored" }) public class QueueFileTest {
+  private static final Logger logger = Logger.getLogger(QueueFileTest.class.getName());
 
   /**
-   * Takes up 33401 bytes in the queue (N*(N+1)/2+4*N). Picked 254 instead of
-   * 255 so that the number of bytes isn't a multiple of 4.
+   * Takes up 33401 bytes in the queue (N*(N+1)/2+4*N). Picked 254 instead of 255 so that the number
+   * of bytes isn't a multiple of 4.
    */
   private static int N = 254;
   private static byte[][] values = new byte[N][];
@@ -42,20 +41,18 @@ public class QueueFileTest {
     for (int i = 0; i < N; i++) {
       byte[] value = new byte[i];
       // Example: values[3] = { 3, 2, 1 }
-      for (int ii = 0; ii < i; ii++) value[ii] = (byte) (i - ii);
+      for (int ii = 0; ii < i; ii++)
+        value[ii] = (byte) (i - ii);
       values[i] = value;
     }
   }
 
+  @Rule public TemporaryFolder folder = new TemporaryFolder();
   private File file;
 
   @Before public void setUp() throws Exception {
-    file = File.createTempFile("test.queue", null);
-    file.delete();
-  }
-
-  @After public void tearDown() throws Exception {
-    file.delete();
+    File parent = folder.getRoot();
+    file = new File(parent, "queue-file");
   }
 
   @Test public void testAddOneElement() throws IOException {
@@ -331,7 +328,8 @@ public class QueueFileTest {
     assertThat(queueFile.peek()).isEqualTo(values[99]);
   }
 
-  @Test public void testPeekWithElementReader() throws IOException {
+  @SuppressWarnings("deprecation") @Test
+  public void testPeekWithElementReader() throws IOException {
     QueueFile queueFile = new QueueFile(file);
     final byte[] a = {1, 2};
     queueFile.add(a);
@@ -380,7 +378,59 @@ public class QueueFileTest {
     assertThat(queueFile.size()).isEqualTo(1);
   }
 
-  @Test public void testForEach() throws IOException {
+  @Test public void testPeekWithElementVisitor() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    final byte[] a = { 1, 2 };
+    queueFile.add(a);
+    final byte[] b = { 3, 4, 5 };
+    queueFile.add(b);
+
+    final AtomicInteger peeks = new AtomicInteger(0);
+
+    queueFile.peek(new QueueFile.ElementVisitor() {
+      @Override public boolean read(InputStream in, int length) throws IOException {
+        peeks.incrementAndGet();
+
+        assertThat(length).isEqualTo(2);
+        byte[] actual = new byte[length];
+        in.read(actual);
+        assertThat(actual).isEqualTo(a);
+        return true;
+      }
+    });
+
+    queueFile.peek(new QueueFile.ElementVisitor() {
+      @Override public boolean read(InputStream in, int length) throws IOException {
+        peeks.incrementAndGet();
+
+        assertThat(length).isEqualTo(2);
+        assertThat(in.read()).isEqualTo(1);
+        assertThat(in.read()).isEqualTo(2);
+        assertThat(in.read()).isEqualTo(-1);
+        return true;
+      }
+    });
+
+    queueFile.remove();
+
+    queueFile.peek(new QueueFile.ElementVisitor() {
+      @Override public boolean read(InputStream in, int length) throws IOException {
+        peeks.incrementAndGet();
+
+        assertThat(length).isEqualTo(3);
+        byte[] actual = new byte[length];
+        in.read(actual);
+        assertThat(actual).isEqualTo(b);
+        return true;
+      }
+    });
+
+    assertThat(peeks.get()).isEqualTo(3);
+    assertThat(queueFile.peek()).isEqualTo(b);
+    assertThat(queueFile.size()).isEqualTo(1);
+  }
+
+  @SuppressWarnings("deprecation") @Test public void testForEach() throws IOException {
     QueueFile queueFile = new QueueFile(file);
 
     final byte[] a = {1, 2};
@@ -414,28 +464,29 @@ public class QueueFileTest {
     assertThat(iteration[0]).isEqualTo(2);
   }
 
-  @Test public void testForEachReadWithOffset() throws IOException {
-      QueueFile queueFile = new QueueFile(file);
+  @SuppressWarnings("deprecation") @Test
+  public void testForEachReadWithOffset() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
 
-      queueFile.add(new byte[] {1, 2});
-      queueFile.add(new byte[] {3, 4, 5});
+    queueFile.add(new byte[] { 1, 2 });
+    queueFile.add(new byte[] { 3, 4, 5 });
 
-      final byte[] actual = new byte[5];
-      final int[] offset = new int[] {0};
+    final byte[] actual = new byte[5];
+    final int[] offset = new int[] { 0 };
 
-      QueueFile.ElementReader elementReader = new QueueFile.ElementReader() {
-        @Override public void read(InputStream in, int length) throws IOException {
-          in.read(actual, offset[0], length);
-          offset[0] += length;
-        }
-      };
+    QueueFile.ElementReader elementReader = new QueueFile.ElementReader() {
+      @Override public void read(InputStream in, int length) throws IOException {
+        in.read(actual, offset[0], length);
+        offset[0] += length;
+      }
+    };
 
-      queueFile.forEach(elementReader);
+    queueFile.forEach(elementReader);
 
-      assertThat(actual).isEqualTo(new byte[] {1, 2, 3, 4, 5});
-    }
+    assertThat(actual).isEqualTo(new byte[] { 1, 2, 3, 4, 5 });
+  }
 
-  @Test public void testForEachStreamCopy() throws IOException {
+  @SuppressWarnings("deprecation") @Test public void testForEachStreamCopy() throws IOException {
     final QueueFile queueFile = new QueueFile(file);
     queueFile.add(new byte[] {1, 2});
     queueFile.add(new byte[] {3, 4, 5});
@@ -466,6 +517,127 @@ public class QueueFileTest {
 
     queueFile.forEach(elementReader);
     assertThat(baos.toByteArray()).isEqualTo(new byte[] {1, 2, 3, 4, 5});
+  }
+
+  @Test public void testForEachVisitor() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+
+    final byte[] a = { 1, 2 };
+    queueFile.add(a);
+    final byte[] b = { 3, 4, 5 };
+    queueFile.add(b);
+
+    final int[] iteration = new int[] { 0 };
+    QueueFile.ElementVisitor elementReader = new QueueFile.ElementVisitor() {
+      @Override public boolean read(InputStream in, int length) throws IOException {
+        if (iteration[0] == 0) {
+          assertThat(length).isEqualTo(2);
+          byte[] actual = new byte[length];
+          in.read(actual);
+          assertThat(actual).isEqualTo(a);
+        } else if (iteration[0] == 1) {
+          assertThat(length).isEqualTo(3);
+          byte[] actual = new byte[length];
+          in.read(actual);
+          assertThat(actual).isEqualTo(b);
+        } else {
+          fail();
+        }
+        iteration[0]++;
+        return true;
+      }
+    };
+
+    queueFile.forEach(elementReader);
+
+    assertThat(queueFile.peek()).isEqualTo(a);
+    assertThat(iteration[0]).isEqualTo(2);
+  }
+
+  @Test public void testForEachVisitorReadWithOffset() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+
+    queueFile.add(new byte[] { 1, 2 });
+    queueFile.add(new byte[] { 3, 4, 5 });
+
+    final byte[] actual = new byte[5];
+    final int[] offset = new int[] { 0 };
+
+    QueueFile.ElementVisitor elementReader = new QueueFile.ElementVisitor() {
+      @Override public boolean read(InputStream in, int length) throws IOException {
+        in.read(actual, offset[0], length);
+        offset[0] += length;
+        return true;
+      }
+    };
+
+    queueFile.forEach(elementReader);
+
+    assertThat(actual).isEqualTo(new byte[] { 1, 2, 3, 4, 5 });
+  }
+
+  @Test public void testForEachVisitorStreamCopy() throws IOException {
+    final QueueFile queueFile = new QueueFile(file);
+    queueFile.add(new byte[] {1, 2});
+    queueFile.add(new byte[] {3, 4, 5});
+
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final byte[] buffer = new byte[8];
+
+    final QueueFile.ElementVisitor elementReader = new QueueFile.ElementVisitor() {
+      @Override public boolean read(InputStream in, int length) throws IOException {
+        // A common idiom for copying data between two streams, but it depends on the
+        // InputStream correctly returning -1 when no more data is available
+        int count;
+        while ((count = in.read(buffer)) != -1) {
+          if (count == 0) {
+            // In the past, the ElementInputStream.read(byte[], int, int) method would return 0
+            // when no more bytes were available for reading. This test detects that error.
+            //
+            // Note: 0 is a valid return value for InputStream.read(byte[], int, int), which happens
+            // when the passed length is zero. We could trigger that through InputStream.read(byte[])
+            // by passing a zero-length buffer. However, since we won't do that during this test,
+            // we can safely assume that a return value of 0 indicates the past error in logic.
+            fail("This test should never receive a result of 0 from InputStream.read(byte[])");
+          }
+          baos.write(buffer, 0, count);
+        }
+        return true;
+      }
+    };
+
+    queueFile.forEach(elementReader);
+    assertThat(baos.toByteArray()).isEqualTo(new byte[] {1, 2, 3, 4, 5});
+  }
+
+  @Test public void testForEachCanAbortEarly() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+
+    final byte[] a = {1, 2};
+    queueFile.add(a);
+    final byte[] b = {3, 4, 5};
+    queueFile.add(b);
+
+    final AtomicInteger iteration = new AtomicInteger();
+    QueueFile.ElementVisitor elementReader = new QueueFile.ElementVisitor() {
+      @Override public boolean read(InputStream in, int length) throws IOException {
+        if (iteration.get() == 0) {
+          assertThat(length).isEqualTo(2);
+          byte[] actual = new byte[length];
+          in.read(actual);
+          assertThat(actual).isEqualTo(a);
+        } else {
+          fail();
+        }
+        iteration.incrementAndGet();
+        return false;
+      }
+    };
+
+    queueFile.forEach(elementReader);
+
+    assertThat(queueFile.peek()).isEqualTo(a);
+    assertThat(iteration.get()).isEqualTo(1);
   }
 
   /**
