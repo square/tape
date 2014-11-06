@@ -416,22 +416,48 @@ public class QueueFile {
     return data;
   }
 
-  /** Invokes reader with the eldest element, if an element is available. */
-  public synchronized void peek(ElementReader reader) throws IOException {
+  /**
+   * Invokes reader with the eldest element, if an element is available.
+   * @deprecated use {@link #peek(ElementVisitor)}
+   */
+  @Deprecated public synchronized void peek(ElementReader reader) throws IOException {
     if (elementCount > 0) {
       reader.read(new ElementInputStream(first), first.length);
+    }
+  }
+
+  /** Invokes {@code visitor} with the eldest element, if an element is available. */
+  public synchronized void peek(ElementVisitor visitor) throws IOException {
+    if (elementCount > 0) {
+      visitor.read(new ElementInputStream(first), first.length);
     }
   }
 
   /**
    * Invokes the given reader once for each element in the queue, from eldest to
    * most recently added.
+   * @deprecated use {@link #forEach(ElementVisitor)}
    */
-  public synchronized void forEach(ElementReader reader) throws IOException {
+  @Deprecated public synchronized void forEach(final ElementReader reader) throws IOException {
+    forEach(new ElementVisitor() {
+      @Override public boolean read(InputStream in, int length) throws IOException {
+        reader.read(in, length);
+        return true;
+      }
+    });
+  }
+
+  /**
+   * Invokes the given reader once for each element in the queue, from eldest to
+   * most recently added. Continues until all elements are read or
+   * {@link ElementVisitor#read reader.read()} returns {@code false}.
+   */
+  public synchronized void forEach(ElementVisitor reader) throws IOException {
     int position = first.position;
     for (int i = 0; i < elementCount; i++) {
       Element current = readElement(position);
-      reader.read(new ElementInputStream(current), current.length);
+      boolean shouldContinue = reader.read(new ElementInputStream(current), current.length);
+      if (!shouldContinue) break;
       position = wrapPosition(current.position + Element.HEADER_LENGTH + current.length);
     }
   }
@@ -592,8 +618,9 @@ public class QueueFile {
   /**
    * Reads queue elements. Enables partial reads as opposed to reading all of
    * the bytes into a byte[].
+   * @deprecated use {@link ElementVisitor} instead.
    */
-  public interface ElementReader {
+  @Deprecated public interface ElementReader {
 
     /*
      * TODO: Support remove() call from read().
@@ -608,5 +635,23 @@ public class QueueFile {
      * @param length of element data in bytes
      */
     void read(InputStream in, int length) throws IOException;
+  }
+
+  /**
+   * Reads queue elements. Enables partial reads as opposed to reading all of
+   * the bytes into a byte[].  Can opt to skip remaining elements.
+   */
+  public interface ElementVisitor {
+    /**
+     * Called once per element.
+     *
+     * @param in     stream of element data. Reads as many bytes as requested,
+     *               unless fewer than the request number of bytes remains, in
+     *               which case it reads all the remaining bytes. Not buffered.
+     * @param length of element data in bytes
+     * @return an indication whether the {@link #forEach} operation should continue;
+     *         If {@code true}, continue, otherwise halt.
+     */
+    boolean read(InputStream in, int length) throws IOException;
   }
 }

@@ -6,6 +6,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
+
+import static java.util.Collections.unmodifiableList;
 
 /**
  * Base queue class, implements common functionality for a QueueFile-backed
@@ -60,6 +64,35 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     }
   }
 
+  /**
+   * Reads up to {@code max} entries from the head of the queue without removing the entries.
+   * If the queue's {@link #size()} is less than {@code max} then only {@link #size()} entries
+   * are read.
+   */
+  public List<T> peek(final int max) {
+    try {
+      final List<T> entries = new ArrayList<T>(max);
+      queueFile.forEach(new QueueFile.ElementVisitor() {
+        int count;
+        @Override public boolean read(InputStream in, int length) throws IOException {
+          byte[] data = new byte[length];
+          in.read(data, 0, length);
+
+          entries.add(converter.from(data));
+          return ++count < max;
+        }
+      });
+      return unmodifiableList(entries);
+
+    } catch (IOException e) {
+      throw new FileException("Failed to peek.", e, file);
+    }
+  }
+
+  public List<T> asList() {
+    return peek(size());
+  }
+
   @Override public final void remove() {
     try {
       queueFile.remove();
@@ -80,13 +113,13 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
   @Override public void setListener(final Listener<T> listener) {
     if (listener != null) {
       try {
-        queueFile.forEach(new QueueFile.ElementReader() {
-          @Override
-          public void read(InputStream in, int length) throws IOException {
+        queueFile.forEach(new QueueFile.ElementVisitor() {
+          @Override public boolean read(InputStream in, int length) throws IOException {
             byte[] data = new byte[length];
             in.read(data, 0, length);
 
             listener.onAdd(FileObjectQueue.this, converter.from(data));
+            return true;
           }
         });
       } catch (IOException e) {
