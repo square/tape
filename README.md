@@ -58,4 +58,4 @@ License
 
 
  [1]: http://square.github.com/tape/
- [2]: http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=com.squareup&a=tape&v=LATEST
+ [2]: https://search.maven.org/remote_content?g=com.squareup&a=tape&v=LATEST
