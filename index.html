@@ -11,6 +11,7 @@
     <link href="prettify.css" rel="stylesheet">
     <link href="app.css" rel="stylesheet">
     <script src="http://code.jquery.com/jquery-latest.js"></script>
+    <script src="jquery-maven-artifact.min.js"></script>
   </head>
   <body>
     <div class="container content">
@@ -30,7 +31,7 @@
         <div class="span5 offset1">
           <h2 id="download">Download</h2>
           <p>Available via Maven or as a downloadable <code>.jar</code>.</p>
-          <p><a href="http://github.com/square/tape/downloads" class="btn btn-inverse btn-large" id="download-btn">Download</a></p>
+          <p><a href="https://search.maven.org/remote_content?g=com.squareup&a=tape&v=LATEST" class="btn btn-inverse btn-large" id="download-btn">Download Latest</a></p>
           <p><a href="http://github.com/square/tape" id="ribbon">Fork Tape on GitHub</a></p>
           <pre class="maven">&lt;dependency>
     &lt;groupId>com.squareup&lt;/groupId>
@@ -42,7 +43,7 @@
       <div class="row">
         <div class="span12">
           <h2 id="examples">Examples</h2>
-          <p></p>
+          <p>For a more complete example of a background image uploader which expands on both of the following examples see the <a href="https://github.com/square/tape/tree/master/tape-sample">sample Android application</a> in the repository.</p>
           <h3 id="example-image-queue">Android Task Queue Service</h3>
           <p>When used on Android, a service is the perfect companion to a <code>TaskQueue</code> since it allows actions to be completed in the background. If the user is uploading new photos to their favorite sharing site, the service will iterate through the queue until all of the upload tasks completes successfully.</p>
           <pre class="prettyprint">/** Listener for starting the upload service when the queue has tasks. */
@@ -53,11 +54,11 @@ public class ImageQueueServiceListener implements ObjectQueue.Listener&lt;ImageU
     this.context = context;
   }
 
-  @Override public void onAdd(ObjectQueue&lt;ImageUploadTask>, ImageUploadTask task) {
+  @Override public void onAdd(ObjectQueue&lt;ImageUploadTask> queue, ImageUploadTask task) {
     context.startService(new Intent(context, ImageQueueService.class));
   }
 
-  @Override public void onRemove(ObjectQueue&lt;ImageUploadTask>) {}
+  @Override public void onRemove(ObjectQueue&lt;ImageUploadTask> queue) {}
 }
 
 /** Service which iterates through pending upload tasks one-by-one. */
@@ -140,20 +141,11 @@ limitations under the License.</p>
     <script src="prettify.js"></script>
     <script> prettyPrint(); </script>
     <script>
-      $.getJSON('https://api.github.com/repos/square/tape/tags?callback=?', function(response) {
-          var meta = response.meta
-            , data = response.data
-            ;
-
-          data.sort(function(o1, o2) {
-              return (o1.name > o2.name) ? -1 : 1;
-          });
-
-          // Replace in Maven <dependency>
-          $('#mvn-version').text(data[0].name);
-          // Replace in download button
-          $('#download-btn').text('Download v' + data[0].name);
-      });
+        // Look up the latest version of the library.
+        $.fn.artifactVersion('com.squareup', 'tape', function(version, url) {
+          $('#mvn-version').text(version);
+          $('#download-btn').text('Download v' + version).attr('href', url);
+        });
     </script>
   </body>
 </html>
