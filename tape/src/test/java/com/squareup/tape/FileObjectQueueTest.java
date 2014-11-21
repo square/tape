@@ -39,6 +39,11 @@ public class FileObjectQueueTest {
     assertThat(peek).hasSize(3);
   }
 
+  @Test public void clear() {
+    queue.clear();
+    assertThat(queue.size()).isEqualTo(0);
+  }
+
   @Test public void peekMaxCanBeSmallerThanQueueDepth() {
     List<String> peek = queue.peek(2);
     assertThat(peek).containsExactly("one", "two");
