@@ -523,25 +523,34 @@ public class QueueFile {
     if (elementCount == 1) {
       clear();
     } else {
-      // assert elementCount > 1
       int firstTotalLength = Element.HEADER_LENGTH + first.length;
 
-      ringErase(first.position, firstTotalLength);
-
+      // Read the next element
       int newFirstPosition = wrapPosition(first.position + firstTotalLength);
       ringRead(newFirstPosition, buffer, 0, Element.HEADER_LENGTH);
-      int length = readInt(buffer, 0);
+      int newFirstLength = readInt(buffer, 0);
+
+      // Commit the headers
       writeHeader(fileLength, elementCount - 1, newFirstPosition, last.position);
+
+      Element removed = first;
       elementCount--;
-      first = new Element(newFirstPosition, length);
+      first = new Element(newFirstPosition, newFirstLength);
+
+      // Commit the erase
+      ringErase(removed.position, firstTotalLength);
     }
   }
 
   /** Clears this queue. Truncates the file to the initial size. */
   public synchronized void clear() throws IOException {
-    raf.seek(0);
-    raf.write(ZEROES);
+    // Commit the header
     writeHeader(INITIAL_LENGTH, 0, 0, 0);
+
+    // Zero out data
+    raf.seek(HEADER_LENGTH);
+    raf.write(ZEROES, 0, INITIAL_LENGTH - HEADER_LENGTH);
+
     elementCount = 0;
     first = Element.NULL;
     last = Element.NULL;
