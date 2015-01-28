@@ -519,27 +519,45 @@ public class QueueFile {
    * @throws java.util.NoSuchElementException if the queue is empty
    */
   public synchronized void remove() throws IOException {
+    remove(1);
+  }
+
+  /**
+   * Removes the eldest {@code n} elements.
+   *
+   * @throws java.util.NoSuchElementException if the queue is empty
+   */
+  public synchronized void remove(int n) throws IOException {
     if (isEmpty()) throw new NoSuchElementException();
-    if (elementCount == 1) {
-      clear();
-    } else {
-      int firstTotalLength = Element.HEADER_LENGTH + first.length;
-
-      // Read the next element.
-      int newFirstPosition = wrapPosition(first.position + firstTotalLength);
-      ringRead(newFirstPosition, buffer, 0, Element.HEADER_LENGTH);
-      int newFirstLength = readInt(buffer, 0);
-
-      // Commit the headers.
-      writeHeader(fileLength, elementCount - 1, newFirstPosition, last.position);
-
-      Element removed = first;
-      elementCount--;
-      first = new Element(newFirstPosition, newFirstLength);
-
-      // Commit the erase.
-      ringErase(removed.position, firstTotalLength);
+    if (n > elementCount) {
+      throw new IllegalArgumentException(
+          "Cannot remove more elements (" + n + ") than present in queue (" + elementCount + ").");
     }
+    if (n == elementCount) {
+      clear();
+      return;
+    }
+
+    final int eraseStartPosition = first.position;
+    int eraseTotalLength = 0;
+
+    // Read the position and length of the new first element.
+    int newFirstPosition = first.position;
+    int newFirstLength = first.length;
+    for (int i = 0; i < n; i++) {
+      eraseTotalLength += Element.HEADER_LENGTH + newFirstLength;
+      newFirstPosition = wrapPosition(newFirstPosition + Element.HEADER_LENGTH + newFirstLength);
+      ringRead(newFirstPosition, buffer, 0, Element.HEADER_LENGTH);
+      newFirstLength = readInt(buffer, 0);
+    }
+
+    // Commit the header.
+    writeHeader(fileLength, elementCount - n, newFirstPosition, last.position);
+    elementCount -= n;
+    first = new Element(newFirstPosition, newFirstLength);
+
+    // Commit the erase.
+    ringErase(eraseStartPosition, eraseTotalLength);
   }
 
   /** Clears this queue. Truncates the file to the initial size. */
