@@ -139,6 +139,26 @@ import static org.fest.assertions.Fail.fail;
     }
   }
 
+  @Test public void removeMultipleDoesNotCorrupt() throws IOException {
+    QueueFile queue = new QueueFile(file);
+    for (int i = 0; i < 10; i ++) {
+      queue.add(values[i]);
+    }
+
+    queue.remove(1);
+    assertThat(queue.size()).isEqualTo(9);
+    assertThat(queue.peek()).isEqualTo(values[1]);
+
+    queue.remove(3);
+    queue = new QueueFile(file);
+    assertThat(queue.size()).isEqualTo(6);
+    assertThat(queue.peek()).isEqualTo(values[4]);
+
+    queue.remove(6);
+    assertThat(queue.isEmpty()).isTrue();
+    assertThat(queue.peek()).isNull();
+  }
+
   @Test public void removeDoesNotCorrupt() throws IOException {
     QueueFile queue = new QueueFile(file);
 

@@ -83,7 +83,6 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
         }
       });
       return unmodifiableList(entries);
-
     } catch (IOException e) {
       throw new FileException("Failed to peek.", e, file);
     }
@@ -97,6 +96,19 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     try {
       queueFile.remove();
       if (listener != null) listener.onRemove(this);
+    } catch (IOException e) {
+      throw new FileException("Failed to remove.", e, file);
+    }
+  }
+
+  public final void remove(int n) throws IOException {
+    try {
+      queueFile.remove(n);
+      if (listener != null) {
+        for (int i = 0; i < n; i++) {
+          listener.onRemove(this);
+        }
+      }
     } catch (IOException e) {
       throw new FileException("Failed to remove.", e, file);
     }
