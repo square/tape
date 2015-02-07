@@ -15,6 +15,7 @@
  */
 package com.squareup.tape;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,30 +29,26 @@ import java.util.logging.Logger;
 import static java.lang.Math.min;
 
 /**
- * A reliable, efficient, file-based, FIFO queue. Additions and removals are
- * O(1). All operations are atomic. Writes are synchronous; data will be written
- * to disk before an operation returns. The underlying file is structured to
- * survive process and even system crashes. If an I/O exception is thrown during
- * a mutating change, the change is aborted. It is safe to continue to use a
- * {@code QueueFile} instance after an exception.
+ * A reliable, efficient, file-based, FIFO queue. Additions and removals are O(1). All operations
+ * are atomic. Writes are synchronous; data will be written to disk before an operation returns.
+ * The underlying file is structured to survive process and even system crashes. If an I/O
+ * exception is thrown during a mutating change, the change is aborted. It is safe to continue to
+ * use a {@code QueueFile} instance after an exception.
  *
- * <p>All operations are synchronized. In a traditional queue, the remove
- * operation returns an element. In this queue, {@link #peek} and {@link
- * #remove} are used in conjunction. Use {@code peek} to retrieve the first
- * element, and then {@code remove} to remove it after successful processing. If
- * the system crashes after {@code peek} and during processing, the element will
- * remain in the queue, to be processed when the system restarts.
+ * <p>All operations are synchronized. In a traditional queue, the remove operation returns an
+ * element. In this queue, {@link #peek} and {@link #remove} are used in conjunction. Use
+ * {@code peek} to retrieve the first element, and then {@code remove} to remove it after
+ * successful processing. If the system crashes after {@code peek} and during processing, the
+ * element will remain in the queue, to be processed when the system restarts.
  *
- * <p><strong>NOTE:</strong> The current implementation is built
- * for file systems that support atomic segment writes (like YAFFS). Most
- * conventional file systems don't support this; if the power goes out while
- * writing a segment, the segment will contain garbage and the file will be
- * corrupt. We'll add journaling support so this class can be used with more
- * file systems later.
+ * <p><strong>NOTE:</strong> The current implementation is built for file systems that support
+ * atomic segment writes (like YAFFS). Most conventional file systems don't support this; if the
+ * power goes out while writing a segment, the segment will contain garbage and the file will be
+ * corrupt. We'll add journaling support so this class can be used with more file systems later.
  *
  * @author Bob Lee (bob@squareup.com)
  */
-public class QueueFile {
+public class QueueFile implements Closeable {
   private static final Logger LOGGER = Logger.getLogger(QueueFile.class.getName());
 
   /** Initial file size in bytes. */
@@ -64,13 +61,11 @@ public class QueueFile {
   static final int HEADER_LENGTH = 16;
 
   /**
-   * The underlying file. Uses a ring buffer to store entries. Designed so that
-   * a modification isn't committed or visible until we write the header. The
-   * header is much smaller than a segment. So long as the underlying file
-   * system supports atomic segment writes, changes to the queue are atomic.
-   * Storing the file length ensures we can recover from a failed expansion
-   * (i.e. if setting the file length succeeds but the process dies before the
-   * data can be copied).
+   * The underlying file. Uses a ring buffer to store entries. Designed so that a modification
+   * isn't committed or visible until we write the header. The header is much smaller than a
+   * segment. So long as the underlying file system supports atomic segment writes, changes to the
+   * queue are atomic. Storing the file length ensures we can recover from a failed expansion
+   * (i.e. if setting the file length succeeds but the process dies before the data can be copied).
    * <p/>
    * <pre>
    *   Format:
@@ -108,24 +103,25 @@ public class QueueFile {
   private final byte[] buffer = new byte[16];
 
   /**
-   * Constructs a new queue backed by the given file. Only one {@code QueueFile}
-   * instance should access a given file at a time.
+   * Constructs a new queue backed by the given file. Only one instance should access a given file
+   * at a time.
    */
   public QueueFile(File file) throws IOException {
-    if (!file.exists()) initialize(file);
+    if (!file.exists()) {
+      initialize(file);
+    }
     raf = open(file);
     readHeader();
   }
 
-  /** For testing. */
   QueueFile(RandomAccessFile raf) throws IOException {
     this.raf = raf;
     readHeader();
   }
 
   /**
-   * Stores int in buffer. The behavior is equivalent to calling {@link
-   * java.io.RandomAccessFile#writeInt}.
+   * Stores an {@code int} in the {@code byte[]}. The behavior is equivalent to calling
+   * {@link RandomAccessFile#writeInt}.
    */
   private static void writeInt(byte[] buffer, int offset, int value) {
     buffer[offset] = (byte) (value >> 24);
@@ -134,19 +130,7 @@ public class QueueFile {
     buffer[offset + 3] = (byte) value;
   }
 
-  /**
-   * Stores int values in buffer. The behavior is equivalent to calling {@link
-   * java.io.RandomAccessFile#writeInt} for each value.
-   */
-  private static void writeInts(byte[] buffer, int... values) {
-    int offset = 0;
-    for (int value : values) {
-      writeInt(buffer, offset, value);
-      offset += 4;
-    }
-  }
-
-  /** Reads an int from a byte[]. */
+  /** Reads an {@code int} from the {@code byte[]}. */
   private static int readInt(byte[] buffer, int offset) {
     return ((buffer[offset] & 0xff) << 24)
         + ((buffer[offset + 1] & 0xff) << 16)
@@ -154,13 +138,13 @@ public class QueueFile {
         + (buffer[offset + 3] & 0xff);
   }
 
-  /** Reads the header. */
   private void readHeader() throws IOException {
     raf.seek(0);
     raf.readFully(buffer);
     fileLength = readInt(buffer, 0);
     if (fileLength > raf.length()) {
-      throw new IOException("File is truncated. Expected length: " + fileLength + ", Actual length: " + raf.length());
+      throw new IOException(
+          "File is truncated. Expected length: " + fileLength + ", Actual length: " + raf.length());
     } else if (fileLength == 0) {
       throw new IOException("File is corrupt; length stored in header is 0.");
     }
@@ -172,19 +156,21 @@ public class QueueFile {
   }
 
   /**
-   * Writes header atomically. The arguments contain the updated values. The
-   * class member fields should not have changed yet. This only updates the
-   * state in the file. It's up to the caller to update the class member
-   * variables *after* this call succeeds. Assumes segment writes are atomic in
-   * the underlying file system.
+   * Writes header atomically. The arguments contain the updated values. The class member fields
+   * should not have changed yet. This only updates the state in the file. It's up to the caller to
+   * update the class member variables *after* this call succeeds. Assumes segment writes are
+   * atomic in the underlying file system.
    */
-  private void writeHeader(int fileLength, int elementCount, int firstPosition, int lastPosition) throws IOException {
-    writeInts(buffer, fileLength, elementCount, firstPosition, lastPosition);
+  private void writeHeader(int fileLength, int elementCount, int firstPosition, int lastPosition)
+      throws IOException {
+    writeInt(buffer, 0, fileLength);
+    writeInt(buffer, 4, elementCount);
+    writeInt(buffer, 8, firstPosition);
+    writeInt(buffer, 12, lastPosition);
     raf.seek(0);
     raf.write(buffer);
   }
 
-  /** Returns the Element for the given offset. */
   private Element readElement(int position) throws IOException {
     if (position == 0) return Element.NULL;
     ringRead(position, buffer, 0, Element.HEADER_LENGTH);
@@ -192,7 +178,6 @@ public class QueueFile {
     return new Element(position, length);
   }
 
-  /** Atomically initializes a new file. */
   private static void initialize(File file) throws IOException {
     // Use a temp file so we don't leave a partially-initialized file.
     File tempFile = new File(file.getPath() + ".tmp");
@@ -201,14 +186,16 @@ public class QueueFile {
       raf.setLength(INITIAL_LENGTH);
       raf.seek(0);
       byte[] headerBuffer = new byte[16];
-      writeInts(headerBuffer, INITIAL_LENGTH, 0, 0, 0);
+      writeInt(headerBuffer, 0, INITIAL_LENGTH);
       raf.write(headerBuffer);
     } finally {
       raf.close();
     }
 
     // A rename is atomic.
-    if (!tempFile.renameTo(file)) throw new IOException("Rename failed!");
+    if (!tempFile.renameTo(file)) {
+      throw new IOException("Rename failed!");
+    }
   }
 
   /** Opens a random access file that writes synchronously. */
@@ -223,12 +210,12 @@ public class QueueFile {
   }
 
   /**
-   * Writes count bytes from buffer to position in file. Automatically wraps
-   * write if position is past the end of the file or if buffer overlaps it.
+   * Writes count bytes from buffer to position in file. Automatically wraps write if position is
+   * past the end of the file or if buffer overlaps it.
    *
    * @param position in file to write to
-   * @param buffer   to write from
-   * @param count    # of bytes to write
+   * @param buffer to write from
+   * @param count # of bytes to write
    */
   private void ringWrite(int position, byte[] buffer, int offset, int count) throws IOException {
     position = wrapPosition(position);
@@ -259,8 +246,8 @@ public class QueueFile {
    * Reads count bytes into buffer from file. Wraps if necessary.
    *
    * @param position in file to read from
-   * @param buffer   to read into
-   * @param count    # of bytes to read
+   * @param buffer to read into
+   * @param count # of bytes to read
    */
   private void ringRead(int position, byte[] buffer, int offset, int count) throws IOException {
     position = wrapPosition(position);
@@ -290,14 +277,16 @@ public class QueueFile {
   /**
    * Adds an element to the end of the queue.
    *
-   * @param data   to copy bytes from
+   * @param data to copy bytes from
    * @param offset to start from in buffer
-   * @param count  number of bytes to copy
-   * @throws IndexOutOfBoundsException if {@code offset < 0} or {@code count < 0}, or if {@code offset + count} is
-   *                                   bigger than the length of {@code buffer}.
+   * @param count number of bytes to copy
+   * @throws IndexOutOfBoundsException if {@code offset < 0} or {@code count < 0}, or if {@code
+   * offset + count} is bigger than the length of {@code buffer}.
    */
   public synchronized void add(byte[] data, int offset, int count) throws IOException {
-    nonNull(data, "buffer");
+    if (data == null) {
+      throw new NullPointerException("data == null");
+    }
     if ((offset | count) < 0 || count > data.length - offset) {
       throw new IndexOutOfBoundsException();
     }
@@ -306,7 +295,8 @@ public class QueueFile {
 
     // Insert a new element after the current last element.
     boolean wasEmpty = isEmpty();
-    int position = wasEmpty ? HEADER_LENGTH : wrapPosition(last.position + Element.HEADER_LENGTH + last.length);
+    int position = wasEmpty ? HEADER_LENGTH
+        : wrapPosition(last.position + Element.HEADER_LENGTH + last.length);
     Element newLast = new Element(position, count);
 
     // Write length.
@@ -324,7 +314,6 @@ public class QueueFile {
     if (wasEmpty) first = last; // first element
   }
 
-  /** Returns the number of used bytes. */
   private int usedBytes() {
     if (elementCount == 0) return HEADER_LENGTH;
 
@@ -341,7 +330,6 @@ public class QueueFile {
     }
   }
 
-  /** Returns number of unused bytes. */
   private int remainingBytes() {
     return fileLength - usedBytes();
   }
@@ -352,8 +340,7 @@ public class QueueFile {
   }
 
   /**
-   * If necessary, expands the file to accommodate an additional element of the
-   * given length.
+   * If necessary, expands the file to accommodate an additional element of the given length.
    *
    * @param dataLength length of data being added
    */
@@ -418,6 +405,7 @@ public class QueueFile {
 
   /**
    * Invokes reader with the eldest element, if an element is available.
+   *
    * @deprecated use {@link #peek(ElementVisitor)}
    */
   @Deprecated public synchronized void peek(ElementReader reader) throws IOException {
@@ -436,6 +424,7 @@ public class QueueFile {
   /**
    * Invokes the given reader once for each element in the queue, from eldest to
    * most recently added.
+   *
    * @deprecated use {@link #forEach(ElementVisitor)}
    */
   @Deprecated public synchronized void forEach(final ElementReader reader) throws IOException {
@@ -448,9 +437,9 @@ public class QueueFile {
   }
 
   /**
-   * Invokes the given reader once for each element in the queue, from eldest to
-   * most recently added. Continues until all elements are read or
-   * {@link ElementVisitor#read reader.read()} returns {@code false}.
+   * Invokes the given reader once for each element in the queue, from eldest to most recently
+   * added. Continues until all elements are read or {@link ElementVisitor#read reader.read()}
+   * returns {@code false}.
    */
   public synchronized void forEach(ElementVisitor reader) throws IOException {
     int position = first.position;
@@ -462,17 +451,6 @@ public class QueueFile {
     }
   }
 
-  /**
-   * Returns t unless it's null.
-   *
-   * @throws NullPointerException if t is null
-   */
-  private static <T> T nonNull(T t, String name) {
-    if (t == null) throw new NullPointerException(name);
-    return t;
-  }
-
-  /** Reads a single element. */
   private final class ElementInputStream extends InputStream {
     private int position;
     private int remaining;
@@ -483,19 +461,17 @@ public class QueueFile {
     }
 
     @Override public int read(byte[] buffer, int offset, int length) throws IOException {
-      nonNull(buffer, "buffer");
       if ((offset | length) < 0 || length > buffer.length - offset) {
         throw new ArrayIndexOutOfBoundsException();
       }
-      if (remaining > 0) {
-        if (length > remaining) length = remaining;
-        ringRead(position, buffer, offset, length);
-        position = wrapPosition(position + length);
-        remaining -= length;
-        return length;
-      } else {
+      if (remaining == 0) {
         return -1;
       }
+      if (length > remaining) length = remaining;
+      ringRead(position, buffer, offset, length);
+      position = wrapPosition(position + length);
+      remaining -= length;
+      return length;
     }
 
     @Override public int read() throws IOException {
@@ -516,7 +492,7 @@ public class QueueFile {
   /**
    * Removes the eldest element.
    *
-   * @throws java.util.NoSuchElementException if the queue is empty
+   * @throws NoSuchElementException if the queue is empty
    */
   public synchronized void remove() throws IOException {
     remove(1);
@@ -525,7 +501,7 @@ public class QueueFile {
   /**
    * Removes the eldest {@code n} elements.
    *
-   * @throws java.util.NoSuchElementException if the queue is empty
+   * @throws NoSuchElementException if the queue is empty
    */
   public synchronized void remove(int n) throws IOException {
     if (isEmpty()) throw new NoSuchElementException();
@@ -577,7 +553,7 @@ public class QueueFile {
   }
 
   /** Closes the underlying file. */
-  public synchronized void close() throws IOException {
+  @Override public synchronized void close() throws IOException {
     raf.close();
   }
 
@@ -611,12 +587,10 @@ public class QueueFile {
 
   /** A pointer to an element. */
   static class Element {
+    static final Element NULL = new Element(0, 0);
 
     /** Length of element header in bytes. */
     static final int HEADER_LENGTH = 4;
-
-    /** Null element. */
-    static final Element NULL = new Element(0, 0);
 
     /** Position in file. */
     final int position;
@@ -628,7 +602,7 @@ public class QueueFile {
      * Constructs a new element.
      *
      * @param position within file
-     * @param length   of data
+     * @param length of data
      */
     Element(int position, int length) {
       this.position = position;
@@ -643,8 +617,9 @@ public class QueueFile {
   }
 
   /**
-   * Reads queue elements. Enables partial reads as opposed to reading all of
-   * the bytes into a byte[].
+   * Reads queue elements. Enables partial reads as opposed to reading all of the bytes into a
+   * {@code byte[]}.
+   *
    * @deprecated use {@link ElementVisitor} instead.
    */
   @Deprecated public interface ElementReader {
@@ -656,9 +631,9 @@ public class QueueFile {
     /**
      * Called once per element.
      *
-     * @param in     stream of element data. Reads as many bytes as requested,
-     *               unless fewer than the request number of bytes remains, in
-     *               which case it reads all the remaining bytes. Not buffered.
+     * @param in stream of element data. Reads as many bytes as requested, unless fewer than the
+     * request number of bytes remains, in which case it reads all the remaining bytes. Not
+     * buffered.
      * @param length of element data in bytes
      */
     void read(InputStream in, int length) throws IOException;
@@ -672,12 +647,12 @@ public class QueueFile {
     /**
      * Called once per element.
      *
-     * @param in     stream of element data. Reads as many bytes as requested,
-     *               unless fewer than the request number of bytes remains, in
-     *               which case it reads all the remaining bytes. Not buffered.
+     * @param in stream of element data. Reads as many bytes as requested, unless fewer than the
+     * request number of bytes remains, in which case it reads all the remaining bytes. Not
+     * buffered.
      * @param length of element data in bytes
-     * @return an indication whether the {@link #forEach} operation should continue;
-     *         If {@code true}, continue, otherwise halt.
+     * @return an indication whether the {@link #forEach} operation should continue; If
+     * {@code true}, continue, otherwise halt.
      */
     boolean read(InputStream in, int length) throws IOException;
   }
