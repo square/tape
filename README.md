@@ -28,12 +28,12 @@ Download [the latest JAR][2] or grab via Maven:
 <dependency>
   <groupId>com.squareup</groupId>
   <artifactId>tape</artifactId>
-  <version>1.2.3</version>
+  <version>1.3.0</version>
 </dependency>
 ```
 or Gradle:
 ```groovy
-compile 'com.squareup:tape:1.2.3'
+compile 'com.squareup:tape:1.3.0'
 ```
 
 Snapshots of the development version are available in [Sonatype's `snapshots` repository][snap].

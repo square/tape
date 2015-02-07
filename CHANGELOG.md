@@ -1,6 +1,15 @@
 Change Log
 ==========
 
+Version 1.3.0 *(2015-01-06)*
+----------------------------
+
+ * New: `remove(int)` allows atomic removal of multiple elements.
+ * New: `forEach(ElementVisitor)` allows iterating queue items and stopping iteration early.
+ * `QueueFile` now implements the `Closeable` interface.
+ * Fix: Do not erase data before updating the header when calling `clear()` or `remove()`.
+
+
 Version 1.2.3 *(2014-10-07)*
 ----------------------------
 
