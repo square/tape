@@ -74,7 +74,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
       final List<T> entries = new ArrayList<T>(max);
       queueFile.forEach(new QueueFile.ElementVisitor() {
         int count;
-        @Override public boolean read(InputStream in, int length) throws IOException {
+        @Override public boolean read(int index, InputStream in, int length) throws IOException {
           byte[] data = new byte[length];
           in.read(data, 0, length);
 
@@ -126,7 +126,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     if (listener != null) {
       try {
         queueFile.forEach(new QueueFile.ElementVisitor() {
-          @Override public boolean read(InputStream in, int length) throws IOException {
+          @Override public boolean read(int index, InputStream in, int length) throws IOException {
             byte[] data = new byte[length];
             in.read(data, 0, length);
 

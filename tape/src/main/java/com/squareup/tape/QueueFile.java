@@ -417,7 +417,7 @@ public class QueueFile implements Closeable {
   /** Invokes {@code visitor} with the eldest element, if an element is available. */
   public synchronized void peek(ElementVisitor visitor) throws IOException {
     if (elementCount > 0) {
-      visitor.read(new ElementInputStream(first), first.length);
+      visitor.read(0, new ElementInputStream(first), first.length);
     }
   }
 
@@ -429,7 +429,7 @@ public class QueueFile implements Closeable {
    */
   @Deprecated public synchronized void forEach(final ElementReader reader) throws IOException {
     forEach(new ElementVisitor() {
-      @Override public boolean read(InputStream in, int length) throws IOException {
+      @Override public boolean read(int index, InputStream in, int length) throws IOException {
         reader.read(in, length);
         return true;
       }
@@ -447,7 +447,7 @@ public class QueueFile implements Closeable {
     int position = first.position;
     for (int i = 0; i < elementCount; i++) {
       Element current = readElement(position);
-      boolean shouldContinue = reader.read(new ElementInputStream(current), current.length);
+      boolean shouldContinue = reader.read(i, new ElementInputStream(current), current.length);
       if (!shouldContinue) {
         return i + 1;
       }
@@ -652,6 +652,7 @@ public class QueueFile implements Closeable {
     /**
      * Called once per element.
      *
+     * @param index position of the element in the queue.
      * @param in stream of element data. Reads as many bytes as requested, unless fewer than the
      * request number of bytes remains, in which case it reads all the remaining bytes. Not
      * buffered.
@@ -659,6 +660,6 @@ public class QueueFile implements Closeable {
      * @return an indication whether the {@link #forEach} operation should continue; If
      * {@code true}, continue, otherwise halt.
      */
-    boolean read(InputStream in, int length) throws IOException;
+    boolean read(int index, InputStream in, int length) throws IOException;
   }
 }
