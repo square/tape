@@ -408,7 +408,7 @@ import static org.fest.assertions.Fail.fail;
     final AtomicInteger peeks = new AtomicInteger(0);
 
     queueFile.peek(new QueueFile.ElementVisitor() {
-      @Override public boolean read(InputStream in, int length) throws IOException {
+      @Override public boolean read(int index, InputStream in, int length) throws IOException {
         peeks.incrementAndGet();
 
         assertThat(length).isEqualTo(2);
@@ -420,7 +420,7 @@ import static org.fest.assertions.Fail.fail;
     });
 
     queueFile.peek(new QueueFile.ElementVisitor() {
-      @Override public boolean read(InputStream in, int length) throws IOException {
+      @Override public boolean read(int index, InputStream in, int length) throws IOException {
         peeks.incrementAndGet();
 
         assertThat(length).isEqualTo(2);
@@ -434,7 +434,7 @@ import static org.fest.assertions.Fail.fail;
     queueFile.remove();
 
     queueFile.peek(new QueueFile.ElementVisitor() {
-      @Override public boolean read(InputStream in, int length) throws IOException {
+      @Override public boolean read(int index, InputStream in, int length) throws IOException {
         peeks.incrementAndGet();
 
         assertThat(length).isEqualTo(3);
@@ -547,15 +547,18 @@ import static org.fest.assertions.Fail.fail;
     final byte[] b = { 3, 4, 5 };
     queueFile.add(b);
 
-    final int[] iteration = new int[] { 0 };
+    final AtomicInteger iteration = new AtomicInteger();
     QueueFile.ElementVisitor elementVisitor = new QueueFile.ElementVisitor() {
-      @Override public boolean read(InputStream in, int length) throws IOException {
-        if (iteration[0] == 0) {
+      @Override public boolean read(int index, InputStream in, int length) throws IOException {
+        int count = iteration.getAndIncrement();
+        assertThat(count).isEqualTo(index);
+
+        if (count == 0) {
           assertThat(length).isEqualTo(2);
           byte[] actual = new byte[length];
           in.read(actual);
           assertThat(actual).isEqualTo(a);
-        } else if (iteration[0] == 1) {
+        } else if (count == 1) {
           assertThat(length).isEqualTo(3);
           byte[] actual = new byte[length];
           in.read(actual);
@@ -563,7 +566,6 @@ import static org.fest.assertions.Fail.fail;
         } else {
           fail();
         }
-        iteration[0]++;
         return true;
       }
     };
@@ -571,7 +573,7 @@ import static org.fest.assertions.Fail.fail;
     int saw = queueFile.forEach(elementVisitor);
     assertThat(saw).isEqualTo(2);
     assertThat(queueFile.peek()).isEqualTo(a);
-    assertThat(iteration[0]).isEqualTo(2);
+    assertThat(iteration.get()).isEqualTo(2);
   }
 
   @Test public void testForEachVisitorReadWithOffset() throws IOException {
@@ -584,7 +586,7 @@ import static org.fest.assertions.Fail.fail;
     final int[] offset = new int[] { 0 };
 
     QueueFile.ElementVisitor elementVisitor = new QueueFile.ElementVisitor() {
-      @Override public boolean read(InputStream in, int length) throws IOException {
+      @Override public boolean read(int index, InputStream in, int length) throws IOException {
         in.read(actual, offset[0], length);
         offset[0] += length;
         return true;
@@ -605,7 +607,7 @@ import static org.fest.assertions.Fail.fail;
     final byte[] buffer = new byte[8];
 
     final QueueFile.ElementVisitor elementVisitor = new QueueFile.ElementVisitor() {
-      @Override public boolean read(InputStream in, int length) throws IOException {
+      @Override public boolean read(int index, InputStream in, int length) throws IOException {
         // A common idiom for copying data between two streams, but it depends on the
         // InputStream correctly returning -1 when no more data is available
         int count;
@@ -641,7 +643,7 @@ import static org.fest.assertions.Fail.fail;
 
     final AtomicInteger iteration = new AtomicInteger();
     QueueFile.ElementVisitor elementVisitor = new QueueFile.ElementVisitor() {
-      @Override public boolean read(InputStream in, int length) throws IOException {
+      @Override public boolean read(int index, InputStream in, int length) throws IOException {
         if (iteration.get() == 0) {
           assertThat(length).isEqualTo(2);
           byte[] actual = new byte[length];
