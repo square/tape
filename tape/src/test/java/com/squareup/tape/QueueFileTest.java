@@ -548,7 +548,7 @@ import static org.fest.assertions.Fail.fail;
     queueFile.add(b);
 
     final int[] iteration = new int[] { 0 };
-    QueueFile.ElementVisitor elementReader = new QueueFile.ElementVisitor() {
+    QueueFile.ElementVisitor elementVisitor = new QueueFile.ElementVisitor() {
       @Override public boolean read(InputStream in, int length) throws IOException {
         if (iteration[0] == 0) {
           assertThat(length).isEqualTo(2);
@@ -568,8 +568,8 @@ import static org.fest.assertions.Fail.fail;
       }
     };
 
-    queueFile.forEach(elementReader);
-
+    int saw = queueFile.forEach(elementVisitor);
+    assertThat(saw).isEqualTo(2);
     assertThat(queueFile.peek()).isEqualTo(a);
     assertThat(iteration[0]).isEqualTo(2);
   }
@@ -583,7 +583,7 @@ import static org.fest.assertions.Fail.fail;
     final byte[] actual = new byte[5];
     final int[] offset = new int[] { 0 };
 
-    QueueFile.ElementVisitor elementReader = new QueueFile.ElementVisitor() {
+    QueueFile.ElementVisitor elementVisitor = new QueueFile.ElementVisitor() {
       @Override public boolean read(InputStream in, int length) throws IOException {
         in.read(actual, offset[0], length);
         offset[0] += length;
@@ -591,8 +591,8 @@ import static org.fest.assertions.Fail.fail;
       }
     };
 
-    queueFile.forEach(elementReader);
-
+    int saw = queueFile.forEach(elementVisitor);
+    assertThat(saw).isEqualTo(2);
     assertThat(actual).isEqualTo(new byte[] { 1, 2, 3, 4, 5 });
   }
 
@@ -604,7 +604,7 @@ import static org.fest.assertions.Fail.fail;
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final byte[] buffer = new byte[8];
 
-    final QueueFile.ElementVisitor elementReader = new QueueFile.ElementVisitor() {
+    final QueueFile.ElementVisitor elementVisitor = new QueueFile.ElementVisitor() {
       @Override public boolean read(InputStream in, int length) throws IOException {
         // A common idiom for copying data between two streams, but it depends on the
         // InputStream correctly returning -1 when no more data is available
@@ -626,7 +626,8 @@ import static org.fest.assertions.Fail.fail;
       }
     };
 
-    queueFile.forEach(elementReader);
+    int saw = queueFile.forEach(elementVisitor);
+    assertThat(saw).isEqualTo(2);
     assertThat(baos.toByteArray()).isEqualTo(new byte[] {1, 2, 3, 4, 5});
   }
 
@@ -639,7 +640,7 @@ import static org.fest.assertions.Fail.fail;
     queueFile.add(b);
 
     final AtomicInteger iteration = new AtomicInteger();
-    QueueFile.ElementVisitor elementReader = new QueueFile.ElementVisitor() {
+    QueueFile.ElementVisitor elementVisitor = new QueueFile.ElementVisitor() {
       @Override public boolean read(InputStream in, int length) throws IOException {
         if (iteration.get() == 0) {
           assertThat(length).isEqualTo(2);
@@ -654,8 +655,8 @@ import static org.fest.assertions.Fail.fail;
       }
     };
 
-    queueFile.forEach(elementReader);
-
+    int saw = queueFile.forEach(elementVisitor);
+    assertThat(saw).isEqualTo(1);
     assertThat(queueFile.peek()).isEqualTo(a);
     assertThat(iteration.get()).isEqualTo(1);
   }
