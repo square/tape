@@ -1,8 +1,8 @@
 Change Log
 ==========
 
-Version 1.3.0 *(2015-01-06)*
-----------------------------
+Version 1.3.0 *(In Development)*
+--------------------------------
 
  * New: `remove(int)` allows atomic removal of multiple elements.
  * New: `forEach(ElementVisitor)` allows iterating queue items and stopping iteration early.
