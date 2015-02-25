@@ -77,7 +77,13 @@ public class SampleActivity extends Activity {
   @SuppressWarnings("UnusedDeclaration") // Used by event bus.
   @Subscribe public void onUploadSuccess(ImageUploadSuccessEvent event) {
     Toast.makeText(this, R.string.task_completed, LENGTH_SHORT).show();
-    uploads.add(event.url);
+    uploads.add(String.format("%s (%d retries)", event.url, event.numRetries));
+  }
+
+  @SuppressWarnings("UnusedDeclaration") // Used by event bus.
+  @Subscribe public void onUploadFailure(ImageUploadFailureEvent event) {
+    Toast.makeText(this, getString(R.string.task_failed, event.numRetries),
+            LENGTH_SHORT).show();
   }
 
   @Override protected void onResume() {
