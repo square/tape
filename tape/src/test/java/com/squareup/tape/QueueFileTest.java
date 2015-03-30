@@ -323,6 +323,7 @@ import static org.fest.assertions.Fail.fail;
   }
 
   @Test public void testIterator() throws IOException {
+    // todo: split these tests into their own methods
     QueueFile queueFile = new QueueFile(file);
     queueFile.add(values[253]);
 
@@ -355,6 +356,31 @@ import static org.fest.assertions.Fail.fail;
       iterator.remove();
     }
     assertThat(saw).isEqualTo(6);
+  }
+
+  @Test public void testIteratorOnlyRemovesFromHead() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+
+    Iterator<byte[]> iterator = queueFile.iterator();
+    int saw = 0;
+    while (iterator.hasNext()) {
+      byte[] element = iterator.next();
+      saw++;
+      if (saw > 3) {
+        try {
+          iterator.remove();
+          fail("should not be able to remove elements at the middle of the queue.");
+        } catch (UnsupportedOperationException expected) {
+
+        }
+      }
+      assertThat(element).isEqualTo(values[253]);
+    }
   }
 
   @Test public void testFailedExpansion() throws IOException {

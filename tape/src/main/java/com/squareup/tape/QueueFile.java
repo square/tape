@@ -475,6 +475,8 @@ public class QueueFile implements Closeable, Iterable<byte[]> {
      */
     private int size = elementCount;
 
+    private int lastElementIndex = 0;
+
     @Override public boolean hasNext() {
       return cursor != size;
     }
@@ -489,6 +491,8 @@ public class QueueFile implements Closeable, Iterable<byte[]> {
 
         // Update the pointer to the next element
         cursorPosition = wrapPosition(current.position + Element.HEADER_LENGTH + current.length);
+
+        lastElementIndex++;
 
         // Return the read element
         return buffer;
@@ -509,6 +513,12 @@ public class QueueFile implements Closeable, Iterable<byte[]> {
     }
 
     @Override public void remove() {
+      lastElementIndex--;
+      if (lastElementIndex != 0) {
+        throw new UnsupportedOperationException("This iterator can only remove "
+            + "elements at the head of the QueueFile.");
+      }
+
       try {
         QueueFile.this.remove();
       } catch (IOException e) {
