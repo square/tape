@@ -135,7 +135,24 @@ import static org.fest.assertions.Fail.fail;
       new QueueFile(file);
       fail("Should have complained about bad header length");
     } catch (IOException ex) {
-      assertThat(ex).hasMessage("File is corrupt; length stored in header is 0.");
+      assertThat(ex).hasMessage("File is corrupt; length stored in header (0) is invalid.");
+    }
+  }
+
+  @Test public void testNegativeSizeInHeaderComplains() throws IOException {
+    RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
+    emptyFile.seek(0);
+    emptyFile.writeInt(-2147483648);
+    emptyFile.setLength(4096);
+    emptyFile.getChannel().force(true);
+    emptyFile.close();
+
+    try {
+      new QueueFile(file);
+      fail("Should have complained about bad header length");
+    } catch (IOException ex) {
+      assertThat(ex) //
+          .hasMessage("File is corrupt; length stored in header (-2147483648) is invalid.");
     }
   }
 
