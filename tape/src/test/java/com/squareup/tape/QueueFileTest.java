@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
@@ -186,6 +187,50 @@ import static org.fest.assertions.Fail.fail;
 
     queue = new QueueFile(file);
     assertThat(queue.peek()).isEqualTo(secondStuff);
+  }
+
+  @Test public void removeFromEmptyFileComplains() throws IOException {
+    QueueFile queue = new QueueFile(file);
+
+    try {
+      queue.remove();
+      fail("Should have complained about removing from empty file.");
+    } catch (NoSuchElementException ignored) {
+    }
+  }
+
+  @Test public void removeNegativeNumberOfElementsComplains() throws IOException {
+    QueueFile queue = new QueueFile(file);
+    queue.add(values[127]);
+
+    try {
+      queue.remove(-1);
+      fail("Should have complained about removing negative number of elements.");
+    } catch (IllegalArgumentException ex) {
+      assertThat(ex) //
+          .hasMessage("Cannot remove negative (-1) number of elements.");
+    }
+  }
+
+  @Test public void removeZeroElementsDoesNothing() throws IOException {
+    QueueFile queue = new QueueFile(file);
+    queue.add(values[127]);
+
+    queue.remove(0);
+    assertThat(queue.size()).isEqualTo(1);
+  }
+
+  @Test public void removeBeyondQueueSizeElementsComplains() throws IOException {
+    QueueFile queue = new QueueFile(file);
+    queue.add(values[127]);
+
+    try {
+      queue.remove(10);
+      fail("Should have complained about removing too many elements.");
+    } catch (IllegalArgumentException ex) {
+      assertThat(ex) //
+          .hasMessage("Cannot remove more elements (10) than present in queue (1).");
+    }
   }
 
   @Test public void removingBigDamnBlocksErasesEffectively() throws IOException {
