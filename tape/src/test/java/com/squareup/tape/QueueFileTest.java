@@ -126,7 +126,7 @@ import static org.fest.assertions.Fail.fail;
     assertThat(data).isEqualTo(new byte[firstStuff.length]);
   }
 
-  @Test public void testZeroSizeInHeaderComplains() throws IOException {
+  @Test public void testZeroSizeInHeaderThrows() throws IOException {
     RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
     emptyFile.setLength(4096);
     emptyFile.getChannel().force(true);
@@ -134,13 +134,13 @@ import static org.fest.assertions.Fail.fail;
 
     try {
       new QueueFile(file);
-      fail("Should have complained about bad header length");
+      fail("Should have thrown about bad header length");
     } catch (IOException ex) {
       assertThat(ex).hasMessage("File is corrupt; length stored in header (0) is invalid.");
     }
   }
 
-  @Test public void testNegativeSizeInHeaderComplains() throws IOException {
+  @Test public void testNegativeSizeInHeaderThrows() throws IOException {
     RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
     emptyFile.seek(0);
     emptyFile.writeInt(-2147483648);
@@ -150,7 +150,7 @@ import static org.fest.assertions.Fail.fail;
 
     try {
       new QueueFile(file);
-      fail("Should have complained about bad header length");
+      fail("Should have thrown about bad header length");
     } catch (IOException ex) {
       assertThat(ex) //
           .hasMessage("File is corrupt; length stored in header (-2147483648) is invalid.");
@@ -189,23 +189,23 @@ import static org.fest.assertions.Fail.fail;
     assertThat(queue.peek()).isEqualTo(secondStuff);
   }
 
-  @Test public void removeFromEmptyFileComplains() throws IOException {
+  @Test public void removeFromEmptyFileThrows() throws IOException {
     QueueFile queue = new QueueFile(file);
 
     try {
       queue.remove();
-      fail("Should have complained about removing from empty file.");
+      fail("Should have thrown about removing from empty file.");
     } catch (NoSuchElementException ignored) {
     }
   }
 
-  @Test public void removeNegativeNumberOfElementsComplains() throws IOException {
+  @Test public void removeNegativeNumberOfElementsThrows() throws IOException {
     QueueFile queue = new QueueFile(file);
     queue.add(values[127]);
 
     try {
       queue.remove(-1);
-      fail("Should have complained about removing negative number of elements.");
+      fail("Should have thrown about removing negative number of elements.");
     } catch (IllegalArgumentException ex) {
       assertThat(ex) //
           .hasMessage("Cannot remove negative (-1) number of elements.");
@@ -220,13 +220,13 @@ import static org.fest.assertions.Fail.fail;
     assertThat(queue.size()).isEqualTo(1);
   }
 
-  @Test public void removeBeyondQueueSizeElementsComplains() throws IOException {
+  @Test public void removeBeyondQueueSizeElementsThrows() throws IOException {
     QueueFile queue = new QueueFile(file);
     queue.add(values[127]);
 
     try {
       queue.remove(10);
-      fail("Should have complained about removing too many elements.");
+      fail("Should have thrown about removing too many elements.");
     } catch (IllegalArgumentException ex) {
       assertThat(ex) //
           .hasMessage("Cannot remove more elements (10) than present in queue (1).");
