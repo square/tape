@@ -510,14 +510,22 @@ public class QueueFile implements Closeable {
    * @throws NoSuchElementException if the queue is empty
    */
   public synchronized void remove(int n) throws IOException {
-    if (isEmpty()) throw new NoSuchElementException();
-    if (n > elementCount) {
-      throw new IllegalArgumentException(
-          "Cannot remove more elements (" + n + ") than present in queue (" + elementCount + ").");
+    if (isEmpty()) {
+      throw new NoSuchElementException();
+    }
+    if (n < 0) {
+      throw new IllegalArgumentException("Cannot remove negative (" + n + ") number of elements.");
+    }
+    if (n == 0) {
+      return;
     }
     if (n == elementCount) {
       clear();
       return;
+    }
+    if (n > elementCount) {
+      throw new IllegalArgumentException(
+          "Cannot remove more elements (" + n + ") than present in queue (" + elementCount + ").");
     }
 
     final int eraseStartPosition = first.position;
