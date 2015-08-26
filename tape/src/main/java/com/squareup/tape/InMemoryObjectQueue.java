@@ -1,7 +1,10 @@
 // Copyright 2012 Square, Inc.
 package com.squareup.tape;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 
 /**
@@ -26,6 +29,10 @@ public class InMemoryObjectQueue<T> implements ObjectQueue<T> {
 
   @Override public T peek() {
     return tasks.peek();
+  }
+
+  @Override public List<T> asList() {
+    return Collections.unmodifiableList(new ArrayList<T>(tasks));
   }
 
   @Override public int size() {
