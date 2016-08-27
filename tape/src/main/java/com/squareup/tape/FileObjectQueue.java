@@ -16,7 +16,7 @@ import static java.util.Collections.unmodifiableList;
  * queue manager.  This class is not thread safe; instances should be kept
  * thread-confined.
  * <p>
- * The {@link #add( Object )}, {@link #peek()}, {@link #remove()}, and
+ * The {@link #add(Object)}, {@link #peek()}, {@link #remove()}, and
  * {@link #setListener(ObjectQueue.Listener)} methods may throw a
  * {@link FileException} if the underlying {@link QueueFile} experiences an
  * {@link java.io.IOException}.
@@ -111,6 +111,19 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
       }
     } catch (IOException e) {
       throw new FileException("Failed to remove.", e, file);
+    }
+  }
+
+  /**
+   * Clears this queue. Also truncates the file to the initial size.
+   * <p>
+   * This will not invoke {@link Listener#onRemove} for any items removed from the queue.
+   */
+  public final void clear() {
+    try {
+      queueFile.clear();
+    } catch (IOException e) {
+      throw new FileException("Failed to clear.", e, file);
     }
   }
 
