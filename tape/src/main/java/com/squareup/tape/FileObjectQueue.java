@@ -101,7 +101,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     }
   }
 
-  public final void remove(int n) throws IOException {
+  public final void remove(int n) {
     try {
       queueFile.remove(n);
       if (listener != null) {
