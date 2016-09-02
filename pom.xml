@@ -34,7 +34,6 @@
 
   <modules>
     <module>tape</module>
-    <module>tape-sample</module>
   </modules>
 
   <properties>
