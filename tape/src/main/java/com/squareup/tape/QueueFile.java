@@ -93,10 +93,10 @@ public class QueueFile implements Closeable, Iterable<byte[]> {
   int fileLength;
 
   /** Number of elements. */
-  private int elementCount;
+  @Private int elementCount;
 
   /** Pointer to first (or eldest) element. */
-  private Element first;
+  @Private Element first;
 
   /** Pointer to last (or newest) element. */
   private Element last;
@@ -109,7 +109,7 @@ public class QueueFile implements Closeable, Iterable<byte[]> {
    * {@link #remove(int)} and {@link #add(byte[], int, int)}. Used by {@link ElementIterator}
    * to guard against concurrent modification.
    */
-  int modCount = 0;
+  @Private int modCount = 0;
 
   /**
    * Constructs a new queue backed by the given file. Only one instance should access a given file
@@ -181,7 +181,7 @@ public class QueueFile implements Closeable, Iterable<byte[]> {
     raf.write(buffer);
   }
 
-  private Element readElement(int position) throws IOException {
+  @Private Element readElement(int position) throws IOException {
     if (position == 0) return Element.NULL;
     ringRead(position, buffer, 0, Element.HEADER_LENGTH);
     int length = readInt(buffer, 0);
@@ -214,7 +214,7 @@ public class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Wraps the position if it exceeds the end of the file. */
-  int wrapPosition(int position) {
+  @Private int wrapPosition(int position) {
     return position < fileLength ? position
         : HEADER_LENGTH + position - fileLength;
   }
@@ -259,7 +259,7 @@ public class QueueFile implements Closeable, Iterable<byte[]> {
    * @param buffer to read into
    * @param count # of bytes to read
    */
-  void ringRead(int position, byte[] buffer, int offset, int count) throws IOException {
+  @Private void ringRead(int position, byte[] buffer, int offset, int count) throws IOException {
     position = wrapPosition(position);
     if (position + count <= fileLength) {
       raf.seek(position);
