@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -48,7 +50,7 @@ import static java.lang.Math.min;
  *
  * @author Bob Lee (bob@squareup.com)
  */
-public class QueueFile implements Closeable {
+public class QueueFile implements Closeable, Iterable<byte[]> {
   private static final Logger LOGGER = Logger.getLogger(QueueFile.class.getName());
 
   /** Initial file size in bytes. */
@@ -101,6 +103,13 @@ public class QueueFile implements Closeable {
 
   /** In-memory buffer. Big enough to hold the header. */
   private final byte[] buffer = new byte[16];
+
+  /**
+   * The number of times this file has been structurally modified — it is incremented during
+   * {@link #remove(int)} and {@link #add(byte[], int, int)}. Used by {@link ElementIterator}
+   * to guard against concurrent modification.
+   */
+  int modCount = 0;
 
   /**
    * Constructs a new queue backed by the given file. Only one instance should access a given file
@@ -312,6 +321,7 @@ public class QueueFile implements Closeable {
     writeHeader(fileLength, elementCount + 1, firstPosition, newLast.position);
     last = newLast;
     elementCount++;
+    modCount++;
     if (wasEmpty) first = last; // first element
   }
 
@@ -457,6 +467,89 @@ public class QueueFile implements Closeable {
     return elementCount;
   }
 
+  /**
+   * Returns an iterator over elements in this QueueFile.
+   *
+   * <p>The iterator disallows modifications to be made to the QueueFile during iteration. Removing
+   * elements from the head of the QueueFile is permitted during iteration using
+   * {@link Iterator#remove()}.
+   *
+   * <p>The iterator may throw an unchecked {@link RuntimeException} during {@link Iterator#next()}
+   * or {@link Iterator#remove()}.
+   */
+  @Override public Iterator<byte[]> iterator() {
+    return new ElementIterator();
+  }
+
+  private final class ElementIterator implements Iterator<byte[]> {
+    /** Index of element to be returned by subsequent call to next. */
+    int nextElementIndex = 0;
+
+    /** Position of element to be returned by subsequent call to next. */
+    private int nextElementPosition = first.position;
+
+    /**
+     * The {@link #modCount} value that the iterator believes that the backing QueueFile should
+     * have. If this expectation is violated, the iterator has detected concurrent modification.
+     */
+    int expectedModCount = modCount;
+
+    ElementIterator() {
+      // Prevent synthetic accessor method from being generated.
+    }
+
+    private void checkForComodification() {
+      if (modCount != expectedModCount) throw new ConcurrentModificationException();
+    }
+
+    @Override public boolean hasNext() {
+      checkForComodification();
+      return nextElementIndex != elementCount;
+    }
+
+    @Override public byte[] next() {
+      checkForComodification();
+      if (isEmpty()) throw new NoSuchElementException();
+      if (nextElementIndex >= elementCount) throw new NoSuchElementException();
+
+      try {
+        // Read the current element.
+        Element current = readElement(nextElementPosition);
+        byte[] buffer = new byte[current.length];
+        nextElementPosition = wrapPosition(current.position + Element.HEADER_LENGTH);
+        ringRead(nextElementPosition, buffer, 0, current.length);
+
+        // Update the pointer to the next element.
+        nextElementPosition =
+            wrapPosition(current.position + Element.HEADER_LENGTH + current.length);
+        nextElementIndex++;
+
+        // Return the read element.
+        return buffer;
+      } catch (IOException e) {
+        throw new RuntimeException("todo: throw a proper error", e);
+      }
+    }
+
+    @Override public void remove() {
+      checkForComodification();
+
+      if (isEmpty()) throw new NoSuchElementException();
+      if (nextElementIndex != 1) {
+        throw new UnsupportedOperationException("Removal is only permitted from the head.");
+      }
+
+      try {
+        QueueFile.this.remove();
+      } catch (IOException e) {
+        throw new RuntimeException("todo: throw a proper error", e);
+      }
+
+      expectedModCount = modCount;
+      nextElementIndex--;
+    }
+  }
+
   private final class ElementInputStream extends InputStream {
     private int position;
     private int remaining;
@@ -544,6 +637,7 @@ public class QueueFile implements Closeable {
     // Commit the header.
     writeHeader(fileLength, elementCount - n, newFirstPosition, last.position);
     elementCount -= n;
+    modCount++;
     first = new Element(newFirstPosition, newFirstLength);
 
     // Commit the erase.
