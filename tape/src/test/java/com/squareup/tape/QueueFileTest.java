@@ -8,6 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -159,7 +160,7 @@ import static org.fest.assertions.Fail.fail;
 
   @Test public void removeMultipleDoesNotCorrupt() throws IOException {
     QueueFile queue = new QueueFile(file);
-    for (int i = 0; i < 10; i ++) {
+    for (int i = 0; i < 10; i++) {
       queue.add(values[i]);
     }
 
@@ -381,6 +382,67 @@ import static org.fest.assertions.Fail.fail;
     queueFile.add(values[99]);
     queueFile.remove();
     assertThat(queueFile.peek()).isEqualTo(values[99]);
+  }
+
+  @Test public void testIterator() throws IOException {
+    // todo: split these tests into their own methods
+    QueueFile queueFile = new QueueFile(file);
+    queueFile.add(values[253]);
+
+    int saw = 0;
+    for (byte[] element : queueFile) {
+      assertThat(element).isEqualTo(values[253]);
+      saw++;
+    }
+    assertThat(saw).isEqualTo(1);
+
+    saw = 0;
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+
+    for (byte[] element : queueFile) {
+      assertThat(element).isEqualTo(values[253]);
+      saw++;
+    }
+    assertThat(saw).isEqualTo(6);
+
+    saw = 0;
+    Iterator<byte[]> iterator = queueFile.iterator();
+    while (iterator.hasNext()) {
+      byte[] element = iterator.next();
+      assertThat(element).isEqualTo(values[253]);
+      saw++;
+      iterator.remove();
+    }
+    assertThat(saw).isEqualTo(6);
+  }
+
+  @Test public void testIteratorOnlyRemovesFromHead() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+    queueFile.add(values[253]);
+
+    Iterator<byte[]> iterator = queueFile.iterator();
+    int saw = 0;
+    while (iterator.hasNext()) {
+      byte[] element = iterator.next();
+      saw++;
+      if (saw > 3) {
+        try {
+          iterator.remove();
+          fail("should not be able to remove elements at the middle of the queue.");
+        } catch (UnsupportedOperationException expected) {
+
+        }
+      }
+      assertThat(element).isEqualTo(values[253]);
+    }
   }
 
   @Test public void testFailedExpansion() throws IOException {

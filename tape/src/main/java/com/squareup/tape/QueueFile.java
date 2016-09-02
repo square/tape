@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -48,7 +50,7 @@ import static java.lang.Math.min;
  *
  * @author Bob Lee (bob@squareup.com)
  */
-public class QueueFile implements Closeable {
+public class QueueFile implements Closeable, Iterable<byte[]> {
   private static final Logger LOGGER = Logger.getLogger(QueueFile.class.getName());
 
   /** Initial file size in bytes. */
@@ -455,6 +457,78 @@ public class QueueFile implements Closeable {
       position = wrapPosition(current.position + Element.HEADER_LENGTH + current.length);
     }
     return elementCount;
+  }
+
+  @Override public Iterator<byte[]> iterator() {
+    return new ElementIterator();
+  }
+
+  private final class ElementIterator implements Iterator<byte[]> {
+    /** Index of element to be returned by subsequent call to next. */
+    private int cursor = 0;
+
+    /** Position of element to be returned by subsequent call to next. */
+    private int cursorPosition = first.position;
+
+    /**
+     * Size recorded at construction (also in remove) to stop iterator and also to check for
+     * concurrent modification.
+     */
+    private int size = elementCount;
+
+    private int lastElementIndex = 0;
+
+    @Override public boolean hasNext() {
+      return cursor != size;
+    }
+
+    private byte[] readNext() {
+      try {
+        // Read the current element
+        Element current = readElement(cursorPosition);
+        byte[] buffer = new byte[current.length];
+        cursorPosition = wrapPosition(current.position + Element.HEADER_LENGTH);
+        ringRead(cursorPosition, buffer, 0, current.length);
+
+        // Update the pointer to the next element
+        cursorPosition = wrapPosition(current.position + Element.HEADER_LENGTH + current.length);
+
+        lastElementIndex++;
+
+        // Return the read element
+        return buffer;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    @Override public byte[] next() {
+      if (cursor == size) throw new NoSuchElementException();
+
+      byte[] element = readNext();
+
+      if (elementCount != size) throw new ConcurrentModificationException();
+
+      cursor++;
+      return element;
+    }
+
+    @Override public void remove() {
+      lastElementIndex--;
+      if (lastElementIndex != 0) {
+        throw new UnsupportedOperationException("This iterator can only remove "
+            + "elements at the head of the QueueFile.");
+      }
+
+      try {
+        QueueFile.this.remove();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+
+      size = elementCount;
+      cursor--;
+    }
   }
 
   private final class ElementInputStream extends InputStream {
