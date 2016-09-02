@@ -72,16 +72,13 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
   public List<T> peek(final int max) {
     try {
       final List<T> entries = new ArrayList<T>(max);
-      queueFile.forEach(new QueueFile.ElementVisitor() {
-        int count;
-        @Override public boolean read(InputStream in, int length) throws IOException {
-          byte[] data = new byte[length];
-          in.read(data, 0, length);
-
-          entries.add(converter.from(data));
-          return ++count < max;
+      int count = 0;
+      for (byte[] data : queueFile) {
+        if (++count > max) {
+          break;
         }
-      });
+        entries.add(converter.from(data));
+      }
       return unmodifiableList(entries);
     } catch (IOException e) {
       throw new FileException("Failed to peek.", e, file);
@@ -138,15 +135,9 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
   @Override public void setListener(final Listener<T> listener) {
     if (listener != null) {
       try {
-        queueFile.forEach(new QueueFile.ElementVisitor() {
-          @Override public boolean read(InputStream in, int length) throws IOException {
-            byte[] data = new byte[length];
-            in.read(data, 0, length);
-
-            listener.onAdd(FileObjectQueue.this, converter.from(data));
-            return true;
-          }
-        });
+        for (byte[] data : queueFile) {
+          listener.onAdd(FileObjectQueue.this, converter.from(data));
+        }
       } catch (IOException e) {
         throw new FileException("Unable to iterate over QueueFile contents.", e, file);
       }
