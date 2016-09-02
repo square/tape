@@ -8,6 +8,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -21,7 +23,7 @@ import org.junit.rules.TemporaryFolder;
 
 import static com.squareup.tape.QueueFile.HEADER_LENGTH;
 import static org.fest.assertions.Assertions.assertThat;
-import static org.fest.assertions.Fail.fail;
+import static org.junit.Assert.fail;
 
 /**
  * Tests for QueueFile.
@@ -956,6 +958,116 @@ import static org.fest.assertions.Fail.fail;
     // File should not be corrupted.
     QueueFile queueFile2 = new QueueFile(file);
     assertThat(queueFile2.size()).isEqualTo(queueSize);
+  }
+
+  @Test public void testIterator() throws IOException {
+    byte[] data = values[10];
+
+    for (int i = 0; i < 10; i++) {
+      QueueFile queueFile = new QueueFile(file);
+      for (int j = 0; j < i; j++) {
+        queueFile.add(data);
+      }
+
+      int saw = 0;
+      for (byte[] element : queueFile) {
+        assertThat(element).isEqualTo(data);
+        saw++;
+      }
+      assertThat(saw).isEqualTo(i);
+      file.delete();
+    }
+  }
+
+  @Test public void testIteratorNextThrowsWhenEmpty() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+
+    Iterator<byte[]> iterator = queueFile.iterator();
+
+    try {
+      iterator.next();
+      fail();
+    } catch (NoSuchElementException ignored) {
+    }
+  }
+
+  @Test public void testIteratorNextThrowsWhenExhausted() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    queueFile.add(values[0]);
+
+    Iterator<byte[]> iterator = queueFile.iterator();
+    iterator.next();
+
+    try {
+      iterator.next();
+      fail();
+    } catch (NoSuchElementException ignored) {
+    }
+  }
+
+  @Test public void testIteratorRemove() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    for (int i = 0; i < 15; i++) {
+      queueFile.add(values[i]);
+    }
+
+    Iterator<byte[]> iterator = queueFile.iterator();
+    while (iterator.hasNext()) {
+      iterator.next();
+      iterator.remove();
+    }
+
+    assertThat(queueFile).isEmpty();
+  }
+
+  @Test public void testIteratorRemoveDisallowsConcurrentModification() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    for (int i = 0; i < 15; i++) {
+      queueFile.add(values[i]);
+    }
+
+    Iterator<byte[]> iterator = queueFile.iterator();
+    iterator.next();
+    queueFile.remove();
+    try {
+      iterator.remove();
+      fail();
+    } catch (ConcurrentModificationException ignored) {
+    }
+  }
+
+  @Test public void testIteratorHasNextDisallowsConcurrentModification() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    for (int i = 0; i < 15; i++) {
+      queueFile.add(values[i]);
+    }
+
+    Iterator<byte[]> iterator = queueFile.iterator();
+    iterator.next();
+    queueFile.remove();
+    try {
+      iterator.hasNext();
+      fail();
+    } catch (ConcurrentModificationException ignored) {
+    }
+  }
+
+  @Test public void testIteratorOnlyRemovesFromHead() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    for (int i = 0; i < 15; i++) {
+      queueFile.add(values[i]);
+    }
+
+    Iterator<byte[]> iterator = queueFile.iterator();
+    iterator.next();
+    iterator.next();
+
+    try {
+      iterator.remove();
+      fail();
+    } catch (UnsupportedOperationException ex) {
+      assertThat(ex).hasMessage("Removal is only permitted from the head.");
+    }
   }
 
   /**
