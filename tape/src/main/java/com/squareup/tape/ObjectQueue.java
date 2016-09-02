@@ -1,6 +1,8 @@
 // Copyright 2011 Square, Inc.
 package com.squareup.tape;
 
+import java.util.List;
+
 /**
  * A queue of objects.
  *
@@ -19,6 +21,11 @@ public interface ObjectQueue<T> {
    * queue.
    */
   T peek();
+
+  /**
+   * Returns the queue as a read-only {@link List}.
+   */
+  List<T> asList();
 
   /** Removes the head of the queue. */
   void remove();

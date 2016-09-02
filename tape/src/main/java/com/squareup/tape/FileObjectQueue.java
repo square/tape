@@ -88,7 +88,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     }
   }
 
-  public List<T> asList() {
+  @Override public List<T> asList() {
     return peek(size());
   }
 

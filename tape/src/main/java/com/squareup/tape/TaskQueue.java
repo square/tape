@@ -1,6 +1,8 @@
 // Copyright 2012 Square, Inc.
 package com.squareup.tape;
 
+import java.util.List;
+
 /**
  * Persistent task queue. Not safe for concurrent use.
  *
@@ -31,6 +33,10 @@ public class TaskQueue<T extends Task> implements ObjectQueue<T> {
       taskInjector.injectMembers(task);
     }
     return task;
+  }
+
+  @Override public List<T> asList() {
+    return delegate.asList();
   }
 
   @Override public int size() {
