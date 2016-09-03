@@ -102,7 +102,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   private Element last;
 
   /** In-memory buffer. Big enough to hold the header. */
-  private final byte[] buffer = new byte[16];
+  private final byte[] buffer = new byte[HEADER_LENGTH];
 
   /**
    * The number of times this file has been structurally modified — it is incremented during
@@ -116,45 +116,46 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    * at a time.
    */
   public QueueFile(File file) throws IOException {
+    this(initializeFromFile(file));
+  }
+
+  private static RandomAccessFile initializeFromFile(File file) throws IOException {
     if (!file.exists()) {
-      initialize(file);
+      // Use a temp file so we don't leave a partially-initialized file.
+      File tempFile = new File(file.getPath() + ".tmp");
+      RandomAccessFile raf = open(tempFile);
+      try {
+        raf.setLength(INITIAL_LENGTH);
+        raf.seek(0);
+        raf.writeInt(INITIAL_LENGTH);
+      } finally {
+        raf.close();
+      }
+
+      // A rename is atomic.
+      if (!tempFile.renameTo(file)) {
+        throw new IOException("Rename failed!");
+      }
     }
-    raf = open(file);
-    readHeader();
+
+    return open(file);
+  }
+
+  /** Opens a random access file that writes synchronously. */
+  private static RandomAccessFile open(File file) throws FileNotFoundException {
+    return new RandomAccessFile(file, "rwd");
   }
 
   QueueFile(RandomAccessFile raf) throws IOException {
     this.raf = raf;
-    readHeader();
-  }
 
-  /**
-   * Stores an {@code int} in the {@code byte[]}. The behavior is equivalent to calling
-   * {@link RandomAccessFile#writeInt}.
-   */
-  private static void writeInt(byte[] buffer, int offset, int value) {
-    buffer[offset] = (byte) (value >> 24);
-    buffer[offset + 1] = (byte) (value >> 16);
-    buffer[offset + 2] = (byte) (value >> 8);
-    buffer[offset + 3] = (byte) value;
-  }
-
-  /** Reads an {@code int} from the {@code byte[]}. */
-  private static int readInt(byte[] buffer, int offset) {
-    return ((buffer[offset] & 0xff) << 24)
-        + ((buffer[offset + 1] & 0xff) << 16)
-        + ((buffer[offset + 2] & 0xff) << 8)
-        + (buffer[offset + 3] & 0xff);
-  }
-
-  private void readHeader() throws IOException {
     raf.seek(0);
     raf.readFully(buffer);
     fileLength = readInt(buffer, 0);
     if (fileLength > raf.length()) {
       throw new IOException(
           "File is truncated. Expected length: " + fileLength + ", Actual length: " + raf.length());
-    } else if (fileLength <= 0) {
+    } else if (fileLength <= HEADER_LENGTH) {
       throw new IOException(
           "File is corrupt; length stored in header (" + fileLength + ") is invalid.");
     }
@@ -163,6 +164,25 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     int lastOffset = readInt(buffer, 12);
     first = readElement(firstOffset);
     last = readElement(lastOffset);
+  }
+
+  /**
+   * Stores an {@code int} in the {@code byte[]}. The behavior is equivalent to calling
+   * {@link RandomAccessFile#writeInt}.
+   */
+  private static void writeInt(byte[] buffer, int offset, int value) {
+    buffer[offset    ] = (byte) (value >> 24);
+    buffer[offset + 1] = (byte) (value >> 16);
+    buffer[offset + 2] = (byte) (value >> 8);
+    buffer[offset + 3] = (byte) value;
+  }
+
+  /** Reads an {@code int} from the {@code byte[]}. */
+  private static int readInt(byte[] buffer, int offset) {
+    return ((buffer[offset    ] & 0xff) << 24)
+        +  ((buffer[offset + 1] & 0xff) << 16)
+        +  ((buffer[offset + 2] & 0xff) << 8)
+        +   (buffer[offset + 3] & 0xff);
   }
 
   /**
@@ -186,31 +206,6 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     ringRead(position, buffer, 0, Element.HEADER_LENGTH);
     int length = readInt(buffer, 0);
     return new Element(position, length);
-  }
-
-  private static void initialize(File file) throws IOException {
-    // Use a temp file so we don't leave a partially-initialized file.
-    File tempFile = new File(file.getPath() + ".tmp");
-    RandomAccessFile raf = open(tempFile);
-    try {
-      raf.setLength(INITIAL_LENGTH);
-      raf.seek(0);
-      byte[] headerBuffer = new byte[16];
-      writeInt(headerBuffer, 0, INITIAL_LENGTH);
-      raf.write(headerBuffer);
-    } finally {
-      raf.close();
-    }
-
-    // A rename is atomic.
-    if (!tempFile.renameTo(file)) {
-      throw new IOException("Rename failed!");
-    }
-  }
-
-  /** Opens a random access file that writes synchronously. */
-  private static RandomAccessFile open(File file) throws FileNotFoundException {
-    return new RandomAccessFile(file, "rwd");
   }
 
   /** Wraps the position if it exceeds the end of the file. */

@@ -2,18 +2,15 @@
 package com.squareup.tape;
 
 import com.squareup.tape.QueueFile.Element;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import org.fest.assertions.Assertions;
 import org.junit.Before;
@@ -139,6 +136,21 @@ import static org.junit.Assert.fail;
       fail("Should have thrown about bad header length");
     } catch (IOException ex) {
       assertThat(ex).hasMessage("File is corrupt; length stored in header (0) is invalid.");
+    }
+  }
+
+  @Test public void testSizeLessThanHeaderThrows() throws IOException {
+    RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
+    emptyFile.setLength(4096);
+    emptyFile.writeInt(QueueFile.HEADER_LENGTH - 1);
+    emptyFile.getChannel().force(true);
+    emptyFile.close();
+
+    try {
+      new QueueFile(file);
+      fail();
+    } catch (IOException ex) {
+      assertThat(ex).hasMessage("File is corrupt; length stored in header (15) is invalid.");
     }
   }
 
@@ -562,7 +574,7 @@ import static org.junit.Assert.fail;
     queue.add(values[4]);
 
     // Read from header to first element and make sure it's zeroed.
-    int firstElementPadding = 1028;
+    int firstElementPadding = Element.HEADER_LENGTH + 1024;
     byte[] data = new byte[firstElementPadding];
     queue.raf.seek(HEADER_LENGTH);
     queue.raf.readFully(data, 0, firstElementPadding);
