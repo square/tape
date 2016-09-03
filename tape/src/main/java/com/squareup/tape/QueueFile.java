@@ -415,59 +415,6 @@ public class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /**
-   * Invokes reader with the eldest element, if an element is available.
-   *
-   * @deprecated use {@link #peek(ElementVisitor)}
-   */
-  @Deprecated public synchronized void peek(ElementReader reader) throws IOException {
-    if (elementCount > 0) {
-      reader.read(new ElementInputStream(first), first.length);
-    }
-  }
-
-  /** Invokes {@code visitor} with the eldest element, if an element is available. */
-  public synchronized void peek(ElementVisitor visitor) throws IOException {
-    if (elementCount > 0) {
-      visitor.read(new ElementInputStream(first), first.length);
-    }
-  }
-
-  /**
-   * Invokes the given reader once for each element in the queue, from eldest to
-   * most recently added.
-   *
-   * @deprecated use {@link #forEach(ElementVisitor)}
-   */
-  @Deprecated public synchronized void forEach(final ElementReader reader) throws IOException {
-    forEach(new ElementVisitor() {
-      @Override public boolean read(InputStream in, int length) throws IOException {
-        reader.read(in, length);
-        return true;
-      }
-    });
-  }
-
-  /**
-   * Invokes the given reader once for each element in the queue, from eldest to most recently
-   * added. Continues until all elements are read or {@link ElementVisitor#read reader.read()}
-   * returns {@code false}.
-   *
-   * @return number of elements visited
-   */
-  public synchronized int forEach(ElementVisitor reader) throws IOException {
-    int position = first.position;
-    for (int i = 0; i < elementCount; i++) {
-      Element current = readElement(position);
-      boolean shouldContinue = reader.read(new ElementInputStream(current), current.length);
-      if (!shouldContinue) {
-        return i + 1;
-      }
-      position = wrapPosition(current.position + Element.HEADER_LENGTH + current.length);
-    }
-    return elementCount;
-  }
-
-  /**
    * Returns an iterator over elements in this QueueFile.
    *
    * <p>The iterator disallows modifications to be made to the QueueFile during iteration. Removing
@@ -674,19 +621,16 @@ public class QueueFile implements Closeable, Iterable<byte[]> {
     builder.append(", last=").append(last);
     builder.append(", element lengths=[");
     try {
-      forEach(new ElementReader() {
-        boolean first = true;
-
-        @Override public void read(InputStream in, int length) throws IOException {
-          if (first) {
-            first = false;
-          } else {
-            builder.append(", ");
-          }
-          builder.append(length);
+      boolean first = true;
+      for (byte[] data : this) {
+        if (first) {
+          first = false;
+        } else {
+          builder.append(", ");
         }
-      });
-    } catch (IOException e) {
+        builder.append(data.length);
+      };
+    } catch (RuntimeException e) {
       LOGGER.log(Level.WARNING, "read error", e);
     }
     builder.append("]]");
@@ -722,46 +666,5 @@ public class QueueFile implements Closeable, Iterable<byte[]> {
           + "position = " + position
           + ", length = " + length + "]";
     }
-  }
-
-  /**
-   * Reads queue elements. Enables partial reads as opposed to reading all of the bytes into a
-   * {@code byte[]}.
-   *
-   * @deprecated use {@link ElementVisitor} instead.
-   */
-  @Deprecated public interface ElementReader {
-
-    /*
-     * TODO: Support remove() call from read().
-     */
-
-    /**
-     * Called once per element.
-     *
-     * @param in stream of element data. Reads as many bytes as requested, unless fewer than the
-     * request number of bytes remains, in which case it reads all the remaining bytes. Not
-     * buffered.
-     * @param length of element data in bytes
-     */
-    void read(InputStream in, int length) throws IOException;
-  }
-
-  /**
-   * Reads queue elements. Enables partial reads as opposed to reading all of
-   * the bytes into a byte[].  Can opt to skip remaining elements.
-   */
-  public interface ElementVisitor {
-    /**
-     * Called once per element.
-     *
-     * @param in stream of element data. Reads as many bytes as requested, unless fewer than the
-     * request number of bytes remains, in which case it reads all the remaining bytes. Not
-     * buffered.
-     * @param length of element data in bytes
-     * @return an indication whether the {@link #forEach} operation should continue; If
-     * {@code true}, continue, otherwise halt.
-     */
-    boolean read(InputStream in, int length) throws IOException;
   }
 }
