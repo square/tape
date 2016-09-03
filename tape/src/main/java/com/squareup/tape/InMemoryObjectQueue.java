@@ -10,7 +10,7 @@ import java.util.Queue;
  *
  * @param <T> The type of elements in the queue.
  */
-public class InMemoryObjectQueue<T> implements ObjectQueue<T> {
+public final class InMemoryObjectQueue<T> implements ObjectQueue<T> {
   private final Queue<T> tasks;
   private Listener<T> listener;
 
