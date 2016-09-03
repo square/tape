@@ -25,8 +25,6 @@ import java.nio.channels.FileChannel;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static java.lang.Math.min;
 
@@ -51,8 +49,6 @@ import static java.lang.Math.min;
  * @author Bob Lee (bob@squareup.com)
  */
 public final class QueueFile implements Closeable, Iterable<byte[]> {
-  private static final Logger LOGGER = Logger.getLogger(QueueFile.class.getName());
-
   /** Initial file size in bytes. */
   private static final int INITIAL_LENGTH = 4096; // one file system block
 
@@ -614,28 +610,12 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   @Override public String toString() {
-    final StringBuilder builder = new StringBuilder();
-    builder.append(getClass().getSimpleName()).append('[');
-    builder.append("fileLength=").append(fileLength);
-    builder.append(", size=").append(elementCount);
-    builder.append(", first=").append(first);
-    builder.append(", last=").append(last);
-    builder.append(", element lengths=[");
-    try {
-      boolean first = true;
-      for (byte[] data : this) {
-        if (first) {
-          first = false;
-        } else {
-          builder.append(", ");
-        }
-        builder.append(data.length);
-      };
-    } catch (RuntimeException e) {
-      LOGGER.log(Level.WARNING, "read error", e);
-    }
-    builder.append("]]");
-    return builder.toString();
+    return getClass().getSimpleName()
+        + "[length=" + fileLength
+        + ", size=" + elementCount
+        + ", first=" + first
+        + ", last=" + last
+        + "]";
   }
 
   /** A pointer to an element. */
@@ -663,9 +643,10 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     }
 
     @Override public String toString() {
-      return getClass().getSimpleName() + "["
-          + "position = " + position
-          + ", length = " + length + "]";
+      return getClass().getSimpleName()
+          + "[position=" + position
+          + ", length=" + length
+          + "]";
     }
   }
 }

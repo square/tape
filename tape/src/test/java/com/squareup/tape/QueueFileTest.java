@@ -773,6 +773,19 @@ import static org.junit.Assert.fail;
     }
   }
 
+  @Test public void queueToString() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    for (int i = 0; i < 15; i++) {
+      queueFile.add(values[i]);
+    }
+
+    assertThat(queueFile.toString()).isEqualTo("QueueFile["
+        + "length=4096, "
+        + "size=15, "
+        + "first=Element[position=16, length=0], "
+        + "last=Element[position=163, length=14]]");
+  }
+
   /**
    * A RandomAccessFile that can break when you go to write the COMMITTED
    * status.
