@@ -2,6 +2,7 @@
 package com.squareup.tape;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -17,7 +18,7 @@ import static java.util.Collections.unmodifiableList;
  *
  * @param <T> The type of elements in the queue.
  */
-public final class FileObjectQueue<T> implements ObjectQueue<T> {
+public final class FileObjectQueue<T> implements ObjectQueue<T>, Closeable {
   /** Backing storage implementation. */
   private final QueueFile queueFile;
   /** Reusable byte output buffer. */
@@ -98,7 +99,7 @@ public final class FileObjectQueue<T> implements ObjectQueue<T> {
     queueFile.clear();
   }
 
-  public void close() throws IOException {
+  @Override public void close() throws IOException {
     queueFile.close();
   }
 
