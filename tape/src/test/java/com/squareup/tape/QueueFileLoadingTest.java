@@ -20,7 +20,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class SerializedConverterTest {
+// TODO Migrate these to run on QueueFile directly, not ObjectQueue.
+public class QueueFileLoadingTest {
 
   private File testFile;
 
