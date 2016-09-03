@@ -4,13 +4,16 @@ package com.squareup.tape;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import static org.fest.assertions.Assertions.assertThat;
+import static org.fest.assertions.Fail.fail;
 
 public class FileObjectQueueTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();
@@ -90,5 +93,61 @@ public class FileObjectQueueTest {
     public void toStream(Pojo o, OutputStream bytes) throws IOException {
       bytes.write(o.getText().getBytes("UTF-8"));
     }
+  }
+
+  @Test public void listenerOnAddInvokedForExistingEntries() throws IOException {
+    final List<Pojo> saw = new ArrayList<Pojo>();
+    queue.setListener(new ObjectQueue.Listener<Pojo>() {
+      @Override public void onAdd(ObjectQueue<Pojo> queue, Pojo entry) {
+        saw.add(entry);
+      }
+
+      @Override public void onRemove(ObjectQueue<Pojo> queue) {
+        fail("onRemove should not be invoked");
+      }
+    });
+    assertThat(saw).containsExactly(new Pojo("one"), new Pojo("two"), new Pojo("three"));
+  }
+
+  @Test public void listenerOnRemoveInvokedForRemove() throws IOException {
+    final AtomicInteger count = new AtomicInteger();
+    queue.setListener(new ObjectQueue.Listener<Pojo>() {
+      @Override public void onAdd(ObjectQueue<Pojo> queue, Pojo entry) {
+      }
+
+      @Override public void onRemove(ObjectQueue<Pojo> queue) {
+        count.getAndIncrement();
+      }
+    });
+    queue.remove();
+    assertThat(count.get()).isEqualTo(1);
+  }
+
+  @Test public void listenerOnRemoveInvokedForRemoveN() throws IOException {
+    final AtomicInteger count = new AtomicInteger();
+    queue.setListener(new ObjectQueue.Listener<Pojo>() {
+      @Override public void onAdd(ObjectQueue<Pojo> queue, Pojo entry) {
+      }
+
+      @Override public void onRemove(ObjectQueue<Pojo> queue) {
+        count.getAndIncrement();
+      }
+    });
+    queue.remove(2);
+    assertThat(count.get()).isEqualTo(2);
+  }
+
+  @Test public void listenerOnRemoveInvokedForClear() throws IOException {
+    final AtomicInteger count = new AtomicInteger();
+    queue.setListener(new ObjectQueue.Listener<Pojo>() {
+      @Override public void onAdd(ObjectQueue<Pojo> queue, Pojo entry) {
+      }
+
+      @Override public void onRemove(ObjectQueue<Pojo> queue) {
+        count.getAndIncrement();
+      }
+    });
+    queue.clear();
+    assertThat(count.get()).isEqualTo(3);
   }
 }
