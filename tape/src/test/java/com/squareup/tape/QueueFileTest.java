@@ -128,6 +128,8 @@ import static org.junit.Assert.fail;
   @Test public void testZeroSizeInHeaderThrows() throws IOException {
     RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
     emptyFile.setLength(4096);
+    emptyFile.seek(0);
+    emptyFile.writeLong(QueueFile.V2);
     emptyFile.getChannel().force(true);
     emptyFile.close();
 
@@ -142,7 +144,7 @@ import static org.junit.Assert.fail;
   @Test public void testSizeLessThanHeaderThrows() throws IOException {
     RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
     emptyFile.setLength(4096);
-    emptyFile.writeInt(QueueFile.HEADER_LENGTH - 1);
+    emptyFile.writeLong(QueueFile.V2 | (QueueFile.HEADER_LENGTH - 1));
     emptyFile.getChannel().force(true);
     emptyFile.close();
 
@@ -151,23 +153,6 @@ import static org.junit.Assert.fail;
       fail();
     } catch (IOException ex) {
       assertThat(ex).hasMessage("File is corrupt; length stored in header (15) is invalid.");
-    }
-  }
-
-  @Test public void testNegativeSizeInHeaderThrows() throws IOException {
-    RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
-    emptyFile.seek(0);
-    emptyFile.writeInt(-2147483648);
-    emptyFile.setLength(4096);
-    emptyFile.getChannel().force(true);
-    emptyFile.close();
-
-    try {
-      new QueueFile(file);
-      fail("Should have thrown about bad header length");
-    } catch (IOException ex) {
-      assertThat(ex) //
-          .hasMessage("File is corrupt; length stored in header (-2147483648) is invalid.");
     }
   }
 
@@ -651,7 +636,7 @@ import static org.junit.Assert.fail;
 
     // Add any element element and close the queue.
     queueFile.add(values[6]);
-    int queueSize = queueFile.size();
+    long queueSize = queueFile.size();
     queueFile.close();
 
     // File should not be corrupted.

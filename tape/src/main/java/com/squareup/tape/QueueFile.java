@@ -55,8 +55,11 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   /** A block of nothing to write over old data. */
   private static final byte[] ZEROES = new byte[INITIAL_LENGTH];
 
+  /** A bitmask for the first 8 bytes in the header which signals the V2 format. */
+  static final long V2 = 0x8000000000000000L;
+
   /** Length of header in bytes. */
-  static final int HEADER_LENGTH = 16;
+  static final int HEADER_LENGTH = 32;
 
   /**
    * The underlying file. Uses a ring buffer to store entries. Designed so that a modification
@@ -64,32 +67,35 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    * segment. So long as the underlying file system supports atomic segment writes, changes to the
    * queue are atomic. Storing the file length ensures we can recover from a failed expansion
    * (i.e. if setting the file length succeeds but the process dies before the data can be copied).
-   * <p/>
+   * <p>
    * <pre>
    *   Format:
-   *     Header              (16 bytes)
-   *     Element Ring Buffer (File Length - 16 bytes)
-   * <p/>
+   *     32 bytes     Header
+   *     ...          Element ring buffer
+   *
    *   Header:
-   *     File Length            (4 bytes)
-   *     Element Count          (4 bytes)
-   *     First Element Position (4 bytes, =0 if null)
-   *     Last Element Position  (4 bytes, =0 if null)
-   * <p/>
+   *     1  bit        Version (0 = V1, 1 = V2)
+   *     63 bits       File length (unsigned)
+   *     8  bytes      Element count (signed)
+   *     8  bytes      First element position (signed, 0 if empty)
+   *     8  bytes      Last element position (signed, 0 if empty)
+   *
    *   Element:
-   *     Length (4 bytes)
-   *     Data   (Length bytes)
+   *     8 bytes       Length (signed)
+   *     ...           Data
    * </pre>
    *
-   * Visible for testing.
+   * "V1" format note: older versions of this class wrote the individual header values and element
+   * lengths as 4-byte signed integers instead of 8. If the leading bit is set to 0 the file is in
+   * this format and should be migrated.
    */
-  final RandomAccessFile raf;
+  final RandomAccessFile raf; // TODO make private
 
   /** Cached file length. Always a power of 2. */
-  int fileLength;
+  long fileLength;
 
   /** Number of elements. */
-  @Private int elementCount;
+  @Private long elementCount;
 
   /** Pointer to first (or eldest) element. */
   @Private Element first;
@@ -102,7 +108,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
   /**
    * The number of times this file has been structurally modified — it is incremented during
-   * {@link #remove(int)} and {@link #add(byte[], int, int)}. Used by {@link ElementIterator}
+   * {@link #remove(long)} and {@link #add(byte[], int, int)}. Used by {@link ElementIterator}
    * to guard against concurrent modification.
    */
   @Private int modCount = 0;
@@ -123,7 +129,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
       try {
         raf.setLength(INITIAL_LENGTH);
         raf.seek(0);
-        raf.writeInt(INITIAL_LENGTH);
+        raf.writeLong(V2 | INITIAL_LENGTH);
       } finally {
         raf.close();
       }
@@ -132,9 +138,20 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
       if (!tempFile.renameTo(file)) {
         throw new IOException("Rename failed!");
       }
+      return open(file);
     }
 
-    return open(file);
+    RandomAccessFile raf = open(file);
+    raf.seek(0); // TODO is this needed?
+
+    // Check for the legacy file format and migrate if necessary.
+    long length = raf.readLong();
+    if ((length & V2) == 0) {
+      // TODO migrate V1 to V2
+      throw new UnsupportedOperationException("TODO migrate!");
+    }
+
+    return raf;
   }
 
   /** Opens a random access file that writes synchronously. */
@@ -147,7 +164,8 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
     raf.seek(0);
     raf.readFully(buffer);
-    fileLength = readInt(buffer, 0);
+
+    fileLength = readLong(buffer, 0) & ~V2; // Remove version.
     if (fileLength > raf.length()) {
       throw new IOException(
           "File is truncated. Expected length: " + fileLength + ", Actual length: " + raf.length());
@@ -155,30 +173,38 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
       throw new IOException(
           "File is corrupt; length stored in header (" + fileLength + ") is invalid.");
     }
-    elementCount = readInt(buffer, 4);
-    int firstOffset = readInt(buffer, 8);
-    int lastOffset = readInt(buffer, 12);
+    elementCount = readLong(buffer, 8);
+    long firstOffset = readLong(buffer, 16);
+    long lastOffset = readLong(buffer, 24);
     first = readElement(firstOffset);
     last = readElement(lastOffset);
   }
 
   /**
-   * Stores an {@code int} in the {@code byte[]}. The behavior is equivalent to calling
-   * {@link RandomAccessFile#writeInt}.
+   * Stores a {@code long} in the {@code byte[]}. The behavior is equivalent to calling
+   * {@link RandomAccessFile#writeLong}.
    */
-  private static void writeInt(byte[] buffer, int offset, int value) {
-    buffer[offset    ] = (byte) (value >> 24);
-    buffer[offset + 1] = (byte) (value >> 16);
-    buffer[offset + 2] = (byte) (value >> 8);
-    buffer[offset + 3] = (byte) value;
+  private static void writeLong(byte[] buffer, int offset, long value) {
+    buffer[offset    ] = (byte) (value >> 56);
+    buffer[offset + 1] = (byte) (value >> 48);
+    buffer[offset + 2] = (byte) (value >> 40);
+    buffer[offset + 3] = (byte) (value >> 32);
+    buffer[offset + 4] = (byte) (value >> 24);
+    buffer[offset + 5] = (byte) (value >> 16);
+    buffer[offset + 6] = (byte) (value >> 8);
+    buffer[offset + 7] = (byte)  value;
   }
 
   /** Reads an {@code int} from the {@code byte[]}. */
-  private static int readInt(byte[] buffer, int offset) {
-    return ((buffer[offset    ] & 0xff) << 24)
-        +  ((buffer[offset + 1] & 0xff) << 16)
-        +  ((buffer[offset + 2] & 0xff) << 8)
-        +   (buffer[offset + 3] & 0xff);
+  private static long readLong(byte[] buffer, int offset) {
+    return ((buffer[offset    ] & 0xffL) << 56)
+        +  ((buffer[offset + 1] & 0xffL) << 48)
+        +  ((buffer[offset + 2] & 0xffL) << 40)
+        +  ((buffer[offset + 3] & 0xffL) << 32)
+        +  ((buffer[offset + 4] & 0xffL) << 24)
+        +  ((buffer[offset + 5] & 0xffL) << 16)
+        +  ((buffer[offset + 6] & 0xffL) << 8)
+        +  ( buffer[offset + 7] & 0xffL);
   }
 
   /**
@@ -187,25 +213,25 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    * update the class member variables *after* this call succeeds. Assumes segment writes are
    * atomic in the underlying file system.
    */
-  private void writeHeader(int fileLength, int elementCount, int firstPosition, int lastPosition)
+  private void writeHeader(long fileLength, long elementCount, long firstPosition, long lastPosition)
       throws IOException {
-    writeInt(buffer, 0, fileLength);
-    writeInt(buffer, 4, elementCount);
-    writeInt(buffer, 8, firstPosition);
-    writeInt(buffer, 12, lastPosition);
+    writeLong(buffer, 0, V2 | fileLength);
+    writeLong(buffer, 8, elementCount);
+    writeLong(buffer, 16, firstPosition);
+    writeLong(buffer, 24, lastPosition);
     raf.seek(0);
     raf.write(buffer);
   }
 
-  @Private Element readElement(int position) throws IOException {
+  @Private Element readElement(long position) throws IOException {
     if (position == 0) return Element.NULL;
     ringRead(position, buffer, 0, Element.HEADER_LENGTH);
-    int length = readInt(buffer, 0);
+    long length = readLong(buffer, 0);
     return new Element(position, length);
   }
 
   /** Wraps the position if it exceeds the end of the file. */
-  @Private int wrapPosition(int position) {
+  @Private long wrapPosition(long position) {
     return position < fileLength ? position
         : HEADER_LENGTH + position - fileLength;
   }
@@ -218,7 +244,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    * @param buffer to write from
    * @param count # of bytes to write
    */
-  private void ringWrite(int position, byte[] buffer, int offset, int count) throws IOException {
+  private void ringWrite(long position, byte[] buffer, int offset, int count) throws IOException {
     position = wrapPosition(position);
     if (position + count <= fileLength) {
       raf.seek(position);
@@ -226,7 +252,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     } else {
       // The write overlaps the EOF.
       // # of bytes to write before the EOF.
-      int beforeEof = fileLength - position;
+      int beforeEof = (int) (fileLength - position);
       raf.seek(position);
       raf.write(buffer, offset, beforeEof);
       raf.seek(HEADER_LENGTH);
@@ -234,9 +260,9 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     }
   }
 
-  private void ringErase(int position, int length) throws IOException {
+  private void ringErase(long position, long length) throws IOException {
     while (length > 0) {
-      int chunk = min(length, ZEROES.length);
+      int chunk = (int) min(length, ZEROES.length);
       ringWrite(position, ZEROES, 0, chunk);
       length -= chunk;
       position += chunk;
@@ -250,7 +276,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    * @param buffer to read into
    * @param count # of bytes to read
    */
-  @Private void ringRead(int position, byte[] buffer, int offset, int count) throws IOException {
+  @Private void ringRead(long position, byte[] buffer, int offset, int count) throws IOException {
     position = wrapPosition(position);
     if (position + count <= fileLength) {
       raf.seek(position);
@@ -258,7 +284,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     } else {
       // The read overlaps the EOF.
       // # of bytes to read before the EOF.
-      int beforeEof = fileLength - position;
+      int beforeEof = (int) (fileLength - position);
       raf.seek(position);
       raf.readFully(buffer, offset, beforeEof);
       raf.seek(HEADER_LENGTH);
@@ -296,19 +322,19 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
     // Insert a new element after the current last element.
     boolean wasEmpty = isEmpty();
-    int position = wasEmpty ? HEADER_LENGTH
+    long position = wasEmpty ? HEADER_LENGTH
         : wrapPosition(last.position + Element.HEADER_LENGTH + last.length);
     Element newLast = new Element(position, count);
 
     // Write length.
-    writeInt(buffer, 0, count);
+    writeLong(buffer, 0, count);
     ringWrite(newLast.position, buffer, 0, Element.HEADER_LENGTH);
 
     // Write data.
     ringWrite(newLast.position + Element.HEADER_LENGTH, data, offset, count);
 
     // Commit the addition. If wasEmpty, first == last.
-    int firstPosition = wasEmpty ? newLast.position : first.position;
+    long firstPosition = wasEmpty ? newLast.position : first.position;
     writeHeader(fileLength, elementCount + 1, firstPosition, newLast.position);
     last = newLast;
     elementCount++;
@@ -316,7 +342,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     if (wasEmpty) first = last; // first element
   }
 
-  private int usedBytes() {
+  private long usedBytes() {
     if (elementCount == 0) return HEADER_LENGTH;
 
     if (last.position >= first.position) {
@@ -332,7 +358,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     }
   }
 
-  private int remainingBytes() {
+  private long remainingBytes() {
     return fileLength - usedBytes();
   }
 
@@ -346,14 +372,14 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    *
    * @param dataLength length of data being added
    */
-  private void expandIfNecessary(int dataLength) throws IOException {
-    int elementLength = Element.HEADER_LENGTH + dataLength;
-    int remainingBytes = remainingBytes();
+  private void expandIfNecessary(long dataLength) throws IOException {
+    long elementLength = Element.HEADER_LENGTH + dataLength;
+    long remainingBytes = remainingBytes();
     if (remainingBytes >= elementLength) return;
 
     // Expand.
-    int previousLength = fileLength;
-    int newLength;
+    long previousLength = fileLength;
+    long newLength;
     // Double the length until we can fit the new data.
     do {
       remainingBytes += previousLength;
@@ -364,13 +390,13 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     setLength(newLength);
 
     // Calculate the position of the tail end of the data in the ring buffer
-    int endOfLastElement = wrapPosition(last.position + Element.HEADER_LENGTH + last.length);
+    long endOfLastElement = wrapPosition(last.position + Element.HEADER_LENGTH + last.length);
 
     // If the buffer is split, we need to make it contiguous
     if (endOfLastElement <= first.position) {
       FileChannel channel = raf.getChannel();
       channel.position(fileLength); // destination position
-      int count = endOfLastElement - HEADER_LENGTH;
+      long count = endOfLastElement - HEADER_LENGTH;
       if (channel.transferTo(HEADER_LENGTH, count, channel) != count) {
         throw new AssertionError("Copied insufficient number of bytes!");
       }
@@ -379,7 +405,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
     // Commit the expansion.
     if (last.position < first.position) {
-      int newLastPosition = fileLength + last.position - HEADER_LENGTH;
+      long newLastPosition = fileLength + last.position - HEADER_LENGTH;
       writeHeader(newLength, elementCount, first.position, newLastPosition);
       last = new Element(newLastPosition, last.length);
     } else {
@@ -390,7 +416,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Sets the length of the file. */
-  private void setLength(int newLength) throws IOException {
+  private void setLength(long newLength) throws IOException {
     // Set new file length (considered metadata) and sync it to storage.
     raf.setLength(newLength);
     raf.getChannel().force(true);
@@ -399,9 +425,12 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   /** Reads the eldest element. Returns null if the queue is empty. */
   public synchronized byte[] peek() throws IOException {
     if (isEmpty()) return null;
-    int length = first.length;
-    byte[] data = new byte[length];
-    ringRead(first.position + Element.HEADER_LENGTH, data, 0, length);
+    long length = first.length;
+    if (length > Integer.MAX_VALUE) {
+      throw new IllegalStateException("Element length > " + Integer.MAX_VALUE + ": " + length);
+    }
+    byte[] data = new byte[(int) length];
+    ringRead(first.position + Element.HEADER_LENGTH, data, 0, (int) length);
     return data;
   }
 
@@ -421,10 +450,10 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
   private final class ElementIterator implements Iterator<byte[]> {
     /** Index of element to be returned by subsequent call to next. */
-    int nextElementIndex = 0;
+    long nextElementIndex = 0L;
 
     /** Position of element to be returned by subsequent call to next. */
-    private int nextElementPosition = first.position;
+    private long nextElementPosition = first.position;
 
     /**
      * The {@link #modCount} value that the iterator believes that the backing QueueFile should
@@ -453,13 +482,16 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
       try {
         // Read the current element.
         Element current = readElement(nextElementPosition);
-        byte[] buffer = new byte[current.length];
+        long length = current.length;
+        if (length > Integer.MAX_VALUE) {
+          throw new IllegalStateException("Element length > " + Integer.MAX_VALUE + ": " + length);
+        }
+        byte[] buffer = new byte[(int) length];
         nextElementPosition = wrapPosition(current.position + Element.HEADER_LENGTH);
-        ringRead(nextElementPosition, buffer, 0, current.length);
+        ringRead(nextElementPosition, buffer, 0, (int) length);
 
         // Update the pointer to the next element.
-        nextElementPosition =
-            wrapPosition(current.position + Element.HEADER_LENGTH + current.length);
+        nextElementPosition = wrapPosition(current.position + Element.HEADER_LENGTH + length);
         nextElementIndex++;
 
         // Return the read element.
@@ -489,8 +521,8 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   private final class ElementInputStream extends InputStream {
-    private int position;
-    private int remaining;
+    private long position;
+    private long remaining;
 
     ElementInputStream(Element element) {
       position = wrapPosition(element.position + Element.HEADER_LENGTH);
@@ -504,7 +536,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
       if (remaining == 0) {
         return -1;
       }
-      if (length > remaining) length = remaining;
+      if (length > remaining) length = (int) remaining;
       ringRead(position, buffer, offset, length);
       position = wrapPosition(position + length);
       remaining -= length;
@@ -522,7 +554,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Returns the number of elements in this queue. */
-  public synchronized int size() {
+  public synchronized long size() {
     return elementCount;
   }
 
@@ -540,7 +572,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    *
    * @throws NoSuchElementException if the queue is empty
    */
-  public synchronized void remove(int n) throws IOException {
+  public synchronized void remove(long n) throws IOException {
     if (isEmpty()) {
       throw new NoSuchElementException();
     }
@@ -559,17 +591,17 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
           "Cannot remove more elements (" + n + ") than present in queue (" + elementCount + ").");
     }
 
-    final int eraseStartPosition = first.position;
-    int eraseTotalLength = 0;
+    long eraseStartPosition = first.position;
+    long eraseTotalLength = 0L;
 
     // Read the position and length of the new first element.
-    int newFirstPosition = first.position;
-    int newFirstLength = first.length;
+    long newFirstPosition = first.position;
+    long newFirstLength = first.length;
     for (int i = 0; i < n; i++) {
       eraseTotalLength += Element.HEADER_LENGTH + newFirstLength;
       newFirstPosition = wrapPosition(newFirstPosition + Element.HEADER_LENGTH + newFirstLength);
       ringRead(newFirstPosition, buffer, 0, Element.HEADER_LENGTH);
-      newFirstLength = readInt(buffer, 0);
+      newFirstLength = readLong(buffer, 0);
     }
 
     // Commit the header.
@@ -615,16 +647,16 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
   /** A pointer to an element. */
   static class Element {
-    static final Element NULL = new Element(0, 0);
+    static final Element NULL = new Element(0L, 0L);
 
     /** Length of element header in bytes. */
-    static final int HEADER_LENGTH = 4;
+    static final int HEADER_LENGTH = 8;
 
     /** Position in file. */
-    final int position;
+    final long position;
 
     /** The length of the data. */
-    final int length;
+    final long length;
 
     /**
      * Constructs a new element.
@@ -632,7 +664,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
      * @param position within file
      * @param length of data
      */
-    Element(int position, int length) {
+    Element(long position, long length) {
       this.position = position;
       this.length = length;
     }

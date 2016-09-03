@@ -11,7 +11,7 @@ import java.io.IOException;
 public interface ObjectQueue<T> {
 
   /** Returns the number of entries in the queue. */
-  int size();
+  long size();
 
   /** Enqueues an entry that can be processed at any time. */
   void add(T entry) throws IOException;
