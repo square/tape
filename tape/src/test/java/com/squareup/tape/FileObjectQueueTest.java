@@ -24,27 +24,27 @@ public class FileObjectQueueTest {
     queue.add("three");
   }
 
-  @Test public void peekMultiple() {
+  @Test public void peekMultiple() throws IOException {
     List<String> peek = queue.peek(3);
     assertThat(peek).containsExactly("one", "two", "three");
   }
 
-  @Test public void getsAllAsList() {
+  @Test public void getsAllAsList() throws IOException {
     List<String> peek = queue.asList();
     assertThat(peek).containsExactly("one", "two", "three");
   }
 
-  @Test public void peekMaxCanExceedQueueDepth() {
+  @Test public void peekMaxCanExceedQueueDepth() throws IOException {
     List<String> peek = queue.peek(6);
     assertThat(peek).hasSize(3);
   }
 
-  @Test public void clear() {
+  @Test public void clear() throws IOException {
     queue.clear();
     assertThat(queue.size()).isEqualTo(0);
   }
 
-  @Test public void peekMaxCanBeSmallerThanQueueDepth() {
+  @Test public void peekMaxCanBeSmallerThanQueueDepth() throws IOException {
     List<String> peek = queue.peek(2);
     assertThat(peek).containsExactly("one", "two");
   }
