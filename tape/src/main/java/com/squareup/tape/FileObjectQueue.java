@@ -4,7 +4,6 @@ package com.squareup.tape;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,11 +14,6 @@ import static java.util.Collections.unmodifiableList;
  * Base queue class, implements common functionality for a QueueFile-backed
  * queue manager.  This class is not thread safe; instances should be kept
  * thread-confined.
- * <p>
- * The {@link #add(Object)}, {@link #peek()}, {@link #remove()}, and
- * {@link #setListener(ObjectQueue.Listener)} methods may throw a
- * {@link FileException} if the underlying {@link QueueFile} experiences an
- * {@link java.io.IOException}.
  *
  * @param <T> The type of elements in the queue.
  */
@@ -39,29 +33,25 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     this.queueFile = new QueueFile(file);
   }
 
+  public File file() {
+    return file;
+  }
+
   @Override public int size() {
     return queueFile.size();
   }
 
-  @Override public final void add(T entry) {
-    try {
-      bytes.reset();
-      converter.toStream(entry, bytes);
-      queueFile.add(bytes.getArray(), 0, bytes.size());
-      if (listener != null) listener.onAdd(this, entry);
-    } catch (IOException e) {
-      throw new FileException("Failed to add entry.", e, file);
-    }
+  @Override public final void add(T entry) throws IOException {
+    bytes.reset();
+    converter.toStream(entry, bytes);
+    queueFile.add(bytes.getArray(), 0, bytes.size());
+    if (listener != null) listener.onAdd(this, entry);
   }
 
-  @Override public T peek() {
-    try {
-      byte[] bytes = queueFile.peek();
-      if (bytes == null) return null;
-      return converter.from(bytes);
-    } catch (IOException e) {
-      throw new FileException("Failed to peek.", e, file);
-    }
+  @Override public T peek() throws IOException {
+    byte[] bytes = queueFile.peek();
+    if (bytes == null) return null;
+    return converter.from(bytes);
   }
 
   /**
@@ -69,45 +59,33 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
    * If the queue's {@link #size()} is less than {@code max} then only {@link #size()} entries
    * are read.
    */
-  public List<T> peek(final int max) {
-    try {
-      final List<T> entries = new ArrayList<T>(max);
-      int count = 0;
-      for (byte[] data : queueFile) {
-        if (++count > max) {
-          break;
-        }
-        entries.add(converter.from(data));
+  public List<T> peek(final int max) throws IOException {
+    List<T> entries = new ArrayList<T>(max);
+    int count = 0;
+    for (byte[] data : queueFile) {
+      if (++count > max) {
+        break;
       }
-      return unmodifiableList(entries);
-    } catch (IOException e) {
-      throw new FileException("Failed to peek.", e, file);
+      entries.add(converter.from(data));
     }
+    return unmodifiableList(entries);
   }
 
-  public List<T> asList() {
+  public List<T> asList() throws IOException {
     return peek(size());
   }
 
-  @Override public final void remove() {
-    try {
-      queueFile.remove();
-      if (listener != null) listener.onRemove(this);
-    } catch (IOException e) {
-      throw new FileException("Failed to remove.", e, file);
-    }
+  @Override public final void remove() throws IOException {
+    queueFile.remove();
+    if (listener != null) listener.onRemove(this);
   }
 
-  public final void remove(int n) {
-    try {
-      queueFile.remove(n);
-      if (listener != null) {
-        for (int i = 0; i < n; i++) {
-          listener.onRemove(this);
-        }
+  public final void remove(int n) throws IOException {
+    queueFile.remove(n);
+    if (listener != null) {
+      for (int i = 0; i < n; i++) {
+        listener.onRemove(this);
       }
-    } catch (IOException e) {
-      throw new FileException("Failed to remove.", e, file);
     }
   }
 
@@ -116,30 +94,18 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
    * <p>
    * This will not invoke {@link Listener#onRemove} for any items removed from the queue.
    */
-  public final void clear() {
-    try {
-      queueFile.clear();
-    } catch (IOException e) {
-      throw new FileException("Failed to clear.", e, file);
-    }
+  public final void clear() throws IOException {
+    queueFile.clear();
   }
 
-  public final void close() {
-    try {
-      queueFile.close();
-    } catch (IOException e) {
-      throw new FileException("Failed to close.", e, file);
-    }
+  public final void close() throws IOException {
+    queueFile.close();
   }
 
-  @Override public void setListener(final Listener<T> listener) {
+  @Override public void setListener(final Listener<T> listener) throws IOException {
     if (listener != null) {
-      try {
-        for (byte[] data : queueFile) {
-          listener.onAdd(FileObjectQueue.this, converter.from(data));
-        }
-      } catch (IOException e) {
-        throw new FileException("Unable to iterate over QueueFile contents.", e, file);
+      for (byte[] data : queueFile) {
+        listener.onAdd(FileObjectQueue.this, converter.from(data));
       }
     }
     this.listener = listener;
