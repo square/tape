@@ -605,6 +605,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     last = Element.NULL;
     if (fileLength > INITIAL_LENGTH) setLength(INITIAL_LENGTH);
     fileLength = INITIAL_LENGTH;
+    modCount++;
   }
 
   /** Closes the underlying file. */

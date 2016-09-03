@@ -739,6 +739,22 @@ import static org.junit.Assert.fail;
     }
   }
 
+  @Test public void testIteratorDisallowsConcurrentModificationWithClear() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    for (int i = 0; i < 15; i++) {
+      queueFile.add(values[i]);
+    }
+
+    Iterator<byte[]> iterator = queueFile.iterator();
+    iterator.next();
+    queueFile.clear();
+    try {
+      iterator.hasNext();
+      fail();
+    } catch (ConcurrentModificationException ignored) {
+    }
+  }
+
   @Test public void testIteratorOnlyRemovesFromHead() throws IOException {
     QueueFile queueFile = new QueueFile(file);
     for (int i = 0; i < 15; i++) {
