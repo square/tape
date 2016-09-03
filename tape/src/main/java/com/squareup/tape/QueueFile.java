@@ -50,7 +50,7 @@ import static java.lang.Math.min;
  *
  * @author Bob Lee (bob@squareup.com)
  */
-public class QueueFile implements Closeable, Iterable<byte[]> {
+public final class QueueFile implements Closeable, Iterable<byte[]> {
   private static final Logger LOGGER = Logger.getLogger(QueueFile.class.getName());
 
   /** Initial file size in bytes. */

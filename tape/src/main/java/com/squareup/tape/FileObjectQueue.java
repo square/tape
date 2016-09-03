@@ -17,7 +17,7 @@ import static java.util.Collections.unmodifiableList;
  *
  * @param <T> The type of elements in the queue.
  */
-public class FileObjectQueue<T> implements ObjectQueue<T> {
+public final class FileObjectQueue<T> implements ObjectQueue<T> {
   /** Backing storage implementation. */
   private final QueueFile queueFile;
   /** Reusable byte output buffer. */
@@ -41,7 +41,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     return queueFile.size();
   }
 
-  @Override public final void add(T entry) throws IOException {
+  @Override public void add(T entry) throws IOException {
     bytes.reset();
     converter.toStream(entry, bytes);
     queueFile.add(bytes.getArray(), 0, bytes.size());
@@ -59,7 +59,7 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
    * If the queue's {@link #size()} is less than {@code max} then only {@link #size()} entries
    * are read.
    */
-  public List<T> peek(final int max) throws IOException {
+  public List<T> peek(int max) throws IOException {
     List<T> entries = new ArrayList<T>(max);
     int count = 0;
     for (byte[] data : queueFile) {
@@ -75,12 +75,12 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     return peek(size());
   }
 
-  @Override public final void remove() throws IOException {
+  @Override public void remove() throws IOException {
     queueFile.remove();
     if (listener != null) listener.onRemove(this);
   }
 
-  public final void remove(int n) throws IOException {
+  public void remove(int n) throws IOException {
     queueFile.remove(n);
     if (listener != null) {
       for (int i = 0; i < n; i++) {
@@ -94,15 +94,15 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
    * <p>
    * This will not invoke {@link Listener#onRemove} for any items removed from the queue.
    */
-  public final void clear() throws IOException {
+  public void clear() throws IOException {
     queueFile.clear();
   }
 
-  public final void close() throws IOException {
+  public void close() throws IOException {
     queueFile.close();
   }
 
-  @Override public void setListener(final Listener<T> listener) throws IOException {
+  @Override public void setListener(Listener<T> listener) throws IOException {
     if (listener != null) {
       for (byte[] data : queueFile) {
         listener.onAdd(FileObjectQueue.this, converter.from(data));
