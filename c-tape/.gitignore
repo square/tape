@@ -1,6 +1,0 @@
-Debug/*
-Release/*
-test.queue
-*.o
-*.d
-.cproject
