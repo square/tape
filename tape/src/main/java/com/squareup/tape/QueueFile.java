@@ -30,13 +30,15 @@ import static java.lang.Math.min;
 
 /**
  * A reliable, efficient, file-based, FIFO queue. Additions and removals are O(1). All operations
- * are atomic. Writes are synchronous; data will be written to disk before an operation returns.
+ * are atomic. Data will be written to disk before an operation returns.
  * The underlying file is structured to survive process and even system crashes. If an I/O
  * exception is thrown during a mutating change, the change is aborted. It is safe to continue to
  * use a {@code QueueFile} instance after an exception.
  *
- * <p>All operations are synchronized. In a traditional queue, the remove operation returns an
- * element. In this queue, {@link #peek} and {@link #remove} are used in conjunction. Use
+ * <p><strong>Note that this implementation is not synchronized.</strong>
+ *
+ * <p>In a traditional queue, the remove operation returns an element. In this queue,
+ * {@link #peek} and {@link #remove} are used in conjunction. Use
  * {@code peek} to retrieve the first element, and then {@code remove} to remove it after
  * successful processing. If the system crashes after {@code peek} and during processing, the
  * element will remain in the queue, to be processed when the system restarts.
@@ -298,7 +300,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    * @throws IndexOutOfBoundsException if {@code offset < 0} or {@code count < 0}, or if {@code
    * offset + count} is bigger than the length of {@code buffer}.
    */
-  public synchronized void add(byte[] data, int offset, int count) throws IOException {
+  public void add(byte[] data, int offset, int count) throws IOException {
     if (data == null) {
       throw new NullPointerException("data == null");
     }
@@ -351,7 +353,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Returns true if this queue contains no entries. */
-  public synchronized boolean isEmpty() {
+  public boolean isEmpty() {
     return elementCount == 0;
   }
 
@@ -413,7 +415,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Reads the eldest element. Returns null if the queue is empty. */
-  public synchronized byte[] peek() throws IOException {
+  public byte[] peek() throws IOException {
     if (isEmpty()) return null;
     int length = first.length;
     byte[] data = new byte[length];
@@ -538,7 +540,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Returns the number of elements in this queue. */
-  public synchronized int size() {
+  public int size() {
     return elementCount;
   }
 
@@ -547,7 +549,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    *
    * @throws NoSuchElementException if the queue is empty
    */
-  public synchronized void remove() throws IOException {
+  public void remove() throws IOException {
     remove(1);
   }
 
@@ -556,7 +558,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    *
    * @throws NoSuchElementException if the queue is empty
    */
-  public synchronized void remove(int n) throws IOException {
+  public void remove(int n) throws IOException {
     if (isEmpty()) {
       throw new NoSuchElementException();
     }
@@ -600,7 +602,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Clears this queue. Truncates the file to the initial size. */
-  public synchronized void clear() throws IOException {
+  public void clear() throws IOException {
     // Commit the header.
     writeHeader(INITIAL_LENGTH, 0, 0, 0);
 
@@ -619,7 +621,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Closes the underlying file. */
-  @Override public synchronized void close() throws IOException {
+  @Override public void close() throws IOException {
     raf.close();
   }
 
