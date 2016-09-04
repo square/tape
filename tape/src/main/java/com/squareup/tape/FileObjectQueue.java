@@ -38,7 +38,7 @@ public final class FileObjectQueue<T> implements ObjectQueue<T>, Closeable {
     return file;
   }
 
-  @Override public int size() {
+  @Override public long size() {
     return queueFile.size();
   }
 
@@ -73,7 +73,11 @@ public final class FileObjectQueue<T> implements ObjectQueue<T>, Closeable {
   }
 
   public List<T> asList() throws IOException {
-    return peek(size());
+    long size = size();
+    if (size > Integer.MAX_VALUE) {
+      throw new IllegalStateException("Element count > " + Integer.MAX_VALUE + ": " + size);
+    }
+    return peek((int) size);
   }
 
   @Override public void remove() throws IOException {

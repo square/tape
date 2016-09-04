@@ -28,7 +28,7 @@ public final class InMemoryObjectQueue<T> implements ObjectQueue<T> {
     return tasks.peek();
   }
 
-  @Override public int size() {
+  @Override public long size() {
     return tasks.size();
   }
 
