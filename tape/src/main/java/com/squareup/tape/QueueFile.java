@@ -107,12 +107,25 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    */
   @Private int modCount = 0;
 
+  /** When true, removing an element will also overwrite data with zero bytes. */
+  private final boolean zero;
+
   /**
    * Constructs a new queue backed by the given file. Only one instance should access a given file
    * at a time.
    */
   public QueueFile(File file) throws IOException {
-    this(initializeFromFile(file));
+    this(file, true);
+  }
+
+  /**
+   * Constructs a new queue backed by the given file. Only one instance should access a given file
+   * at a time.
+   *
+   * @param zero When true, removing an element will also overwrite data with zero bytes.
+   */
+  public QueueFile(File file, boolean zero) throws IOException {
+    this(initializeFromFile(file), zero);
   }
 
   private static RandomAccessFile initializeFromFile(File file) throws IOException {
@@ -142,8 +155,9 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     return new RandomAccessFile(file, "rwd");
   }
 
-  QueueFile(RandomAccessFile raf) throws IOException {
+  QueueFile(RandomAccessFile raf, boolean zero) throws IOException {
     this.raf = raf;
+    this.zero = zero;
 
     raf.seek(0);
     raf.readFully(buffer);
@@ -374,7 +388,9 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
       if (channel.transferTo(HEADER_LENGTH, count, channel) != count) {
         throw new AssertionError("Copied insufficient number of bytes!");
       }
-      ringErase(HEADER_LENGTH, count);
+      if (zero) {
+        ringErase(HEADER_LENGTH, count);
+      }
     }
 
     // Commit the expansion.
@@ -578,8 +594,9 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     modCount++;
     first = new Element(newFirstPosition, newFirstLength);
 
-    // Commit the erase.
-    ringErase(eraseStartPosition, eraseTotalLength);
+    if (zero) {
+      ringErase(eraseStartPosition, eraseTotalLength);
+    }
   }
 
   /** Clears this queue. Truncates the file to the initial size. */
@@ -587,9 +604,11 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     // Commit the header.
     writeHeader(INITIAL_LENGTH, 0, 0, 0);
 
-    // Zero out data.
-    raf.seek(HEADER_LENGTH);
-    raf.write(ZEROES, 0, INITIAL_LENGTH - HEADER_LENGTH);
+    if (zero) {
+      // Zero out data.
+      raf.seek(HEADER_LENGTH);
+      raf.write(ZEROES, 0, INITIAL_LENGTH - HEADER_LENGTH);
+    }
 
     elementCount = 0;
     first = Element.NULL;

@@ -12,6 +12,8 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.logging.Logger;
+import okio.BufferedSource;
+import okio.Okio;
 import org.fest.assertions.Assertions;
 import org.junit.Before;
 import org.junit.Rule;
@@ -352,7 +354,7 @@ import static org.junit.Assert.fail;
     queueFile.close();
 
     final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf);
+    queueFile = new QueueFile(braf, true);
 
     try {
       queueFile.add(values[252]);
@@ -379,7 +381,7 @@ import static org.junit.Assert.fail;
     queueFile.close();
 
     final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf);
+    queueFile = new QueueFile(braf, true);
 
     try {
       queueFile.remove();
@@ -403,7 +405,7 @@ import static org.junit.Assert.fail;
     queueFile.close();
 
     final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf);
+    queueFile = new QueueFile(braf, true);
 
     try {
       // This should trigger an expansion which should fail.
@@ -537,6 +539,40 @@ import static org.junit.Assert.fail;
     }
 
     queue.close();
+  }
+
+  @Test public void removingElementZeroesData() throws IOException {
+    QueueFile queueFile = new QueueFile(file, true);
+    queueFile.add(values[4]);
+    queueFile.remove();
+    queueFile.close();
+
+    BufferedSource source = Okio.buffer(Okio.source(file));
+    // Header
+    assertThat(source.readInt()).isEqualTo(4096);
+    assertThat(source.readInt()).isEqualTo(0);
+    assertThat(source.readInt()).isEqualTo(0);
+    assertThat(source.readInt()).isEqualTo(0);
+    // Element
+    assertThat(source.readInt()).isEqualTo(0);
+    assertThat(source.readByteString(4).hex()).isEqualTo("00000000");
+  }
+
+  @Test public void removingElementDoesNotZeroData() throws IOException {
+    QueueFile queueFile = new QueueFile(file, false);
+    queueFile.add(values[4]);
+    queueFile.remove();
+    queueFile.close();
+
+    BufferedSource source = Okio.buffer(Okio.source(file));
+    // Header
+    assertThat(source.readInt()).isEqualTo(4096);
+    assertThat(source.readInt()).isEqualTo(0);
+    assertThat(source.readInt()).isEqualTo(0);
+    assertThat(source.readInt()).isEqualTo(0);
+    // Element
+    assertThat(source.readInt()).isEqualTo(4);
+    assertThat(source.readByteString(4).hex()).isEqualTo("04030201");
   }
 
   /**
