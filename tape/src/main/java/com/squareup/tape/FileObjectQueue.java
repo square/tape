@@ -61,7 +61,7 @@ public final class FileObjectQueue<T> implements ObjectQueue<T>, Closeable {
    * are read.
    */
   public List<T> peek(int max) throws IOException {
-    List<T> entries = new ArrayList<T>(max);
+    List<T> entries = new ArrayList<T>(queueFile.size() >  max ? max : queueFile.size());
     int count = 0;
     for (byte[] data : queueFile) {
       if (++count > max) {
