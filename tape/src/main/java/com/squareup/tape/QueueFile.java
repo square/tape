@@ -30,7 +30,7 @@ import static java.lang.Math.min;
 
 /**
  * A reliable, efficient, file-based, FIFO queue. Additions and removals are O(1). All operations
- * are atomic. Data will be written to disk before an operation returns.
+ * are atomic. Writes are synchronous; data will be written to disk before an operation returns.
  * The underlying file is structured to survive process and even system crashes. If an I/O
  * exception is thrown during a mutating change, the change is aborted. It is safe to continue to
  * use a {@code QueueFile} instance after an exception.
