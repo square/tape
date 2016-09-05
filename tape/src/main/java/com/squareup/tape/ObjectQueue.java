@@ -2,35 +2,58 @@
 package com.squareup.tape;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * A queue of objects.
  *
  * @param <T> The type of queue for the elements.
  */
-public interface ObjectQueue<T> {
+public abstract class ObjectQueue<T> {
 
   /** Returns the number of entries in the queue. */
-  int size();
+  abstract int size();
 
   /** Enqueues an entry that can be processed at any time. */
-  void add(T entry) throws IOException;
+  abstract void add(T entry) throws IOException;
 
   /**
    * Returns the head of the queue, or {@code null} if the queue is empty. Does not modify the
    * queue.
    */
-  T peek() throws IOException;
+  abstract T peek() throws IOException;
+
+  /**
+   * Reads up to {@code max} entries from the head of the queue without removing the entries.
+   * If the queue's {@link #size()} is less than {@code max} then only {@link #size()} entries
+   * are read.
+   */
+  abstract List<T> peek(int max) throws IOException;
+
+  /** Returns the entries in the queue as an unmodifiable {@link List}.*/
+  List<T> asList() throws IOException {
+    return peek(size());
+  }
 
   /** Removes the head of the queue. */
-  void remove() throws IOException;
+  void remove() throws IOException {
+    remove(1);
+  }
+
+  /** Removes {@code n} entries from the head of the queue. */
+  abstract void remove(int n) throws IOException;
+
+  /** Clears this queue. Also truncates the file to the initial size. */
+  void clear() throws IOException {
+    remove(size());
+  }
 
   /**
    * Sets a listener on this queue. Invokes {@link Listener#onAdd} once for each entry that's
    * already in the queue. If an error occurs while reading the data, the listener will not receive
    * further notifications.
    */
-  void setListener(Listener<T> listener) throws IOException;
+  abstract void setListener(Listener<T> listener) throws IOException;
 
   /**
    * Listens for changes to the queue.
