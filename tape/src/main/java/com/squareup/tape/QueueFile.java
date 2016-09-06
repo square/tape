@@ -450,8 +450,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
      */
     int expectedModCount = modCount;
 
-    ElementIterator() {
-      // Prevent synthetic accessor method from being generated.
+    @Private ElementIterator() {
     }
 
     private void checkForComodification() {
@@ -503,39 +502,6 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
       expectedModCount = modCount;
       nextElementIndex--;
-    }
-  }
-
-  private final class ElementInputStream extends InputStream {
-    private int position;
-    private int remaining;
-
-    ElementInputStream(Element element) {
-      position = wrapPosition(element.position + Element.HEADER_LENGTH);
-      remaining = element.length;
-    }
-
-    @Override public int read(byte[] buffer, int offset, int length) throws IOException {
-      if ((offset | length) < 0 || length > buffer.length - offset) {
-        throw new ArrayIndexOutOfBoundsException();
-      }
-      if (remaining == 0) {
-        return -1;
-      }
-      if (length > remaining) length = remaining;
-      ringRead(position, buffer, offset, length);
-      position = wrapPosition(position + length);
-      remaining -= length;
-      return length;
-    }
-
-    @Override public int read() throws IOException {
-      if (remaining == 0) return -1;
-      raf.seek(position);
-      int b = raf.read();
-      position = wrapPosition(position + 1);
-      remaining--;
-      return b;
     }
   }
 

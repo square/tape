@@ -2,6 +2,9 @@
 package com.squareup.tape;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -9,7 +12,7 @@ import java.util.List;
  *
  * @param <T> The type of queue for the elements.
  */
-public abstract class ObjectQueue<T> {
+public abstract class ObjectQueue<T> implements Iterable<T> {
 
   /** Returns the number of entries in the queue. */
   abstract int size();
@@ -28,7 +31,15 @@ public abstract class ObjectQueue<T> {
    * If the queue's {@link #size()} is less than {@code max} then only {@link #size()} entries
    * are read.
    */
-  abstract List<T> peek(int max) throws IOException;
+  List<T> peek(int max) throws IOException {
+    int end = Math.min(max, size());
+    List<T> subList = new ArrayList<T>(end);
+    Iterator<T> iterator = iterator();
+    for (int i = 0; i < end; i++) {
+      subList.add(iterator.next());
+    }
+    return Collections.unmodifiableList(subList);
+  }
 
   /** Returns the entries in the queue as an unmodifiable {@link List}.*/
   List<T> asList() throws IOException {

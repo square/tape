@@ -6,14 +6,12 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-
-import static java.util.Collections.unmodifiableList;
 
 /**
  * Base queue class, implements common functionality for a QueueFile-backed
- * queue manager.  This class is not thread safe; instances should be kept
+ * queue manager. This class is not thread safe; instances should be kept
  * thread-confined.
  *
  * @param <T> The type of elements in the queue.
@@ -25,7 +23,7 @@ public final class FileObjectQueue<T> extends ObjectQueue<T> implements Closeabl
   private final DirectByteArrayOutputStream bytes = new DirectByteArrayOutputStream();
   /** Keep file around for error reporting. */
   private final File file;
-  final Converter<T> converter;
+  @Private final Converter<T> converter;
   private Listener<T> listener;
 
   public FileObjectQueue(File file, Converter<T> converter) throws IOException {
@@ -55,23 +53,6 @@ public final class FileObjectQueue<T> extends ObjectQueue<T> implements Closeabl
     return converter.from(bytes);
   }
 
-  /**
-   * Reads up to {@code max} entries from the head of the queue without removing the entries.
-   * If the queue's {@link #size()} is less than {@code max} then only {@link #size()} entries
-   * are read.
-   */
-  @Override public List<T> peek(int max) throws IOException {
-    List<T> entries = new ArrayList<T>(queueFile.size() >  max ? max : queueFile.size());
-    int count = 0;
-    for (byte[] data : queueFile) {
-      if (++count > max) {
-        break;
-      }
-      entries.add(converter.from(data));
-    }
-    return unmodifiableList(entries);
-  }
-
   @Override public List<T> asList() throws IOException {
     return peek(size());
   }
@@ -96,6 +77,44 @@ public final class FileObjectQueue<T> extends ObjectQueue<T> implements Closeabl
       }
     }
     this.listener = listener;
+  }
+
+  /**
+   * Returns an iterator over entries in this queue.
+   *
+   * <p>The iterator disallows modifications to the queue during iteration. Removing entries from
+   * the head of the queue is permitted during iteration using {@link Iterator#remove()}.
+   *
+   * <p>The iterator may throw an unchecked {@link RuntimeException} during {@link Iterator#next()}
+   * or {@link Iterator#remove()}.
+   */
+  @Override public Iterator<T> iterator() {
+    return new QueueFileIterator(queueFile.iterator());
+  }
+
+  private final class QueueFileIterator implements Iterator<T> {
+    final Iterator<byte[]> iterator;
+
+    @Private QueueFileIterator(Iterator<byte[]> iterator) {
+      this.iterator = iterator;
+    }
+
+    @Override public boolean hasNext() {
+      return iterator.hasNext();
+    }
+
+    @Override public T next() {
+      byte[] data = iterator.next();
+      try {
+        return converter.from(data);
+      } catch (IOException e) {
+        throw new RuntimeException("todo: throw a proper error", e);
+      }
+    }
+
+    @Override public void remove() {
+      iterator.remove();
+    }
   }
 
   /**
