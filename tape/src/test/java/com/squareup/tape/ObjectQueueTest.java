@@ -1,6 +1,7 @@
-// Copyright 2014 Square, Inc.
 package com.squareup.tape;
 
+import com.squareup.burst.BurstJUnit4;
+import com.squareup.burst.annotation.Burst;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,110 +15,103 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
 
 import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.Fail.fail;
 
-public class FileObjectQueueTest {
+@RunWith(BurstJUnit4.class)
+public class ObjectQueueTest {
+  public enum QueueFactory {
+    FILE() {
+      @Override public <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter converter)
+          throws IOException {
+        return new FileObjectQueue<T>(file, converter);
+      }
+    },
+    MEMORY() {
+      @Override public <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter converter) {
+        return new InMemoryObjectQueue<T>();
+      }
+    };
+
+    public abstract <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter converter) throws
+        IOException;
+  }
+
   @Rule public TemporaryFolder folder = new TemporaryFolder();
-  private FileObjectQueue<Pojo> queue;
+  @Burst QueueFactory factory;
+  ObjectQueue<String> queue;
 
   @Before public void setUp() throws IOException {
     File parent = folder.getRoot();
-    File file = new File(parent, "queue-file");
-    queue = new FileObjectQueue<Pojo>(file, new PojoConverter());
-    queue.add(new Pojo("one"));
-    queue.add(new Pojo("two"));
-    queue.add(new Pojo("three"));
+    File file = new File(parent, "object-queue");
+
+    queue = factory.create(file, new StringConverter());
+    queue.add("one");
+    queue.add("two");
+    queue.add("three");
+  }
+
+  @Test public void size() throws IOException {
+    assertThat(queue.size()).isEqualTo(3);
+  }
+
+  @Test public void peek() throws IOException {
+    assertThat(queue.peek()).isEqualTo("one");
   }
 
   @Test public void peekMultiple() throws IOException {
-    List<Pojo> peek = queue.peek(3);
-    assertThat(peek).containsExactly(new Pojo("one"), new Pojo("two"), new Pojo("three"));
-  }
-
-  @Test public void getsAllAsList() throws IOException {
-    List<Pojo> peek = queue.asList();
-    assertThat(peek).containsExactly(new Pojo("one"), new Pojo("two"), new Pojo("three"));
+    assertThat(queue.peek(2)).containsExactly("one", "two");
   }
 
   @Test public void peekMaxCanExceedQueueDepth() throws IOException {
-    List<Pojo> peek = queue.peek(6);
-    assertThat(peek).hasSize(3);
+    assertThat(queue.peek(6)).containsExactly("one", "two", "three");
+  }
+
+  @Test public void asList() throws IOException {
+    assertThat(queue.asList()).containsExactly("one", "two", "three");
+  }
+
+  @Test public void remove() throws IOException {
+    queue.remove();
+
+    assertThat(queue.asList()).containsExactly("two", "three");
+  }
+
+  @Test public void removeMultiple() throws IOException {
+    queue.remove(2);
+
+    assertThat(queue.asList()).containsExactly("three");
   }
 
   @Test public void clear() throws IOException {
     queue.clear();
+
     assertThat(queue.size()).isEqualTo(0);
   }
 
-  @Test public void peekMaxCanBeSmallerThanQueueDepth() throws IOException {
-    List<Pojo> peek = queue.peek(2);
-    assertThat(peek).containsExactly(new Pojo("one"), new Pojo("two"));
-  }
-
-  private static class Pojo {
-    private String text;
-
-    private Pojo(String text) {
-      this.text = text;
-    }
-
-    private String getText() {
-      return text;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-
-      Pojo pojo = (Pojo) o;
-
-      return text != null ? text.equals(pojo.text) : pojo.text == null;
-    }
-
-    @Override
-    public int hashCode() {
-      return text != null ? text.hashCode() : 0;
-    }
-  }
-
-  private class PojoConverter implements FileObjectQueue.Converter<Pojo> {
-
-    @Override
-    public Pojo from(byte[] bytes) throws IOException {
-      String text = new String(bytes, "UTF-8");
-      return new Pojo(text);
-    }
-
-    @Override
-    public void toStream(Pojo o, OutputStream bytes) throws IOException {
-      bytes.write(o.getText().getBytes("UTF-8"));
-    }
-  }
-
   @Test public void listenerOnAddInvokedForExistingEntries() throws IOException {
-    final List<Pojo> saw = new ArrayList<Pojo>();
-    queue.setListener(new ObjectQueue.Listener<Pojo>() {
-      @Override public void onAdd(ObjectQueue<Pojo> queue, Pojo entry) {
+    final List<String> saw = new ArrayList<String>();
+    queue.setListener(new ObjectQueue.Listener<String>() {
+      @Override public void onAdd(ObjectQueue<String> queue, String entry) {
         saw.add(entry);
       }
 
-      @Override public void onRemove(ObjectQueue<Pojo> queue) {
+      @Override public void onRemove(ObjectQueue<String> queue) {
         fail("onRemove should not be invoked");
       }
     });
-    assertThat(saw).containsExactly(new Pojo("one"), new Pojo("two"), new Pojo("three"));
+    assertThat(saw).containsExactly("one", "two", "three");
   }
 
   @Test public void listenerOnRemoveInvokedForRemove() throws IOException {
     final AtomicInteger count = new AtomicInteger();
-    queue.setListener(new ObjectQueue.Listener<Pojo>() {
-      @Override public void onAdd(ObjectQueue<Pojo> queue, Pojo entry) {
+    queue.setListener(new ObjectQueue.Listener<String>() {
+      @Override public void onAdd(ObjectQueue<String> queue, String entry) {
       }
 
-      @Override public void onRemove(ObjectQueue<Pojo> queue) {
+      @Override public void onRemove(ObjectQueue<String> queue) {
         count.getAndIncrement();
       }
     });
@@ -127,11 +121,11 @@ public class FileObjectQueueTest {
 
   @Test public void listenerOnRemoveInvokedForRemoveN() throws IOException {
     final AtomicInteger count = new AtomicInteger();
-    queue.setListener(new ObjectQueue.Listener<Pojo>() {
-      @Override public void onAdd(ObjectQueue<Pojo> queue, Pojo entry) {
+    queue.setListener(new ObjectQueue.Listener<String>() {
+      @Override public void onAdd(ObjectQueue<String> queue, String entry) {
       }
 
-      @Override public void onRemove(ObjectQueue<Pojo> queue) {
+      @Override public void onRemove(ObjectQueue<String> queue) {
         count.getAndIncrement();
       }
     });
@@ -141,11 +135,11 @@ public class FileObjectQueueTest {
 
   @Test public void listenerOnRemoveInvokedForClear() throws IOException {
     final AtomicInteger count = new AtomicInteger();
-    queue.setListener(new ObjectQueue.Listener<Pojo>() {
-      @Override public void onAdd(ObjectQueue<Pojo> queue, Pojo entry) {
+    queue.setListener(new ObjectQueue.Listener<String>() {
+      @Override public void onAdd(ObjectQueue<String> queue, String entry) {
       }
 
-      @Override public void onRemove(ObjectQueue<Pojo> queue) {
+      @Override public void onRemove(ObjectQueue<String> queue) {
         count.getAndIncrement();
       }
     });
@@ -154,11 +148,11 @@ public class FileObjectQueueTest {
   }
 
   @Test public void testIterator() throws IOException {
-    final List<Pojo> saw = new ArrayList<Pojo>();
-    for (Pojo pojo : queue) {
+    final List<String> saw = new ArrayList<String>();
+    for (String pojo : queue) {
       saw.add(pojo);
     }
-    assertThat(saw).containsExactly(new Pojo("one"), new Pojo("two"), new Pojo("three"));
+    assertThat(saw).containsExactly("one", "two", "three");
   }
 
   @Test public void testIteratorNextThrowsWhenEmpty() throws IOException {
@@ -182,6 +176,9 @@ public class FileObjectQueueTest {
       iterator.next();
       fail();
     } catch (NoSuchElementException ignored) {
+      // thrown by file implementation.
+    } catch (IndexOutOfBoundsException ignored) {
+      // thrown by memory implementation.
     }
   }
 
@@ -190,11 +187,11 @@ public class FileObjectQueueTest {
 
     iterator.next();
     iterator.remove();
-    assertThat(queue.asList()).containsExactly(new Pojo("two"), new Pojo("three"));
+    assertThat(queue.asList()).containsExactly("two", "three");
 
     iterator.next();
     iterator.remove();
-    assertThat(queue.asList()).containsExactly(new Pojo("three"));
+    assertThat(queue.asList()).containsExactly("three");
   }
 
   @Test public void testIteratorRemoveDisallowsConcurrentModification() throws IOException {
@@ -245,4 +242,15 @@ public class FileObjectQueueTest {
       assertThat(ex).hasMessage("Removal is only permitted from the head.");
     }
   }
+
+  static class StringConverter implements FileObjectQueue.Converter<String> {
+    @Override public String from(byte[] bytes) throws IOException {
+      return new String(bytes, "UTF-8");
+    }
+
+    @Override public void toStream(String s, OutputStream os) throws IOException {
+      os.write(s.getBytes("UTF-8"));
+    }
+  }
 }
+
