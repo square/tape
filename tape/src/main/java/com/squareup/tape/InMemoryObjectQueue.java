@@ -101,7 +101,8 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
       if (closed) throw new IllegalStateException("closed");
       checkForComodification();
 
-      if (size() == 0) throw new NoSuchElementException();
+      if (nextElementIndex >= size()) throw new NoSuchElementException();
+
       return entries.get(nextElementIndex++);
     }
 
