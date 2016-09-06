@@ -19,7 +19,6 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.util.ConcurrentModificationException;
@@ -111,6 +110,8 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
   /** When true, removing an element will also overwrite data with zero bytes. */
   private final boolean zero;
+
+  @Private boolean closed;
 
   /**
    * Constructs a new queue backed by the given file. Only one instance should access a given file
@@ -307,6 +308,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     if ((offset | count) < 0 || count > data.length - offset) {
       throw new IndexOutOfBoundsException();
     }
+    if (closed) throw new IOException("closed");
 
     expandIfNecessary(count);
 
@@ -416,6 +418,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
   /** Reads the eldest element. Returns null if the queue is empty. */
   public byte[] peek() throws IOException {
+    if (closed) throw new IOException("closed");
     if (isEmpty()) return null;
     int length = first.length;
     byte[] data = new byte[length];
@@ -458,11 +461,13 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     }
 
     @Override public boolean hasNext() {
+      if (closed) throw new IllegalStateException("closed");
       checkForComodification();
       return nextElementIndex != elementCount;
     }
 
     @Override public byte[] next() {
+      if (closed) throw new IllegalStateException("closed");
       checkForComodification();
       if (isEmpty()) throw new NoSuchElementException();
       if (nextElementIndex >= elementCount) throw new NoSuchElementException();
@@ -569,6 +574,8 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
   /** Clears this queue. Truncates the file to the initial size. */
   public void clear() throws IOException {
+    if (closed) throw new IOException("closed");
+
     // Commit the header.
     writeHeader(INITIAL_LENGTH, 0, 0, 0);
 
@@ -586,8 +593,8 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     modCount++;
   }
 
-  /** Closes the underlying file. */
   @Override public void close() throws IOException {
+    closed = true;
     raf.close();
   }
 

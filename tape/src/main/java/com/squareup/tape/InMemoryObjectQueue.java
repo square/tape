@@ -1,19 +1,14 @@
 // Copyright 2012 Square, Inc.
 package com.squareup.tape;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 
-/**
- * A queue for objects that are not serious enough to be written to disk. Objects in this queue
- * are kept in memory and will not be serialized.
- *
- * @param <T> The type of elements in the queue.
- */
-public final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
+final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
   // LinkedList can be used both as a List (for get(n)) and Queue (for peek() and remove()).
   @Private final LinkedList<T> entries;
   /**
@@ -23,19 +18,25 @@ public final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
    */
   @Private int modCount = 0;
   private Listener<T> listener;
+  private boolean closed;
 
-  @SuppressWarnings("unchecked")
-  public InMemoryObjectQueue() {
+  InMemoryObjectQueue() {
     entries = new LinkedList<T>();
   }
 
-  @Override public void add(T entry) {
+  @Override public File file() {
+    return null;
+  }
+
+  @Override public void add(T entry) throws IOException {
+    if (closed) throw new IOException("closed");
     modCount++;
     entries.add(entry);
     if (listener != null) listener.onAdd(this, entry);
   }
 
-  @Override public T peek() {
+  @Override public T peek() throws IOException {
+    if (closed) throw new IOException("closed");
     return entries.peek();
   }
 
@@ -44,6 +45,7 @@ public final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
   }
 
   @Override public void remove(int n) throws IOException {
+    if (closed) throw new IOException("closed");
     modCount++;
     for (int i = 0; i < n; i++) {
       entries.remove();
@@ -51,7 +53,8 @@ public final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     }
   }
 
-  @Override public void setListener(Listener<T> listener) {
+  @Override public void setListener(Listener<T> listener) throws IOException {
+    if (closed) throw new IOException("closed");
     if (listener != null) {
       for (T entry : entries) {
         listener.onAdd(this, entry);
@@ -68,6 +71,10 @@ public final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
    */
   @Override public Iterator<T> iterator() {
     return new EntryIterator();
+  }
+
+  @Override public void close() throws IOException {
+    closed = true;
   }
 
   private final class EntryIterator implements Iterator<T> {
@@ -91,6 +98,7 @@ public final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     }
 
     @Override public T next() {
+      if (closed) throw new IllegalStateException("closed");
       checkForComodification();
 
       if (size() == 0) throw new NoSuchElementException();
@@ -98,6 +106,7 @@ public final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     }
 
     @Override public void remove() {
+      if (closed) throw new IllegalStateException("closed");
       checkForComodification();
 
       if (size() == 0) throw new NoSuchElementException();
