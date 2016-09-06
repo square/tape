@@ -5,7 +5,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Before;
 import org.junit.Rule;
@@ -72,7 +75,6 @@ public class FileObjectQueueTest {
       Pojo pojo = (Pojo) o;
 
       return text != null ? text.equals(pojo.text) : pojo.text == null;
-
     }
 
     @Override
@@ -149,5 +151,98 @@ public class FileObjectQueueTest {
     });
     queue.clear();
     assertThat(count.get()).isEqualTo(3);
+  }
+
+  @Test public void testIterator() throws IOException {
+    final List<Pojo> saw = new ArrayList<Pojo>();
+    for (Pojo pojo : queue) {
+      saw.add(pojo);
+    }
+    assertThat(saw).containsExactly(new Pojo("one"), new Pojo("two"), new Pojo("three"));
+  }
+
+  @Test public void testIteratorNextThrowsWhenEmpty() throws IOException {
+    queue.clear();
+    Iterator iterator = queue.iterator();
+
+    try {
+      iterator.next();
+      fail();
+    } catch (NoSuchElementException ignored) {
+    }
+  }
+
+  @Test public void testIteratorNextThrowsWhenExhausted() throws IOException {
+    Iterator iterator = queue.iterator();
+    iterator.next();
+    iterator.next();
+    iterator.next();
+
+    try {
+      iterator.next();
+      fail();
+    } catch (NoSuchElementException ignored) {
+    }
+  }
+
+  @Test public void testIteratorRemove() throws IOException {
+    Iterator iterator = queue.iterator();
+
+    iterator.next();
+    iterator.remove();
+    assertThat(queue.asList()).containsExactly(new Pojo("two"), new Pojo("three"));
+
+    iterator.next();
+    iterator.remove();
+    assertThat(queue.asList()).containsExactly(new Pojo("three"));
+  }
+
+  @Test public void testIteratorRemoveDisallowsConcurrentModification() throws IOException {
+    Iterator iterator = queue.iterator();
+    iterator.next();
+    queue.remove();
+
+    try {
+      iterator.remove();
+      fail();
+    } catch (ConcurrentModificationException ignored) {
+    }
+  }
+
+  @Test public void testIteratorHasNextDisallowsConcurrentModification() throws IOException {
+    Iterator iterator = queue.iterator();
+    iterator.next();
+    queue.remove();
+
+    try {
+      iterator.hasNext();
+      fail();
+    } catch (ConcurrentModificationException ignored) {
+    }
+  }
+
+  @Test public void testIteratorDisallowsConcurrentModificationWithClear() throws IOException {
+    Iterator iterator = queue.iterator();
+    iterator.next();
+    queue.clear();
+
+    try {
+      iterator.hasNext();
+      fail();
+    } catch (ConcurrentModificationException ignored) {
+    }
+  }
+
+  @Test public void testIteratorOnlyRemovesFromHead() throws IOException {
+    Iterator iterator = queue.iterator();
+    iterator.next();
+    iterator.next();
+
+    try {
+      iterator.remove();
+      fail();
+    } catch (UnsupportedOperationException ex) {
+      assertThat(ex).hasMessage("Removal is only permitted from the head.");
+    }
   }
 }

@@ -2,12 +2,10 @@
 package com.squareup.tape;
 
 import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.NoSuchElementException;
 
 /**
  * A queue for objects that are not serious enough to be written to disk. Objects in this queue
@@ -16,8 +14,14 @@ import java.util.Queue;
  * @param <T> The type of elements in the queue.
  */
 public final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
-  // LinkedList can be used both as a List and Queue.
-  private final LinkedList<T> entries;
+  // LinkedList can be used both as a List (for get(n)) and Queue (for peek() and remove()).
+  @Private final LinkedList<T> entries;
+  /**
+   * The number of times this file has been structurally modified — it is incremented during {@link
+   * #remove(int)} and {@link #add(Object)}. Used by {@link InMemoryObjectQueue.EntryIterator} to
+   * guard against concurrent modification.
+   */
+  @Private int modCount = 0;
   private Listener<T> listener;
 
   @SuppressWarnings("unchecked")
@@ -26,6 +30,7 @@ public final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
   }
 
   @Override public void add(T entry) {
+    modCount++;
     entries.add(entry);
     if (listener != null) listener.onAdd(this, entry);
   }
@@ -34,17 +39,12 @@ public final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     return entries.peek();
   }
 
-  @Override public List<T> peek(int max) throws IOException {
-    int end = Math.min(max, entries.size());
-    List<T> subList = entries.subList(0, end);
-    return Collections.unmodifiableList(subList);
-  }
-
   @Override public int size() {
     return entries.size();
   }
 
   @Override public void remove(int n) throws IOException {
+    modCount++;
     for (int i = 0; i < n; i++) {
       entries.remove();
       if (listener != null) listener.onRemove(this);
@@ -58,5 +58,65 @@ public final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
       }
     }
     this.listener = listener;
+  }
+
+  /**
+   * Returns an iterator over entries in this queue.
+   *
+   * <p>The iterator disallows modifications to the queue during iteration. Removing entries from
+   * the head of the queue is permitted during iteration using{@link Iterator#remove()}.
+   */
+  @Override public Iterator<T> iterator() {
+    return new EntryIterator();
+  }
+
+  private final class EntryIterator implements Iterator<T> {
+    /** Index of element to be returned by subsequent call to next. */
+    int nextElementIndex = 0;
+
+    /**
+     * The {@link #modCount} value that the iterator believes that the backing QueueFile should
+     * have. If this expectation is violated, the iterator has detected concurrent modification.
+     */
+    int expectedModCount = modCount;
+
+    @Private EntryIterator() {
+
+    }
+
+    @Override public boolean hasNext() {
+      checkForComodification();
+
+      return nextElementIndex != size();
+    }
+
+    @Override public T next() {
+      checkForComodification();
+
+      if (size() == 0) throw new NoSuchElementException();
+      return entries.get(nextElementIndex++);
+    }
+
+    @Override public void remove() {
+      checkForComodification();
+
+      if (size() == 0) throw new NoSuchElementException();
+      if (nextElementIndex != 1) {
+        throw new UnsupportedOperationException("Removal is only permitted from the head.");
+      }
+
+      try {
+        InMemoryObjectQueue.this.remove();
+      } catch (IOException e) {
+        throw new RuntimeException("todo: throw a proper error", e);
+      }
+
+      expectedModCount = modCount;
+      nextElementIndex--;
+    }
+
+    private void checkForComodification() {
+      if (modCount != expectedModCount) throw new ConcurrentModificationException();
+    }
   }
 }
