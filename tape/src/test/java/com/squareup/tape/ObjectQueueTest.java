@@ -24,18 +24,20 @@ import static org.fest.assertions.Fail.fail;
 public class ObjectQueueTest {
   public enum QueueFactory {
     FILE() {
-      @Override public <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter converter)
+      @Override public <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter<T> converter)
           throws IOException {
-        return new FileObjectQueue<T>(file, converter);
+        return ObjectQueue.create(file, converter);
       }
     },
     MEMORY() {
-      @Override public <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter converter) {
-        return new InMemoryObjectQueue<T>();
+      @Override
+      public <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter<T> converter) {
+        return ObjectQueue.createInMemory();
       }
     };
 
-    public abstract <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter converter) throws
+    public abstract <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter<T> converter)
+        throws
         IOException;
   }
 
@@ -176,9 +178,6 @@ public class ObjectQueueTest {
       iterator.next();
       fail();
     } catch (NoSuchElementException ignored) {
-      // thrown by file implementation.
-    } catch (IndexOutOfBoundsException ignored) {
-      // thrown by memory implementation.
     }
   }
 
