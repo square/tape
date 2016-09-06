@@ -2,21 +2,12 @@
 package com.squareup.tape;
 
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Iterator;
 import java.util.List;
 
-/**
- * Base queue class, implements common functionality for a QueueFile-backed
- * queue manager. This class is not thread safe; instances should be kept
- * thread-confined.
- *
- * @param <T> The type of elements in the queue.
- */
-public final class FileObjectQueue<T> extends ObjectQueue<T> implements Closeable {
+final class FileObjectQueue<T> extends ObjectQueue<T> {
   /** Backing storage implementation. */
   private final QueueFile queueFile;
   /** Reusable byte output buffer. */
@@ -26,13 +17,13 @@ public final class FileObjectQueue<T> extends ObjectQueue<T> implements Closeabl
   @Private final Converter<T> converter;
   private Listener<T> listener;
 
-  public FileObjectQueue(File file, Converter<T> converter) throws IOException {
+  FileObjectQueue(File file, Converter<T> converter) throws IOException {
     this.file = file;
     this.converter = converter;
     this.queueFile = new QueueFile(file);
   }
 
-  public File file() {
+  @Override public File file() {
     return file;
   }
 
@@ -115,19 +106,6 @@ public final class FileObjectQueue<T> extends ObjectQueue<T> implements Closeabl
     @Override public void remove() {
       iterator.remove();
     }
-  }
-
-  /**
-   * Convert a byte stream to and from a concrete type.
-   *
-   * @param <T> Object type.
-   */
-  public interface Converter<T> {
-    /** Converts bytes to an object. */
-    T from(byte[] bytes) throws IOException;
-
-    /** Converts o to bytes written to the specified stream. */
-    void toStream(T o, OutputStream bytes) throws IOException;
   }
 
   /** Enables direct access to the internal array. Avoids unnecessary copying. */
