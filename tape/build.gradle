@@ -1,0 +1,15 @@
+apply plugin: 'java'
+
+targetCompatibility = JavaVersion.VERSION_1_7
+sourceCompatibility = JavaVersion.VERSION_1_7
+
+dependencies {
+  testCompile 'junit:junit:4.12'
+  testCompile 'org.mockito:mockito-core:1.9.5'
+  testCompile 'org.easytesting:fest-assert:1.4'
+  testCompile 'commons-io:commons-io:2.4'
+  testCompile 'com.squareup.burst:burst-junit4:1.1.0'
+  testCompile 'com.squareup.okio:okio:1.10.0'
+}
+
+apply from: rootProject.file('gradle/gradle-mvn-push.gradle')

@@ -1,14 +1,6 @@
-language: android
-
-android:
-  components:
-    - build-tools-20.0.0
-    - android-16
-  licenses:
-    - android-sdk-license-5be876d5
+language: java
 
 jdk:
-  - oraclejdk7
   - oraclejdk8
 
 after_success:
@@ -16,8 +8,8 @@ after_success:
 
 env:
   global:
-    - secure: "gPnO4rMnW2zFPsx5ROwM1+8+r+fsm2z0n477RMcN+2xWu5QrmfKcdPBj7QFBfWDkwIi/EdASEcID6MzFXPwcU21io18NKt9OMgpuzGyUf2W5oVJN/jYIlC5vPXFeGfsH2Eh3ZMhztSH2ADN9lPAxvThY//FhEMj+MH/z8zVljHA="
-    - secure: "A4Lps6F7ZcHHQT1zWbdrzp58uho2NcMYsAxB9D/Bbmxwm1uHJ/N8BN2rQilmsu46PzSN9WngKpK04mPn8hTXQPMcnymmM0p4aWQqmwfRDe4QLn1baXkjXUDrdAprRwVEJ2RF2cZXBn64zCtHVRD+TA36FSAx+on/JYDVceKu03Y="
+    - secure: "ClEdIniNlok5b6YUdD/en7FnsV/X+41NTisd7XWJvzta+Q5llF30VcVobDvMfrlTsqugl3epMSmgOO+8fisw/sV1DCt7J7UHQfVj+ZDPqhWubDFWc6KzvRDp4VOLNE9B/mLOe7bPC/I5NwGAqECsPSu+EV/Zf7ERL+1ewh8kzxY="
+    - secure: "Q6cjZvLjk77JjYD1F9cGMCWSka2GwlHpefvT8pxG2Se5e4Pr/qyVhS9Z5mIgRqZ16KuweTV/xsixFHrha3gzEAwa1hkOw6kvzR4z9dx0XmpvORuo1h4Ag0LCxAR70ZueGyStqpaXoFmTWB1z0WWwooAd0kgDwMDSOcH60Pv4mew="
 
 branches:
   except:
@@ -27,7 +19,3 @@ notifications:
   email: false
 
 sudo: false
-
-cache:
-  directories:
-    - $HOME/.m2
