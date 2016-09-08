@@ -1,0 +1,8 @@
+subprojects { project ->
+  group = GROUP
+  version = VERSION_NAME
+
+  repositories {
+    mavenCentral()
+  }
+}

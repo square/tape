@@ -1,22 +1,12 @@
-.classpath
-.project
-.settings
-eclipsebin
-
-bin
-gen
-build
-out
-lib
-
-target
-pom.xml.*
-release.properties
-
+# IntelliJ
 .idea
 *.iml
-classes
 
-obj
-
+# OS X
 .DS_Store
+
+# Gradle
+.gradle
+build
+local.properties
+reports
