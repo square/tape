@@ -1,4 +1,5 @@
 apply plugin: 'java'
+apply plugin: 'checkstyle'
 
 targetCompatibility = JavaVersion.VERSION_1_7
 sourceCompatibility = JavaVersion.VERSION_1_7
@@ -10,6 +11,10 @@ dependencies {
   testCompile 'commons-io:commons-io:2.4'
   testCompile 'com.squareup.burst:burst-junit4:1.1.0'
   testCompile 'com.squareup.okio:okio:1.10.0'
+}
+
+checkstyle {
+  configFile rootProject.file('checkstyle.xml')
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')

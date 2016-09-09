@@ -75,16 +75,16 @@ public class QueueFileLoadingTest {
     testFile = copyTestFile(EMPTY_SERIALIZED_QUEUE);
 
     // Should throw an exception.
-    FileObjectQueue<String> qf = new FileObjectQueue<String>(testFile, new FileObjectQueue.Converter<String>() {
-      @Override
-      public String from(byte[] bytes) throws IOException {
-        return null;
-      }
+    FileObjectQueue<String> qf =
+        new FileObjectQueue<String>(testFile, new FileObjectQueue.Converter<String>() {
+          @Override public String from(byte[] bytes) throws IOException {
+            return null;
+          }
 
-      @Override public void toStream(String o, OutputStream bytes) throws IOException {
-        throw new IOException("fake Permission denied");
-      }
-    });
+          @Override public void toStream(String o, OutputStream bytes) throws IOException {
+            throw new IOException("fake Permission denied");
+          }
+        });
 
     // Should throw an exception.
     qf.add("trouble");

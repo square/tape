@@ -1,16 +1,16 @@
 // Copyright 2012 Square, Inc.
 package com.squareup.tape;
 
-import org.apache.commons.io.FileUtils;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import org.apache.commons.io.FileUtils;
 
 import static org.junit.Assert.assertTrue;
 
 public class QueueTestUtils {
-  static final String TRUNCATED_ONE_ENTRY_SERIALIZED_QUEUE = "/truncated-one-entry-serialized-queue";
+  static final String TRUNCATED_ONE_ENTRY_SERIALIZED_QUEUE =
+      "/truncated-one-entry-serialized-queue";
   static final String TRUNCATED_EMPTY_SERIALIZED_QUEUE = "/truncated-empty-serialized-queue";
   static final String ONE_ENTRY_SERIALIZED_QUEUE = "/one-entry-serialized-queue";
   static final String EMPTY_SERIALIZED_QUEUE = "/empty-serialized-queue";
