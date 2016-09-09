@@ -93,62 +93,6 @@ public class ObjectQueueTest {
     assertThat(queue.size()).isEqualTo(0);
   }
 
-  @Test public void listenerOnAddInvokedForExistingEntries() throws IOException {
-    final List<String> saw = new ArrayList<String>();
-    queue.setListener(new ObjectQueue.Listener<String>() {
-      @Override public void onAdd(ObjectQueue<String> queue, String entry) {
-        saw.add(entry);
-      }
-
-      @Override public void onRemove(ObjectQueue<String> queue) {
-        fail("onRemove should not be invoked");
-      }
-    });
-    assertThat(saw).containsExactly("one", "two", "three");
-  }
-
-  @Test public void listenerOnRemoveInvokedForRemove() throws IOException {
-    final AtomicInteger count = new AtomicInteger();
-    queue.setListener(new ObjectQueue.Listener<String>() {
-      @Override public void onAdd(ObjectQueue<String> queue, String entry) {
-      }
-
-      @Override public void onRemove(ObjectQueue<String> queue) {
-        count.getAndIncrement();
-      }
-    });
-    queue.remove();
-    assertThat(count.get()).isEqualTo(1);
-  }
-
-  @Test public void listenerOnRemoveInvokedForRemoveN() throws IOException {
-    final AtomicInteger count = new AtomicInteger();
-    queue.setListener(new ObjectQueue.Listener<String>() {
-      @Override public void onAdd(ObjectQueue<String> queue, String entry) {
-      }
-
-      @Override public void onRemove(ObjectQueue<String> queue) {
-        count.getAndIncrement();
-      }
-    });
-    queue.remove(2);
-    assertThat(count.get()).isEqualTo(2);
-  }
-
-  @Test public void listenerOnRemoveInvokedForClear() throws IOException {
-    final AtomicInteger count = new AtomicInteger();
-    queue.setListener(new ObjectQueue.Listener<String>() {
-      @Override public void onAdd(ObjectQueue<String> queue, String entry) {
-      }
-
-      @Override public void onRemove(ObjectQueue<String> queue) {
-        count.getAndIncrement();
-      }
-    });
-    queue.clear();
-    assertThat(count.get()).isEqualTo(3);
-  }
-
   @Test public void testIterator() throws IOException {
     final List<String> saw = new ArrayList<String>();
     for (String pojo : queue) {
