@@ -15,7 +15,6 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
   /** Keep file around for error reporting. */
   private final File file;
   @Private final Converter<T> converter;
-  private Listener<T> listener;
 
   FileObjectQueue(File file, Converter<T> converter) throws IOException {
     this.file = file;
@@ -35,7 +34,6 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
     bytes.reset();
     converter.toStream(entry, bytes);
     queueFile.add(bytes.getArray(), 0, bytes.size());
-    if (listener != null) listener.onAdd(this, entry);
   }
 
   @Override public T peek() throws IOException {
@@ -50,24 +48,10 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
 
   @Override public void remove(int n) throws IOException {
     queueFile.remove(n);
-    if (listener != null) {
-      for (int i = 0; i < n; i++) {
-        listener.onRemove(this);
-      }
-    }
   }
 
   @Override public void close() throws IOException {
     queueFile.close();
-  }
-
-  @Override public void setListener(Listener<T> listener) throws IOException {
-    if (listener != null) {
-      for (byte[] data : queueFile) {
-        listener.onAdd(this, converter.from(data));
-      }
-    }
-    this.listener = listener;
   }
 
   /**

@@ -17,7 +17,6 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
    * guard against concurrent modification.
    */
   @Private int modCount = 0;
-  private Listener<T> listener;
   private boolean closed;
 
   InMemoryObjectQueue() {
@@ -32,7 +31,6 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     if (closed) throw new IOException("closed");
     modCount++;
     entries.add(entry);
-    if (listener != null) listener.onAdd(this, entry);
   }
 
   @Override public T peek() throws IOException {
@@ -49,18 +47,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     modCount++;
     for (int i = 0; i < n; i++) {
       entries.remove();
-      if (listener != null) listener.onRemove(this);
     }
-  }
-
-  @Override public void setListener(Listener<T> listener) throws IOException {
-    if (closed) throw new IOException("closed");
-    if (listener != null) {
-      for (T entry : entries) {
-        listener.onAdd(this, entry);
-      }
-    }
-    this.listener = listener;
   }
 
   /**
