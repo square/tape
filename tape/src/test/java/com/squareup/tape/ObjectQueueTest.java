@@ -10,7 +10,6 @@ import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,8 +36,7 @@ public class ObjectQueueTest {
     };
 
     public abstract <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter<T> converter)
-        throws
-        IOException;
+        throws IOException;
   }
 
   @Rule public TemporaryFolder folder = new TemporaryFolder();

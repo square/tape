@@ -36,7 +36,7 @@ import static org.junit.Assert.fail;
    * Takes up 33401 bytes in the queue (N*(N+1)/2+4*N). Picked 254 instead of 255 so that the number
    * of bytes isn't a multiple of 4.
    */
-  private static int N = 254;
+  private static final int N = 254;
   private static byte[][] values = new byte[N][];
 
   static {
@@ -175,7 +175,7 @@ import static org.junit.Assert.fail;
 
   @Test public void removeMultipleDoesNotCorrupt() throws IOException {
     QueueFile queue = new QueueFile(file);
-    for (int i = 0; i < 10; i ++) {
+    for (int i = 0; i < 10; i++) {
       queue.add(values[i]);
     }
 
