@@ -26,7 +26,7 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
     return file;
   }
 
-  @Override public int size() {
+  @Override public long size() {
     return queueFile.size();
   }
 
@@ -46,8 +46,11 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
     return peek(size());
   }
 
-  @Override public void remove(int n) throws IOException {
-    queueFile.remove(n);
+  @Override public void remove(long n) throws IOException {
+    for (; n > 0; n -= Integer.MAX_VALUE) {
+      int amount = (int) Math.min(n, Integer.MAX_VALUE);
+      queueFile.remove(amount);
+    }
   }
 
   @Override public void close() throws IOException {

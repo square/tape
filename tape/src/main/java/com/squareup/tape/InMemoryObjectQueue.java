@@ -13,7 +13,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
   @Private final LinkedList<T> entries;
   /**
    * The number of times this file has been structurally modified — it is incremented during {@link
-   * #remove(int)} and {@link #add(Object)}. Used by {@link InMemoryObjectQueue.EntryIterator} to
+   * #remove(long)} and {@link #add(Object)}. Used by {@link InMemoryObjectQueue.EntryIterator} to
    * guard against concurrent modification.
    */
   @Private int modCount = 0;
@@ -38,14 +38,14 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     return entries.peek();
   }
 
-  @Override public int size() {
+  @Override public long size() {
     return entries.size();
   }
 
-  @Override public void remove(int n) throws IOException {
+  @Override public void remove(long n) throws IOException {
     if (closed) throw new IOException("closed");
     modCount++;
-    for (int i = 0; i < n; i++) {
+    for (long i = 0; i < n; i++) {
       entries.remove();
     }
   }
