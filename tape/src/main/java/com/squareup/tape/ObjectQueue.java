@@ -29,7 +29,7 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
   public abstract File file();
 
   /** Returns the number of entries in the queue. */
-  public abstract int size();
+  public abstract long size();
 
   /** Enqueues an entry that can be processed at any time. */
   public abstract void add(T entry) throws IOException;
@@ -44,9 +44,14 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
    * Reads up to {@code max} entries from the head of the queue without removing the entries.
    * If the queue's {@link #size()} is less than {@code max} then only {@link #size()} entries
    * are read.
+   *
+   * @throws IndexOutOfBoundsException when {@code max} is greater than {@code Integer.MAX_VALUE}.
    */
-  public List<T> peek(int max) throws IOException {
-    int end = Math.min(max, size());
+  public List<T> peek(long max) throws IOException {
+    if (max > Integer.MAX_VALUE) {
+      throw new IndexOutOfBoundsException(max + " > " + Integer.MAX_VALUE);
+    }
+    int end = (int) Math.min(max, size());
     List<T> subList = new ArrayList<T>(end);
     Iterator<T> iterator = iterator();
     for (int i = 0; i < end; i++) {
@@ -66,7 +71,7 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
   }
 
   /** Removes {@code n} entries from the head of the queue. */
-  public abstract void remove(int n) throws IOException;
+  public abstract void remove(long n) throws IOException;
 
   /** Clears this queue. Also truncates the file to the initial size. */
   public void clear() throws IOException {
