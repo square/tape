@@ -1,4 +1,4 @@
-package com.squareup.tape;
+package com.squareup.tape2;
 
 import com.squareup.burst.BurstJUnit4;
 import com.squareup.burst.annotation.Burst;

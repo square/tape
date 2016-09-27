@@ -1,4 +1,4 @@
-package com.squareup.tape;
+package com.squareup.tape2;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

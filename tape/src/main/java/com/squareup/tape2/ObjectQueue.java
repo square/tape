@@ -1,5 +1,5 @@
 // Copyright 2011 Square, Inc.
-package com.squareup.tape;
+package com.squareup.tape2;
 
 import java.io.Closeable;
 import java.io.File;
