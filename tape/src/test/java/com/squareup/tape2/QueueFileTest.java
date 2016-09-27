@@ -6,9 +6,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.logging.Logger;
@@ -19,8 +21,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-import static com.squareup.tape2.QueueFile.HEADER_LENGTH;
+import static com.squareup.tape2.QueueFile.INITIAL_LENGTH;
 import static org.fest.assertions.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
@@ -29,7 +33,17 @@ import static org.junit.Assert.fail;
  *
  * @author Bob Lee (bob@squareup.com)
  */
-@SuppressWarnings({ "ResultOfMethodCallIgnored" }) public class QueueFileTest {
+@SuppressWarnings("ResultOfMethodCallIgnored")
+@RunWith(Parameterized.class)
+public class QueueFileTest {
+  @Parameterized.Parameters(name = "{0}")
+  public static List<Object[]> parameters() {
+    return Arrays.asList(
+        new Object[] {"Legacy"   , true , 16},
+        new Object[] {"Versioned", false, 32}
+    );
+  }
+
   private static final Logger logger = Logger.getLogger(QueueFileTest.class.getName());
 
   /**
@@ -49,8 +63,28 @@ import static org.junit.Assert.fail;
     }
   }
 
+  private final boolean forceLegacy;
+  private final int headerLength;
+
   @Rule public TemporaryFolder folder = new TemporaryFolder();
   private File file;
+
+  public QueueFileTest(String name, boolean forceLegacy, int headerLength) {
+    this.forceLegacy = forceLegacy;
+    this.headerLength = headerLength;
+  }
+
+  private QueueFile newQueueFile() throws IOException {
+    return newQueueFile(true);
+  }
+
+  private QueueFile newQueueFile(RandomAccessFile file) throws IOException {
+    return new QueueFile(file, true, forceLegacy);
+  }
+
+  private QueueFile newQueueFile(boolean zero) throws IOException {
+    return new QueueFile(file, zero, forceLegacy);
+  }
 
   @Before public void setUp() throws Exception {
     File parent = folder.getRoot();
@@ -59,41 +93,41 @@ import static org.junit.Assert.fail;
 
   @Test public void testAddOneElement() throws IOException {
     // This test ensures that we update 'first' correctly.
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
     byte[] expected = values[253];
     queue.add(expected);
     assertThat(queue.peek()).isEqualTo(expected);
     queue.close();
-    queue = new QueueFile(file);
+    queue = newQueueFile();
     assertThat(queue.peek()).isEqualTo(expected);
   }
 
   @Test public void testClearErases() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
     byte[] expected = values[253];
     queue.add(expected);
 
     // Confirm that the data was in the file before we cleared.
     byte[] data = new byte[expected.length];
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(headerLength + Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, expected.length);
     assertThat(data).isEqualTo(expected);
 
     queue.clear();
 
     // Should have been erased.
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(headerLength + Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, expected.length);
     assertThat(data).isEqualTo(new byte[expected.length]);
   }
 
   @Test public void testClearDoesNotCorrupt() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
     byte[] stuff = values[253];
     queue.add(stuff);
     queue.clear();
 
-    queue = new QueueFile(file);
+    queue = newQueueFile();
     assertThat(queue.isEmpty()).isTrue();
     assertThat(queue.peek()).isNull();
 
@@ -102,7 +136,7 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void removeErasesEagerly() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
 
     byte[] firstStuff = values[127];
     queue.add(firstStuff);
@@ -112,7 +146,7 @@ import static org.junit.Assert.fail;
 
     // Confirm that first stuff was in the file before we remove.
     byte[] data = new byte[firstStuff.length];
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(headerLength + Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, firstStuff.length);
     assertThat(data).isEqualTo(firstStuff);
 
@@ -122,19 +156,19 @@ import static org.junit.Assert.fail;
     assertThat(queue.peek()).isEqualTo(secondStuff);
 
     // First should have been erased.
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(headerLength + Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, firstStuff.length);
     assertThat(data).isEqualTo(new byte[firstStuff.length]);
   }
 
   @Test public void testZeroSizeInHeaderThrows() throws IOException {
     RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
-    emptyFile.setLength(4096);
+    emptyFile.setLength(INITIAL_LENGTH);
     emptyFile.getChannel().force(true);
     emptyFile.close();
 
     try {
-      new QueueFile(file);
+      newQueueFile();
       fail("Should have thrown about bad header length");
     } catch (IOException ex) {
       assertThat(ex).hasMessage("File is corrupt; length stored in header (0) is invalid.");
@@ -143,16 +177,23 @@ import static org.junit.Assert.fail;
 
   @Test public void testSizeLessThanHeaderThrows() throws IOException {
     RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
-    emptyFile.setLength(4096);
-    emptyFile.writeInt(QueueFile.HEADER_LENGTH - 1);
+    emptyFile.setLength(INITIAL_LENGTH);
+    if (forceLegacy) {
+      emptyFile.writeInt(headerLength - 1);
+    } else {
+      emptyFile.writeInt(0x80000001);
+      emptyFile.writeLong(headerLength - 1);
+    }
     emptyFile.getChannel().force(true);
     emptyFile.close();
 
     try {
-      new QueueFile(file);
+      newQueueFile();
       fail();
     } catch (IOException ex) {
-      assertThat(ex).hasMessage("File is corrupt; length stored in header (15) is invalid.");
+      assertThat(ex.getMessage()).isIn(
+          "File is corrupt; length stored in header (15) is invalid.",
+          "File is corrupt; length stored in header (31) is invalid.");
     }
   }
 
@@ -160,21 +201,22 @@ import static org.junit.Assert.fail;
     RandomAccessFile emptyFile = new RandomAccessFile(file, "rwd");
     emptyFile.seek(0);
     emptyFile.writeInt(-2147483648);
-    emptyFile.setLength(4096);
+    emptyFile.setLength(INITIAL_LENGTH);
     emptyFile.getChannel().force(true);
     emptyFile.close();
 
     try {
-      new QueueFile(file);
+      newQueueFile();
       fail("Should have thrown about bad header length");
     } catch (IOException ex) {
-      assertThat(ex) //
-          .hasMessage("File is corrupt; length stored in header (-2147483648) is invalid.");
+      assertThat(ex.getMessage()).isIn(
+          "File is corrupt; length stored in header (-2147483648) is invalid.",
+          "Unable to read version 0 format. Supported versions are 1 and legacy.");
     }
   }
 
   @Test public void removeMultipleDoesNotCorrupt() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
     for (int i = 0; i < 10; i++) {
       queue.add(values[i]);
     }
@@ -184,7 +226,7 @@ import static org.junit.Assert.fail;
     assertThat(queue.peek()).isEqualTo(values[1]);
 
     queue.remove(3);
-    queue = new QueueFile(file);
+    queue = newQueueFile();
     assertThat(queue.size()).isEqualTo(6);
     assertThat(queue.peek()).isEqualTo(values[4]);
 
@@ -194,19 +236,19 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void removeDoesNotCorrupt() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
 
     queue.add(values[127]);
     byte[] secondStuff = values[253];
     queue.add(secondStuff);
     queue.remove();
 
-    queue = new QueueFile(file);
+    queue = newQueueFile();
     assertThat(queue.peek()).isEqualTo(secondStuff);
   }
 
   @Test public void removeFromEmptyFileThrows() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
 
     try {
       queue.remove();
@@ -216,7 +258,7 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void removeNegativeNumberOfElementsThrows() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
     queue.add(values[127]);
 
     try {
@@ -229,7 +271,7 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void removeZeroElementsDoesNothing() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
     queue.add(values[127]);
 
     queue.remove(0);
@@ -237,7 +279,7 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void removeBeyondQueueSizeElementsThrows() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
     queue.add(values[127]);
 
     try {
@@ -255,7 +297,7 @@ import static org.junit.Assert.fail;
       System.arraycopy(values[100], 0, bigBoy, i, values[100].length);
     }
 
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
 
     queue.add(bigBoy);
     byte[] secondStuff = values[123];
@@ -263,7 +305,7 @@ import static org.junit.Assert.fail;
 
     // Confirm that bigBoy was in the file before we remove.
     byte[] data = new byte[bigBoy.length];
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(headerLength + Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, bigBoy.length);
     assertThat(data).isEqualTo(bigBoy);
 
@@ -273,7 +315,7 @@ import static org.junit.Assert.fail;
     assertThat(queue.peek()).isEqualTo(secondStuff);
 
     // First should have been erased.
-    queue.raf.seek(HEADER_LENGTH + Element.HEADER_LENGTH);
+    queue.raf.seek(headerLength + Element.HEADER_LENGTH);
     queue.raf.readFully(data, 0, bigBoy.length);
     assertThat(data).isEqualTo(new byte[bigBoy.length]);
   }
@@ -284,7 +326,7 @@ import static org.junit.Assert.fail;
     Queue<byte[]> expected = new LinkedList<byte[]>();
 
     for (int round = 0; round < 5; round++) {
-      QueueFile queue = new QueueFile(file);
+      QueueFile queue = newQueueFile();
       for (int i = 0; i < N; i++) {
         queue.add(values[i]);
         expected.add(values[i]);
@@ -300,7 +342,7 @@ import static org.junit.Assert.fail;
     }
 
     // Remove and validate remaining 15 elements.
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
     assertThat(queue.size()).isEqualTo(15);
     assertThat(queue.size()).isEqualTo(expected.size());
     while (!expected.isEmpty()) {
@@ -321,7 +363,7 @@ import static org.junit.Assert.fail;
     int max = 80;
 
     Queue<byte[]> expected = new LinkedList<byte[]>();
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
 
     for (int i = 0; i < max; i++) {
       expected.add(values[i]);
@@ -349,12 +391,12 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void testFailedAdd() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
     queueFile.add(values[253]);
     queueFile.close();
 
-    final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf, true);
+    BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
+    queueFile = newQueueFile(braf);
 
     try {
       queueFile.add(values[252]);
@@ -368,7 +410,7 @@ import static org.junit.Assert.fail;
 
     queueFile.close();
 
-    queueFile = new QueueFile(file);
+    queueFile = newQueueFile();
     Assertions.assertThat(queueFile.size()).isEqualTo(2);
     assertThat(queueFile.peek()).isEqualTo(values[253]);
     queueFile.remove();
@@ -376,12 +418,12 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void testFailedRemoval() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
     queueFile.add(values[253]);
     queueFile.close();
 
-    final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf, true);
+    BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
+    queueFile = newQueueFile(braf);
 
     try {
       queueFile.remove();
@@ -390,7 +432,7 @@ import static org.junit.Assert.fail;
 
     queueFile.close();
 
-    queueFile = new QueueFile(file);
+    queueFile = newQueueFile();
     assertThat(queueFile.size()).isEqualTo(1);
     assertThat(queueFile.peek()).isEqualTo(values[253]);
 
@@ -400,12 +442,12 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void testFailedExpansion() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
     queueFile.add(values[253]);
     queueFile.close();
 
-    final BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
-    queueFile = new QueueFile(braf, true);
+    BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
+    queueFile = newQueueFile(braf);
 
     try {
       // This should trigger an expansion which should fail.
@@ -415,8 +457,7 @@ import static org.junit.Assert.fail;
 
     queueFile.close();
 
-    queueFile = new QueueFile(file);
-
+    queueFile = newQueueFile();
     assertThat(queueFile.size()).isEqualTo(1);
     assertThat(queueFile.peek()).isEqualTo(values[253]);
     assertThat(queueFile.fileLength).isEqualTo(4096);
@@ -433,7 +474,7 @@ import static org.junit.Assert.fail;
    */
   @Test public void testFileExpansionDoesntCorruptWrappedElements()
       throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
 
     // Create test data - 1k blocks marked consecutively 1, 2, 3, 4 and 5.
     byte[][] values = new byte[5][];
@@ -482,7 +523,7 @@ import static org.junit.Assert.fail;
    * expansion correctly update all their positions?
    */
   @Test public void testFileExpansionCorrectlyMovesElements() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
 
     // Create test data - 1k blocks marked consecutively 1, 2, 3, 4 and 5.
     byte[][] values = new byte[5][];
@@ -542,37 +583,29 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void removingElementZeroesData() throws IOException {
-    QueueFile queueFile = new QueueFile(file, true);
+    QueueFile queueFile = newQueueFile(true);
     queueFile.add(values[4]);
     queueFile.remove();
     queueFile.close();
 
     BufferedSource source = Okio.buffer(Okio.source(file));
-    // Header
-    assertThat(source.readInt()).isEqualTo(4096);
-    assertThat(source.readInt()).isEqualTo(0);
-    assertThat(source.readInt()).isEqualTo(0);
-    assertThat(source.readInt()).isEqualTo(0);
-    // Element
-    assertThat(source.readInt()).isEqualTo(0);
+    source.skip(headerLength);
+    source.skip(Element.HEADER_LENGTH);
     assertThat(source.readByteString(4).hex()).isEqualTo("00000000");
   }
 
   @Test public void removingElementDoesNotZeroData() throws IOException {
-    QueueFile queueFile = new QueueFile(file, false);
+    QueueFile queueFile = newQueueFile(false);
     queueFile.add(values[4]);
     queueFile.remove();
     queueFile.close();
 
     BufferedSource source = Okio.buffer(Okio.source(file));
-    // Header
-    assertThat(source.readInt()).isEqualTo(4096);
-    assertThat(source.readInt()).isEqualTo(0);
-    assertThat(source.readInt()).isEqualTo(0);
-    assertThat(source.readInt()).isEqualTo(0);
-    // Element
-    assertThat(source.readInt()).isEqualTo(4);
+    source.skip(headerLength);
+    source.skip(Element.HEADER_LENGTH);
     assertThat(source.readByteString(4).hex()).isEqualTo("04030201");
+
+    source.close();
   }
 
   /**
@@ -581,7 +614,7 @@ import static org.junit.Assert.fail;
    */
   @Test public void testFileExpansionCorrectlyZeroesData()
       throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
 
     // Create test data - 1k blocks marked consecutively 1, 2, 3, 4 and 5.
     byte[][] values = new byte[5][];
@@ -612,12 +645,12 @@ import static org.junit.Assert.fail;
     // Read from header to first element and make sure it's zeroed.
     int firstElementPadding = Element.HEADER_LENGTH + 1024;
     byte[] data = new byte[firstElementPadding];
-    queue.raf.seek(HEADER_LENGTH);
+    queue.raf.seek(headerLength);
     queue.raf.readFully(data, 0, firstElementPadding);
     assertThat(data).containsOnly((byte) 0x00);
 
     // Read from the last element to the end and make sure it's zeroed.
-    int endOfLastElement = HEADER_LENGTH + firstElementPadding + 4 * (Element.HEADER_LENGTH + 1024);
+    int endOfLastElement = headerLength + firstElementPadding + 4 * (Element.HEADER_LENGTH + 1024);
     int readLength = (int) (queue.raf.length() - endOfLastElement);
     data = new byte[readLength];
     queue.raf.seek(endOfLastElement);
@@ -630,17 +663,17 @@ import static org.junit.Assert.fail;
    * are the same causes corruption.
    */
   @Test public void testSaturatedFileExpansionMovesElements() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
 
     // Create test data - 1016-byte blocks marked consecutively 1, 2, 3, 4, 5 and 6,
     // four of which perfectly fill the queue file, taking into account the file header
     // and the item headers.
     // Each item is of length
-    // (QueueFile.INITIAL_LENGTH - QueueFile.HEADER_LENGTH) / 4 - element_header_length
+    // (QueueFile.INITIAL_LENGTH - headerLength) / 4 - element_header_length
     // = 1016 bytes
     byte[][] values = new byte[6][];
     for (int blockNum = 0; blockNum < values.length; blockNum++) {
-      values[blockNum] = new byte[1016];
+      values[blockNum] = new byte[(INITIAL_LENGTH - headerLength) / 4 - Element.HEADER_LENGTH];
       for (int i = 0; i < values[blockNum].length; i++) {
         values[blockNum][i] = (byte) (blockNum + 1);
       }
@@ -674,7 +707,7 @@ import static org.junit.Assert.fail;
    * was non contiguous throws an {@link java.io.EOFException}.
    */
   @Test public void testReadHeadersFromNonContiguousQueueWorks() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
 
     // Fill the queue up to `length - 2` (i.e. remainingBytes() == 2).
     for (int i = 0; i < 15; i++) {
@@ -691,7 +724,7 @@ import static org.junit.Assert.fail;
     queueFile.close();
 
     // File should not be corrupted.
-    QueueFile queueFile2 = new QueueFile(file);
+    QueueFile queueFile2 = newQueueFile();
     assertThat(queueFile2.size()).isEqualTo(queueSize);
   }
 
@@ -699,7 +732,7 @@ import static org.junit.Assert.fail;
     byte[] data = values[10];
 
     for (int i = 0; i < 10; i++) {
-      QueueFile queueFile = new QueueFile(file);
+      QueueFile queueFile = newQueueFile();
       for (int j = 0; j < i; j++) {
         queueFile.add(data);
       }
@@ -715,7 +748,7 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void testIteratorNextThrowsWhenEmpty() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
 
     Iterator<byte[]> iterator = queueFile.iterator();
 
@@ -727,7 +760,7 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void testIteratorNextThrowsWhenExhausted() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
     queueFile.add(values[0]);
 
     Iterator<byte[]> iterator = queueFile.iterator();
@@ -741,7 +774,7 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void testIteratorRemove() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
     for (int i = 0; i < 15; i++) {
       queueFile.add(values[i]);
     }
@@ -756,7 +789,7 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void testIteratorRemoveDisallowsConcurrentModification() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
     for (int i = 0; i < 15; i++) {
       queueFile.add(values[i]);
     }
@@ -772,7 +805,7 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void testIteratorHasNextDisallowsConcurrentModification() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
     for (int i = 0; i < 15; i++) {
       queueFile.add(values[i]);
     }
@@ -788,7 +821,7 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void testIteratorDisallowsConcurrentModificationWithClear() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
     for (int i = 0; i < 15; i++) {
       queueFile.add(values[i]);
     }
@@ -804,7 +837,7 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void testIteratorOnlyRemovesFromHead() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
     for (int i = 0; i < 15; i++) {
       queueFile.add(values[i]);
     }
@@ -822,23 +855,25 @@ import static org.junit.Assert.fail;
   }
 
   @Test public void queueToString() throws IOException {
-    QueueFile queueFile = new QueueFile(file);
+    QueueFile queueFile = newQueueFile();
     for (int i = 0; i < 15; i++) {
       queueFile.add(values[i]);
     }
 
-    assertThat(queueFile.toString()).isEqualTo("QueueFile["
-        + "length=4096, "
-        + "size=15, "
+    assertThat(queueFile.toString()).isIn(
+        "QueueFile[length=4096, size=15, "
         + "first=Element[position=16, length=0], "
-        + "last=Element[position=163, length=14]]");
+        + "last=Element[position=163, length=14]]",
+        "QueueFile[length=4096, size=15, "
+            + "first=Element[position=32, length=0], "
+            + "last=Element[position=179, length=14]]");
   }
 
   /**
    * A RandomAccessFile that can break when you go to write the COMMITTED
    * status.
    */
-  static class BrokenRandomAccessFile extends RandomAccessFile {
+  static final class BrokenRandomAccessFile extends RandomAccessFile {
     boolean rejectCommit = true;
 
     BrokenRandomAccessFile(File file, String mode)
@@ -846,11 +881,11 @@ import static org.junit.Assert.fail;
       super(file, mode);
     }
 
-    @Override public void write(byte[] buffer) throws IOException {
+    @Override public void write(byte[] b, int off, int len) throws IOException {
       if (rejectCommit && getFilePointer() == 0) {
         throw new IOException("No commit for you!");
       }
-      super.write(buffer);
+      super.write(b, off, len);
     }
   }
 }
