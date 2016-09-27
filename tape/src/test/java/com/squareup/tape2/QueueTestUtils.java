@@ -1,5 +1,5 @@
 // Copyright 2012 Square, Inc.
-package com.squareup.tape;
+package com.squareup.tape2;
 
 import java.io.File;
 import java.io.IOException;

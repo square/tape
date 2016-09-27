@@ -1,7 +1,7 @@
 // Copyright 2010 Square, Inc.
-package com.squareup.tape;
+package com.squareup.tape2;
 
-import com.squareup.tape.QueueFile.Element;
+import com.squareup.tape2.QueueFile.Element;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -20,7 +20,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import static com.squareup.tape.QueueFile.HEADER_LENGTH;
+import static com.squareup.tape2.QueueFile.HEADER_LENGTH;
 import static org.fest.assertions.Assertions.assertThat;
 import static org.junit.Assert.fail;
 

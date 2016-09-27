@@ -1,5 +1,5 @@
 // Copyright 2012 Square, Inc.
-package com.squareup.tape;
+package com.squareup.tape2;
 
 import org.junit.After;
 import org.junit.Test;
@@ -8,13 +8,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static com.squareup.tape.QueueTestUtils.EMPTY_SERIALIZED_QUEUE;
-import static com.squareup.tape.QueueTestUtils.FRESH_SERIALIZED_QUEUE;
-import static com.squareup.tape.QueueTestUtils.ONE_ENTRY_SERIALIZED_QUEUE;
-import static com.squareup.tape.QueueTestUtils.TRUNCATED_EMPTY_SERIALIZED_QUEUE;
-import static com.squareup.tape.QueueTestUtils.TRUNCATED_ONE_ENTRY_SERIALIZED_QUEUE;
-import static com.squareup.tape.QueueTestUtils.UndeletableFile;
-import static com.squareup.tape.QueueTestUtils.copyTestFile;
+import static com.squareup.tape2.QueueTestUtils.EMPTY_SERIALIZED_QUEUE;
+import static com.squareup.tape2.QueueTestUtils.FRESH_SERIALIZED_QUEUE;
+import static com.squareup.tape2.QueueTestUtils.ONE_ENTRY_SERIALIZED_QUEUE;
+import static com.squareup.tape2.QueueTestUtils.TRUNCATED_EMPTY_SERIALIZED_QUEUE;
+import static com.squareup.tape2.QueueTestUtils.TRUNCATED_ONE_ENTRY_SERIALIZED_QUEUE;
+import static com.squareup.tape2.QueueTestUtils.UndeletableFile;
+import static com.squareup.tape2.QueueTestUtils.copyTestFile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
