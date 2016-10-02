@@ -91,6 +91,14 @@ public class ObjectQueueTest {
     assertThat(queue.size()).isEqualTo(0);
   }
 
+  @Test public void isEmpty() throws IOException {
+    assertThat(queue.isEmpty()).isFalse();
+
+    queue.clear();
+
+    assertThat(queue.isEmpty()).isTrue();
+  }
+
   @Test public void testIterator() throws IOException {
     final List<String> saw = new ArrayList<String>();
     for (String pojo : queue) {
