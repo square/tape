@@ -31,6 +31,11 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
   /** Returns the number of entries in the queue. */
   public abstract int size();
 
+  /** Returns {@code true} if this queue contains no entries. */
+  public boolean isEmpty() {
+    return size() == 0;
+  }
+
   /** Enqueues an entry that can be processed at any time. */
   public abstract void add(T entry) throws IOException;
 
