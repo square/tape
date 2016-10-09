@@ -530,9 +530,6 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    * @throws NoSuchElementException if the queue is empty
    */
   public void remove(int n) throws IOException {
-    if (isEmpty()) {
-      throw new NoSuchElementException();
-    }
     if (n < 0) {
       throw new IllegalArgumentException("Cannot remove negative (" + n + ") number of elements.");
     }
@@ -542,6 +539,9 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     if (n == elementCount) {
       clear();
       return;
+    }
+    if (isEmpty()) {
+      throw new NoSuchElementException();
     }
     if (n > elementCount) {
       throw new IllegalArgumentException(

@@ -215,6 +215,12 @@ import static org.junit.Assert.fail;
     }
   }
 
+  @Test public void removeZeroFromEmptyFileDoesNothing() throws IOException {
+    QueueFile queue = new QueueFile(file);
+    queue.remove(0);
+    assertThat(queue.isEmpty()).isTrue();
+  }
+
   @Test public void removeNegativeNumberOfElementsThrows() throws IOException {
     QueueFile queue = new QueueFile(file);
     queue.add(values[127]);
