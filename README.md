@@ -9,6 +9,11 @@ synchronous; data will be written to disk before an operation returns. The
 underlying file is structured to survive process and even system crashes and if
 an I/O exception is thrown during a mutating change, the change is aborted.
 
+**NOTE:** The current implementation is built for file systems that support
+atomic segment writes (like YAFFS). Most conventional file systems don't support
+this; if the power goes out while writing a segment, the segment will contain
+garbage and the file will be corrupt.
+
 An `ObjectQueue` represents an ordering of arbitrary objects which can be backed
 either by the filesystem (via `QueueFile`) or in memory only.
 
