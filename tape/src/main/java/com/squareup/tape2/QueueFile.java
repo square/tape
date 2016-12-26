@@ -47,6 +47,8 @@ import static java.lang.Math.min;
  * power goes out while writing a segment, the segment will contain garbage and the file will be
  * corrupt. We'll add journaling support so this class can be used with more file systems later.
  *
+ * Construct instances with {@link Builder}.
+ *
  * @author Bob Lee (bob@squareup.com)
  */
 public final class QueueFile implements Closeable, Iterable<byte[]> {
@@ -94,6 +96,9 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    */
   final RandomAccessFile raf;
 
+  /** Keep file around for error reporting. */
+  final File file;
+
   /** True when using the versioned header format. Otherwise use the legacy format. */
   boolean versioned;
 
@@ -126,35 +131,6 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   private final boolean zero;
 
   @Private boolean closed;
-
-  /**
-   * Constructs a new queue backed by the given file. Only one instance should access a given file
-   * at a time.
-   */
-  public QueueFile(File file) throws IOException {
-    this(file, true);
-  }
-
-  /**
-   * Constructs a new queue backed by the given file. Only one instance should access a given file
-   * at a time.
-   *
-   * @param zero When true, removing an element will also overwrite data with zero bytes.
-   */
-  public QueueFile(File file, boolean zero) throws IOException {
-    this(file, zero, false);
-  }
-
-  /**
-   * Constructs a new queue backed by the given file. Only one instance should access a given file
-   * at a time.
-   *
-   * @param zero When true, removing an element will also overwrite data with zero bytes.
-   * @param forceLegacy When true, only the legacy (Tape 1.x) format will be used.
-   */
-  public QueueFile(File file, boolean zero, boolean forceLegacy) throws IOException {
-    this(initializeFromFile(file, forceLegacy), zero, forceLegacy);
-  }
 
   private static RandomAccessFile initializeFromFile(File file, boolean forceLegacy)
       throws IOException {
@@ -189,7 +165,8 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     return new RandomAccessFile(file, "rwd");
   }
 
-  QueueFile(RandomAccessFile raf, boolean zero, boolean forceLegacy) throws IOException {
+  QueueFile(File file, RandomAccessFile raf, boolean zero, boolean forceLegacy) throws IOException {
+    this.file = file;
     this.raf = raf;
     this.zero = zero;
 
@@ -685,6 +662,11 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     modCount++;
   }
 
+  /** The underlying {@link File} backing this queue. */
+  public File file() {
+    return file;
+  }
+
   @Override public void close() throws IOException {
     closed = true;
     raf.close();
@@ -728,6 +710,42 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
           + "[position=" + position
           + ", length=" + length
           + "]";
+    }
+  }
+
+  /** Fluent API for creating {@link QueueFile} instances. */
+  public static final class Builder {
+    final File file;
+    boolean zero = true;
+    boolean forceLegacy = false;
+
+    /** Start constructing a new queue backed by the given file. */
+    public Builder(File file) {
+      if (file == null) {
+        throw new NullPointerException("file == null");
+      }
+      this.file = file;
+    }
+
+    /** When true, removing an element will also overwrite data with zero bytes. */
+    public Builder zero(boolean zero) {
+      this.zero = zero;
+      return this;
+    }
+
+    /** When true, only the legacy (Tape 1.x) format will be used. */
+    public Builder forceLegacy(boolean forceLegacy) {
+      this.forceLegacy = forceLegacy;
+      return this;
+    }
+
+    /**
+     * Constructs a new queue backed by the given builder. Only one instance should access a given
+     * file at a time.
+     */
+    public QueueFile build() throws IOException {
+      RandomAccessFile raf = initializeFromFile(file, forceLegacy);
+      return new QueueFile(file, raf, zero, forceLegacy);
     }
   }
 }

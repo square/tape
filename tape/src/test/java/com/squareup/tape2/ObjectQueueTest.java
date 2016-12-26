@@ -23,20 +23,21 @@ import static org.fest.assertions.Fail.fail;
 public class ObjectQueueTest {
   public enum QueueFactory {
     FILE() {
-      @Override public <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter<T> converter)
+      @Override
+      public <T> ObjectQueue<T> create(QueueFile queueFile, FileObjectQueue.Converter<T> converter)
           throws IOException {
-        return ObjectQueue.create(file, converter);
+        return ObjectQueue.create(queueFile, converter);
       }
     },
     MEMORY() {
       @Override
-      public <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter<T> converter) {
+      public <T> ObjectQueue<T> create(QueueFile file, FileObjectQueue.Converter<T> converter) {
         return ObjectQueue.createInMemory();
       }
     };
 
-    public abstract <T> ObjectQueue<T> create(File file, FileObjectQueue.Converter<T> converter)
-        throws IOException;
+    public abstract <T> ObjectQueue<T> create(QueueFile queueFile,
+        FileObjectQueue.Converter<T> converter) throws IOException;
   }
 
   @Rule public TemporaryFolder folder = new TemporaryFolder();
@@ -46,8 +47,9 @@ public class ObjectQueueTest {
   @Before public void setUp() throws IOException {
     File parent = folder.getRoot();
     File file = new File(parent, "object-queue");
+    QueueFile queueFile = new QueueFile.Builder(file).build();
 
-    queue = factory.create(file, new StringConverter());
+    queue = factory.create(queueFile, new StringConverter());
     queue.add("one");
     queue.add("two");
     queue.add("three");

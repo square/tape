@@ -31,33 +31,33 @@ public class QueueFileLoadingTest {
     testFile = File.createTempFile(FRESH_SERIALIZED_QUEUE, "test");
     assertTrue(testFile.delete());
     assertFalse(testFile.exists());
-    QueueFile queue = new QueueFile(testFile);
+    QueueFile queue = new QueueFile.Builder(testFile).build();
     assertEquals(0, queue.size());
     assertTrue(testFile.exists());
   }
 
   @Test public void testEmptyFileInitializes() throws Exception {
     testFile = copyTestFile(EMPTY_SERIALIZED_QUEUE);
-    QueueFile queue = new QueueFile(testFile);
+    QueueFile queue = new QueueFile.Builder(testFile).build();
     assertEquals(0, queue.size());
   }
 
   @Test public void testSingleEntryFileInitializes() throws Exception {
     testFile = copyTestFile(ONE_ENTRY_SERIALIZED_QUEUE);
-    QueueFile queue = new QueueFile(testFile);
+    QueueFile queue = new QueueFile.Builder(testFile).build();
     assertEquals(1, queue.size());
   }
 
   @Test(expected = IOException.class)
   public void testTruncatedEmptyFileThrows() throws Exception {
     testFile = copyTestFile(TRUNCATED_EMPTY_SERIALIZED_QUEUE);
-    new QueueFile(testFile);
+    new QueueFile.Builder(testFile).build();
   }
 
   @Test(expected = IOException.class)
   public void testTruncatedOneEntryFileThrows() throws Exception {
     testFile = copyTestFile(TRUNCATED_ONE_ENTRY_SERIALIZED_QUEUE);
-    new QueueFile(testFile);
+    new QueueFile.Builder(testFile).build();
   }
 
   @Test(expected = IOException.class)
@@ -67,16 +67,18 @@ public class QueueFileLoadingTest {
 
     File tmp = new UndeletableFile(testFile.getAbsolutePath());
     // Should throw an exception.
-    new QueueFile(tmp);
+    new QueueFile.Builder(testFile).build();
   }
 
   @Test(expected = IOException.class)
   public void testAddWithReadOnlyFile_missesMonitor() throws Exception {
     testFile = copyTestFile(EMPTY_SERIALIZED_QUEUE);
 
+    QueueFile qf = new QueueFile.Builder(testFile).build();
+
     // Should throw an exception.
-    FileObjectQueue<String> qf =
-        new FileObjectQueue<String>(testFile, new FileObjectQueue.Converter<String>() {
+    FileObjectQueue<String> queue =
+        new FileObjectQueue<String>(qf, new FileObjectQueue.Converter<String>() {
           @Override public String from(byte[] bytes) throws IOException {
             return null;
           }
@@ -87,6 +89,6 @@ public class QueueFileLoadingTest {
         });
 
     // Should throw an exception.
-    qf.add("trouble");
+    queue.add("trouble");
   }
 }

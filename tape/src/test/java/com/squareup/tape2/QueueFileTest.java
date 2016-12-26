@@ -78,12 +78,12 @@ public class QueueFileTest {
     return newQueueFile(true);
   }
 
-  private QueueFile newQueueFile(RandomAccessFile file) throws IOException {
-    return new QueueFile(file, true, forceLegacy);
+  private QueueFile newQueueFile(RandomAccessFile raf) throws IOException {
+    return new QueueFile(this.file, raf, true, forceLegacy);
   }
 
   private QueueFile newQueueFile(boolean zero) throws IOException {
-    return new QueueFile(file, zero, forceLegacy);
+    return new QueueFile.Builder(file).zero(zero).forceLegacy(forceLegacy).build();
   }
 
   @Before public void setUp() throws Exception {
@@ -258,7 +258,7 @@ public class QueueFileTest {
   }
 
   @Test public void removeZeroFromEmptyFileDoesNothing() throws IOException {
-    QueueFile queue = new QueueFile(file);
+    QueueFile queue = newQueueFile();
     queue.remove(0);
     assertThat(queue.isEmpty()).isTrue();
   }
