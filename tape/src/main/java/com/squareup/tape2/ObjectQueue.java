@@ -13,8 +13,8 @@ import java.util.List;
 /** A queue of objects. */
 public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
   /** A queue for objects that are atomically and durably serialized to {@code file}. */
-  public static <T> ObjectQueue<T> create(File file, Converter<T> converter) throws IOException {
-    return new FileObjectQueue<T>(file, converter);
+  public static <T> ObjectQueue<T> create(QueueFile qf, Converter<T> converter) throws IOException {
+    return new FileObjectQueue<T>(qf, converter);
   }
 
   /**
@@ -60,7 +60,7 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
     return Collections.unmodifiableList(subList);
   }
 
-  /** Returns the entries in the queue as an unmodifiable {@link List}.*/
+  /** Returns the entries in the queue as an unmodifiable {@link List}. */
   public List<T> asList() throws IOException {
     return peek(size());
   }
