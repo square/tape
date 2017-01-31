@@ -1,7 +1,6 @@
 // Copyright 2012 Square, Inc.
 package com.squareup.tape2;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -23,7 +22,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     entries = new LinkedList<T>();
   }
 
-  @Override public File file() {
+  @Override public QueueFile file() {
     return null;
   }
 

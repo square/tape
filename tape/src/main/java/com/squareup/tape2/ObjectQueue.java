@@ -2,7 +2,6 @@
 package com.squareup.tape2;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -25,8 +24,8 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
     return new InMemoryObjectQueue<T>();
   }
 
-  /** The underlying {@link File} backing this queue, or null if it's only in memory. */
-  public abstract File file();
+  /** The underlying {@link QueueFile} backing this queue, or null if it's only in memory. */
+  public abstract QueueFile file();
 
   /** Returns the number of entries in the queue. */
   public abstract int size();
