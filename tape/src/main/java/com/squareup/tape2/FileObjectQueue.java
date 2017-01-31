@@ -2,7 +2,6 @@
 package com.squareup.tape2;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
@@ -19,8 +18,8 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
     this.converter = converter;
   }
 
-  @Override public File file() {
-    return queueFile.file();
+  @Override public QueueFile file() {
+    return queueFile;
   }
 
   @Override public int size() {
