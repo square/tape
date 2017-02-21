@@ -396,6 +396,48 @@ public class QueueFileTest {
     queue.close();
   }
 
+  /** Tests failed queue expansion when the data crosses EOF. */
+  @Test public void testFailedSplitExpansion() throws IOException {
+    // This should results in a full file, but doesn't trigger an expansion (yet)
+    int max = 86;
+
+    Queue<byte[]> expected = new LinkedList<byte[]>();
+    QueueFile queue = newQueueFile();
+
+    for (int i = 0; i < max; i++) {
+      expected.add(values[i]);
+      queue.add(values[i]);
+    }
+
+    // Remove all but 1 value and add back
+    // This should wrap around before expanding.
+    for (int i = 0; i < max - 1; i++) {
+      assertThat(queue.peek()).isEqualTo(expected.remove());
+      queue.remove();
+
+      expected.add(values[i]);
+      queue.add(values[i]);
+    }
+
+    //Try to insert element that causes file expansion, but fail
+    long fileLengthBeforeExpansion = file.length();
+    BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
+    queue = newQueueFile(braf);
+    try {
+      queue.add(values[max]);
+      fail();
+    } catch (IOException e) { /* expected */ }
+
+    //Check that the queue continues valid
+    braf.rejectCommit = false;
+    while (!expected.isEmpty()) {
+      assertThat(queue.peek()).isEqualTo(expected.remove());
+      queue.remove();
+    }
+
+    queue.close();
+  }
+
   @Test public void testFailedAdd() throws IOException {
     QueueFile queueFile = newQueueFile();
     queueFile.add(values[253]);
