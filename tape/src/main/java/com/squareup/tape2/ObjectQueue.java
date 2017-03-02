@@ -12,8 +12,8 @@ import java.util.List;
 /** A queue of objects. */
 public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
   /** A queue for objects that are atomically and durably serialized to {@code file}. */
-  public static <T> ObjectQueue<T> create(QueueFile qf, Converter<T> converter) throws IOException {
-    return new FileObjectQueue<T>(qf, converter);
+  public static <T> ObjectQueue<T> create(QueueFile qf, Converter<T> converter) {
+    return new FileObjectQueue<>(qf, converter);
   }
 
   /**
@@ -21,7 +21,7 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
    * are kept in memory and will not be serialized.
    */
   public static <T> ObjectQueue<T> createInMemory() {
-    return new InMemoryObjectQueue<T>();
+    return new InMemoryObjectQueue<>();
   }
 
   /** The underlying {@link QueueFile} backing this queue, or null if it's only in memory. */
