@@ -2,14 +2,16 @@
 package com.squareup.tape2;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
+import java.util.Deque;
 import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
-  // LinkedList can be used both as a List (for get(n)) and Queue (for peek() and remove()).
-  @Private final LinkedList<T> entries;
+  private final Deque<T> entries;
   /**
    * The number of times this file has been structurally modified — it is incremented during {@link
    * #remove(int)} and {@link #add(Object)}. Used by {@link InMemoryObjectQueue.EntryIterator} to
@@ -19,7 +21,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
   private boolean closed;
 
   InMemoryObjectQueue() {
-    entries = new LinkedList<T>();
+    entries = new ArrayDeque<>();
   }
 
   @Override public QueueFile file() {
@@ -29,12 +31,16 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
   @Override public void add(T entry) throws IOException {
     if (closed) throw new IOException("closed");
     modCount++;
-    entries.add(entry);
+    entries.addLast(entry);
   }
 
   @Override public T peek() throws IOException {
     if (closed) throw new IOException("closed");
-    return entries.peek();
+    return entries.peekFirst();
+  }
+
+  @Override public List<T> asList() throws IOException {
+    return new ArrayList<>(entries);
   }
 
   @Override public int size() {
@@ -45,7 +51,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     if (closed) throw new IOException("closed");
     modCount++;
     for (int i = 0; i < n; i++) {
-      entries.remove();
+      entries.removeFirst();
     }
   }
 
@@ -56,7 +62,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
    * the head of the queue is permitted during iteration using{@link Iterator#remove()}.
    */
   @Override public Iterator<T> iterator() {
-    return new EntryIterator();
+    return new EntryIterator(entries.iterator());
   }
 
   @Override public void close() throws IOException {
@@ -64,32 +70,30 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
   }
 
   private final class EntryIterator implements Iterator<T> {
-    /** Index of element to be returned by subsequent call to next. */
-    int nextElementIndex = 0;
+    private final Iterator<T> delegate;
+    private int index = 0;
 
     /**
      * The {@link #modCount} value that the iterator believes that the backing QueueFile should
      * have. If this expectation is violated, the iterator has detected concurrent modification.
      */
-    int expectedModCount = modCount;
+    private int expectedModCount = modCount;
 
-    @Private EntryIterator() {
-
+    @Private EntryIterator(Iterator<T> delegate) {
+      this.delegate = delegate;
     }
 
     @Override public boolean hasNext() {
       checkForComodification();
-
-      return nextElementIndex != size();
+      return delegate.hasNext();
     }
 
     @Override public T next() {
       if (closed) throw new IllegalStateException("closed");
       checkForComodification();
 
-      if (nextElementIndex >= size()) throw new NoSuchElementException();
-
-      return entries.get(nextElementIndex++);
+      index += 1;
+      return delegate.next();
     }
 
     @Override public void remove() {
@@ -97,7 +101,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
       checkForComodification();
 
       if (size() == 0) throw new NoSuchElementException();
-      if (nextElementIndex != 1) {
+      if (index != 1) {
         throw new UnsupportedOperationException("Removal is only permitted from the head.");
       }
 
@@ -108,7 +112,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
       }
 
       expectedModCount = modCount;
-      nextElementIndex--;
+      index -= 1;
     }
 
     private void checkForComodification() {
