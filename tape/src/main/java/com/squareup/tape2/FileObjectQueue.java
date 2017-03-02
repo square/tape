@@ -4,7 +4,6 @@ package com.squareup.tape2;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.List;
 
 final class FileObjectQueue<T> extends ObjectQueue<T> {
   /** Backing storage implementation. */
@@ -26,6 +25,10 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
     return queueFile.size();
   }
 
+  @Override public boolean isEmpty() {
+    return queueFile.isEmpty();
+  }
+
   @Override public void add(T entry) throws IOException {
     bytes.reset();
     converter.toStream(entry, bytes);
@@ -38,12 +41,16 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
     return converter.from(bytes);
   }
 
-  @Override public List<T> asList() throws IOException {
-    return peek(size());
+  @Override public void remove() throws IOException {
+    queueFile.remove();
   }
 
   @Override public void remove(int n) throws IOException {
     queueFile.remove(n);
+  }
+
+  @Override public void clear() throws IOException {
+    queueFile.clear();
   }
 
   @Override public void close() throws IOException {
