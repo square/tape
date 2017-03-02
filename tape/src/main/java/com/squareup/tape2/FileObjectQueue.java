@@ -13,7 +13,7 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
   private final DirectByteArrayOutputStream bytes = new DirectByteArrayOutputStream();
   private final Converter<T> converter;
 
-  FileObjectQueue(QueueFile queueFile, Converter<T> converter) throws IOException {
+  FileObjectQueue(QueueFile queueFile, Converter<T> converter) {
     this.queueFile = queueFile;
     this.converter = converter;
   }
