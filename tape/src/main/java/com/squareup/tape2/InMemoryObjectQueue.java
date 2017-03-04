@@ -92,8 +92,9 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
       if (closed) throw new IllegalStateException("closed");
       checkForComodification();
 
+      T next = delegate.next();
       index += 1;
-      return delegate.next();
+      return next;
     }
 
     @Override public void remove() {
