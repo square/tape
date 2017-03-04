@@ -1,3 +1,13 @@
+buildscript {
+  dependencies {
+    classpath 'net.ltgt.gradle:gradle-errorprone-plugin:0.0.8'
+  }
+
+  repositories {
+    maven { url 'https://plugins.gradle.org/m2/' }
+  }
+}
+
 subprojects { project ->
   group = GROUP
   version = VERSION_NAME
@@ -5,4 +15,10 @@ subprojects { project ->
   repositories {
     mavenCentral()
   }
+
+  tasks.withType(JavaCompile) {
+    options.compilerArgs += ['-Xlint:all', '-Xlint:-path', '-Werror']
+  }
+
+  apply plugin: 'net.ltgt.errorprone'
 }
