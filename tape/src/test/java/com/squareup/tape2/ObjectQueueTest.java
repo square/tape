@@ -111,7 +111,7 @@ public class ObjectQueueTest {
 
   @Test public void testIteratorNextThrowsWhenEmpty() throws IOException {
     queue.clear();
-    Iterator iterator = queue.iterator();
+    Iterator<String> iterator = queue.iterator();
 
     try {
       iterator.next();
@@ -121,7 +121,7 @@ public class ObjectQueueTest {
   }
 
   @Test public void testIteratorNextThrowsWhenExhausted() throws IOException {
-    Iterator iterator = queue.iterator();
+    Iterator<String> iterator = queue.iterator();
     iterator.next();
     iterator.next();
     iterator.next();
@@ -134,7 +134,7 @@ public class ObjectQueueTest {
   }
 
   @Test public void testIteratorRemove() throws IOException {
-    Iterator iterator = queue.iterator();
+    Iterator<String> iterator = queue.iterator();
 
     iterator.next();
     iterator.remove();
@@ -146,7 +146,7 @@ public class ObjectQueueTest {
   }
 
   @Test public void testIteratorRemoveDisallowsConcurrentModification() throws IOException {
-    Iterator iterator = queue.iterator();
+    Iterator<String> iterator = queue.iterator();
     iterator.next();
     queue.remove();
 
@@ -158,7 +158,7 @@ public class ObjectQueueTest {
   }
 
   @Test public void testIteratorHasNextDisallowsConcurrentModification() throws IOException {
-    Iterator iterator = queue.iterator();
+    Iterator<String> iterator = queue.iterator();
     iterator.next();
     queue.remove();
 
@@ -170,7 +170,7 @@ public class ObjectQueueTest {
   }
 
   @Test public void testIteratorDisallowsConcurrentModificationWithClear() throws IOException {
-    Iterator iterator = queue.iterator();
+    Iterator<String> iterator = queue.iterator();
     iterator.next();
     queue.clear();
 
@@ -182,7 +182,7 @@ public class ObjectQueueTest {
   }
 
   @Test public void testIteratorOnlyRemovesFromHead() throws IOException {
-    Iterator iterator = queue.iterator();
+    Iterator<String> iterator = queue.iterator();
     iterator.next();
     iterator.next();
 
