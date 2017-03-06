@@ -16,7 +16,6 @@ import java.util.Queue;
 import java.util.logging.Logger;
 import okio.BufferedSource;
 import okio.Okio;
-import org.fest.assertions.Assertions;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -24,8 +23,8 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static com.google.common.truth.Truth.assertThat;
 import static com.squareup.tape2.QueueFile.INITIAL_LENGTH;
-import static org.fest.assertions.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 /**
@@ -171,7 +170,8 @@ public class QueueFileTest {
       newQueueFile();
       fail("Should have thrown about bad header length");
     } catch (IOException ex) {
-      assertThat(ex).hasMessage("File is corrupt; length stored in header (0) is invalid.");
+      assertThat(ex).hasMessageThat()
+          .isEqualTo("File is corrupt; length stored in header (0) is invalid.");
     }
   }
 
@@ -192,8 +192,8 @@ public class QueueFileTest {
       fail();
     } catch (IOException ex) {
       assertThat(ex.getMessage()).isIn(
-          "File is corrupt; length stored in header (15) is invalid.",
-          "File is corrupt; length stored in header (31) is invalid.");
+          Arrays.asList("File is corrupt; length stored in header (15) is invalid.",
+              "File is corrupt; length stored in header (31) is invalid."));
     }
   }
 
@@ -210,8 +210,8 @@ public class QueueFileTest {
       fail("Should have thrown about bad header length");
     } catch (IOException ex) {
       assertThat(ex.getMessage()).isIn(
-          "File is corrupt; length stored in header (-2147483648) is invalid.",
-          "Unable to read version 0 format. Supported versions are 1 and legacy.");
+          Arrays.asList("File is corrupt; length stored in header (-2147483648) is invalid.",
+              "Unable to read version 0 format. Supported versions are 1 and legacy."));
     }
   }
 
@@ -272,7 +272,7 @@ public class QueueFileTest {
       fail("Should have thrown about removing negative number of elements.");
     } catch (IllegalArgumentException ex) {
       assertThat(ex) //
-          .hasMessage("Cannot remove negative (-1) number of elements.");
+          .hasMessageThat().isEqualTo("Cannot remove negative (-1) number of elements.");
     }
   }
 
@@ -293,7 +293,8 @@ public class QueueFileTest {
       fail("Should have thrown about removing too many elements.");
     } catch (IllegalArgumentException ex) {
       assertThat(ex) //
-          .hasMessage("Cannot remove more elements (10) than present in queue (1).");
+          .hasMessageThat()
+          .isEqualTo("Cannot remove more elements (10) than present in queue (1).");
     }
   }
 
@@ -329,7 +330,7 @@ public class QueueFileTest {
   @Test public void testAddAndRemoveElements() throws IOException {
     long start = System.nanoTime();
 
-    Queue<byte[]> expected = new LinkedList<byte[]>();
+    Queue<byte[]> expected = new LinkedList<>();
 
     for (int round = 0; round < 5; round++) {
       QueueFile queue = newQueueFile();
@@ -368,7 +369,7 @@ public class QueueFileTest {
     // This should result in 3560 bytes.
     int max = 80;
 
-    Queue<byte[]> expected = new LinkedList<byte[]>();
+    Queue<byte[]> expected = new LinkedList<>();
     QueueFile queue = newQueueFile();
 
     for (int i = 0; i < max; i++) {
@@ -401,7 +402,7 @@ public class QueueFileTest {
     // This should results in a full file, but doesn't trigger an expansion (yet)
     int max = 86;
 
-    Queue<byte[]> expected = new LinkedList<byte[]>();
+    Queue<byte[]> expected = new LinkedList<>();
     QueueFile queue = newQueueFile();
 
     for (int i = 0; i < max; i++) {
@@ -459,7 +460,7 @@ public class QueueFileTest {
     queueFile.close();
 
     queueFile = newQueueFile();
-    Assertions.assertThat(queueFile.size()).isEqualTo(2);
+    assertThat(queueFile.size()).isEqualTo(2);
     assertThat(queueFile.peek()).isEqualTo(values[253]);
     queueFile.remove();
     assertThat(queueFile.peek()).isEqualTo(values[251]);
@@ -555,8 +556,8 @@ public class QueueFileTest {
       queue.remove();
 
       for (int i = 0; i < value.length; i++) {
-        assertThat(value[i]).isEqualTo((byte) (blockNum + 1))
-            .as("Block " + (blockNum + 1) + " corrupted at byte index " + i);
+        assertThat(value[i]).named("Block %1$d corrupted at byte index %2$d.", blockNum + 1, i)
+            .isEqualTo((byte) (blockNum + 1));
       }
     }
 
@@ -622,8 +623,8 @@ public class QueueFileTest {
       queue.remove();
 
       for (int i = 0; i < value.length; i++) {
-        assertThat(value[i]).isEqualTo(expectedBlockNumber)
-            .as("Block " + expectedBlockNumber + " corrupted at byte index " + i);
+        assertThat(value[i]).named("Block %1$d corrupted at byte index %2$d.", expectedBlockNumber,
+            i).isEqualTo(expectedBlockNumber);
       }
     }
 
@@ -695,7 +696,7 @@ public class QueueFileTest {
     byte[] data = new byte[firstElementPadding];
     queue.raf.seek(headerLength);
     queue.raf.readFully(data, 0, firstElementPadding);
-    assertThat(data).containsOnly((byte) 0x00);
+    assertThat(data).isEqualTo(new byte[firstElementPadding]);
 
     // Read from the last element to the end and make sure it's zeroed.
     int endOfLastElement = headerLength + firstElementPadding + 4 * (Element.HEADER_LENGTH + 1024);
@@ -703,7 +704,7 @@ public class QueueFileTest {
     data = new byte[readLength];
     queue.raf.seek(endOfLastElement);
     queue.raf.readFully(data, 0, readLength);
-    assertThat(data).containsOnly((byte) 0x00);
+    assertThat(data).isEqualTo(new byte[readLength]);
   }
 
   /**
@@ -898,7 +899,7 @@ public class QueueFileTest {
       iterator.remove();
       fail();
     } catch (UnsupportedOperationException ex) {
-      assertThat(ex).hasMessage("Removal is only permitted from the head.");
+      assertThat(ex).hasMessageThat().isEqualTo("Removal is only permitted from the head.");
     }
   }
 
@@ -908,13 +909,11 @@ public class QueueFileTest {
       queueFile.add(values[i]);
     }
 
-    assertThat(queueFile.toString()).isIn(
-        "QueueFile[length=4096, size=15, "
+    assertThat(queueFile.toString()).isIn(Arrays.asList("QueueFile[length=4096, size=15, "
         + "first=Element[position=16, length=0], "
-        + "last=Element[position=163, length=14]]",
-        "QueueFile[length=4096, size=15, "
-            + "first=Element[position=32, length=0], "
-            + "last=Element[position=179, length=14]]");
+        + "last=Element[position=163, length=14]]", "QueueFile[length=4096, size=15, "
+        + "first=Element[position=32, length=0], "
+        + "last=Element[position=179, length=14]]"));
   }
 
   /**

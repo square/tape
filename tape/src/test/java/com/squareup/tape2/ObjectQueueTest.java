@@ -16,8 +16,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
-import static org.fest.assertions.Assertions.assertThat;
-import static org.fest.assertions.Fail.fail;
+import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.fail;
 
 @RunWith(BurstJUnit4.class)
 public class ObjectQueueTest {
@@ -102,7 +102,7 @@ public class ObjectQueueTest {
   }
 
   @Test public void testIterator() throws IOException {
-    final List<String> saw = new ArrayList<String>();
+    final List<String> saw = new ArrayList<>();
     for (String pojo : queue) {
       saw.add(pojo);
     }
@@ -190,7 +190,7 @@ public class ObjectQueueTest {
       iterator.remove();
       fail();
     } catch (UnsupportedOperationException ex) {
-      assertThat(ex).hasMessage("Removal is only permitted from the head.");
+      assertThat(ex).hasMessageThat().isEqualTo("Removal is only permitted from the head.");
     }
   }
 
