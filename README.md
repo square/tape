@@ -43,7 +43,12 @@ compile 'com.squareup:tape:1.2.3'
 
 Snapshots of the development version are available in [Sonatype's `snapshots` repository][snap].
 
+or Gradle:
+```groovy
+compile 'com.squareup:tape:VERSION'
+```
 
+where `VERSION` is replaced by an actual version number such as `1.2.2`.
 
 License
 -------
