@@ -556,7 +556,7 @@ public class QueueFileTest {
       queue.remove();
 
       for (int i = 0; i < value.length; i++) {
-        assertThat(value[i]).named("Block " + (blockNum + 1) + " corrupted at byte index " + i)
+        assertThat(value[i]).named("Block %1$d corrupted at byte index %2$d.", blockNum + 1, i)
             .isEqualTo((byte) (blockNum + 1));
       }
     }
@@ -623,8 +623,8 @@ public class QueueFileTest {
       queue.remove();
 
       for (int i = 0; i < value.length; i++) {
-        assertThat(value[i]).named("Block " + expectedBlockNumber + " corrupted at byte index " + i)
-            .isEqualTo(expectedBlockNumber);
+        assertThat(value[i]).named("Block %1$d corrupted at byte index %2$d.", expectedBlockNumber,
+            i).isEqualTo(expectedBlockNumber);
       }
     }
 
