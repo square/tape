@@ -18,7 +18,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
    * guard against concurrent modification.
    */
   @Private int modCount = 0;
-  private boolean closed;
+  @Private boolean closed;
 
   InMemoryObjectQueue() {
     entries = new ArrayDeque<>();

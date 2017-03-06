@@ -10,7 +10,7 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
   private final QueueFile queueFile;
   /** Reusable byte output buffer. */
   private final DirectByteArrayOutputStream bytes = new DirectByteArrayOutputStream();
-  private final Converter<T> converter;
+  @Private final Converter<T> converter;
 
   FileObjectQueue(QueueFile queueFile, Converter<T> converter) {
     this.queueFile = queueFile;
