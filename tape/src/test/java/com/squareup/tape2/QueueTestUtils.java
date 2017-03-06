@@ -4,7 +4,8 @@ package com.squareup.tape2;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import org.apache.commons.io.FileUtils;
+import okio.BufferedSink;
+import okio.Okio;
 
 import static org.junit.Assert.assertTrue;
 
@@ -19,7 +20,9 @@ public class QueueTestUtils {
   static File copyTestFile(String file) throws IOException {
     File newFile = File.createTempFile(file, "test");
     InputStream in = QueueTestUtils.class.getResourceAsStream(file);
-    FileUtils.copyInputStreamToFile(in, newFile);
+    try (BufferedSink sink = Okio.buffer(Okio.sink(newFile))) {
+      sink.writeAll(Okio.source(in));
+    }
     assertTrue(newFile.exists());
     return newFile;
   }
