@@ -6,7 +6,7 @@ sourceCompatibility = JavaVersion.VERSION_1_7
 
 dependencies {
   testCompile 'junit:junit:4.12'
-  testCompile 'org.easytesting:fest-assert:1.4'
+  testCompile 'com.google.truth:truth:0.32'
   testCompile 'com.squareup.burst:burst-junit4:1.1.1'
   testCompile 'com.squareup.okio:okio:1.11.0'
 }
