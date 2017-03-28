@@ -17,12 +17,6 @@ garbage and the file will be corrupt.
 An `ObjectQueue` represents an ordering of arbitrary objects which can be backed
 either by the filesystem (via `QueueFile`) or in memory only.
 
-`TaskQueue` is a special object queue which holds `Task`s, objects which have a
-notion of being executed. Instances are managed by an external executor which
-prepares and executes enqueued tasks.
-
-*Some examples are available on [the website][1].*
-
 
 
 Download
@@ -31,18 +25,144 @@ Download
 Download [the latest JAR][2] or grab via Maven:
 ```xml
 <dependency>
-  <groupId>com.squareup</groupId>
+  <groupId>com.squareup.tape2</groupId>
   <artifactId>tape</artifactId>
-  <version>1.2.3</version>
+  <version>2.0.0-SNAPSHOT</version>
 </dependency>
 ```
 or Gradle:
 ```groovy
-compile 'com.squareup:tape:1.2.3'
+compile 'com.squareup.tape2:tape:2.0.0-SNAPSHOT'
 ```
 
 Snapshots of the development version are available in [Sonatype's `snapshots` repository][snap].
 
+
+
+Usage
+-----
+
+Create a `QueueFile` instance.
+
+```java
+File file = // ...
+QueueFile queueFile = new QueueFile.Builder(file).build();
+```
+
+Add some data to the queue to the end of the queue. `QueueFile` accepts a `byte[]` of arbitrary length.
+
+```java
+queueFile.add("data".getBytes());
+```
+
+Read data at the head of the queue.
+
+```java
+byte[] data = queueFile.peek();
+```
+
+Remove processed elements.
+
+```java
+// Remove the eldest element.
+queueFile.remove();
+
+// Remove multiple elements.
+queueFile.remove(n);
+
+// Remove all elements.
+queueFile.clear();
+```
+
+Read and process multiple elements with the iterator API.
+
+```java
+Iterator<byte[]> iterator = queueFile.iterator();
+while (iterator.hasNext()) {
+  byte[] element = iterator.next();
+  process(element);
+  iterator.remove();
+}
+```
+
+While `QueueFile` works with `byte[]`, `ObjectQueue` works with arbitrary Java objects with a similar API. An `ObjectQueue` may be backed by a persistent `QueueFile`, or in memory. A persistent `ObjectQueue` requires a [`Converter`](#converter) to encode and decode objects.
+
+```java
+// A persistent ObjectQueue.
+ObjectQueue<String> queue = ObjectQueue.create(queueFile, converter);
+
+// An in-memory ObjectQueue.
+ObjectQueue<String> queue = ObjectQueue.createInMemory();
+```
+
+Add some data to the queue to the end of the queue.
+
+```java
+queue.add("data");
+```
+
+Read data at the head of the queue.
+
+```java
+// Peek the eldest elements.
+String data = queue.peek();
+
+// Peek the eldest `n` elements.
+List<String> data = queue.peek(n);
+
+// Peek all elements.
+List<String> data = queue.asList();
+```
+
+Remove processed elements.
+
+```java
+// Remove the eldest element.
+queue.remove();
+
+// Remove multiple elements.
+queue.remove(n);
+
+// Remove all elements.
+queue.clear();
+```
+
+Read and process multiple elements with the iterator API.
+
+```java
+Iterator<String> iterator = queue.iterator();
+while (iterator.hasNext()) {
+  String element = iterator.next();
+  process(element);
+  iterator.remove();
+}
+```
+
+
+
+Converter
+---------
+
+A `Converter` encodes objects to bytes and decodes objects from bytes.
+
+```java
+/** Converter which uses Moshi to serialize instances of class T to disk. */
+class MoshiConverter<T> implements Converter<T> {
+  private final JsonAdapter<T> jsonAdapter;
+
+  public MoshiConverter(Moshi moshi, Class<T> type) {
+    this.jsonAdapter = moshi.adapter(type);
+  }
+
+  @Override public String from(byte[] bytes) throws IOException {
+    return jsonAdapter.fromJson(new Buffer().write(bytes));
+  }
+
+  @Override public void toStream(T o, OutputStream os) throws IOException {
+    return jsonAdapter.toJson(Okio.buffer(Okio.sink(os)), val);
+  }
+}
+```
 
 
 License

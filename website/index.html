@@ -26,96 +26,17 @@
           <p>Tape is a collection of queue-related classes for Android and Java by Square, Inc.</p>
           <p><code>QueueFile</code> is a lightning-fast, transactional, file-based FIFO. Addition and removal from an instance is an O(1) operation and is atomic. Writes are synchronous; data will be written to disk before an operation returns. The underlying file is structured to survive process and even system crashes and if an I/O exception is thrown during a mutating change, the change is aborted.</p>
           <p>An <code>ObjectQueue</code> represents an ordering of arbitrary objects which can be backed either by the filesystem (via <code>QueueFile</code>) or in memory only.</p>
-          <p><code>TaskQueue</code> is a special object queue which holds <code>Task</code>s, objects which have a notion of being executed. Instances are managed by an external executor which prepares and executes enqueued tasks.</p>
         </div>
         <div class="span5 offset1">
           <h2 id="download">Download</h2>
           <p>Available via Maven or as a downloadable <code>.jar</code>.</p>
-          <p><a href="https://search.maven.org/remote_content?g=com.squareup&a=tape&v=LATEST" class="btn btn-inverse btn-large" id="download-btn">Download Latest</a></p>
+          <p><a href="https://search.maven.org/remote_content?g=com.squareup.tape2&a=tape&v=LATEST" class="btn btn-inverse btn-large" id="download-btn">Download Latest</a></p>
           <p><a href="http://github.com/square/tape" id="ribbon">Fork Tape on GitHub</a></p>
           <pre class="maven">&lt;dependency>
-    &lt;groupId>com.squareup&lt;/groupId>
+    &lt;groupId>com.squareup.tape2&lt;/groupId>
     &lt;artifactId>tape&lt;/artifactId>
     &lt;version><span id="mvn-version"><em>(insert latest)</em></span>&lt;/version>
 &lt;/dependency></pre>
-        </div>
-      </div>
-      <div class="row">
-        <div class="span12">
-          <h2 id="examples">Examples</h2>
-          <p>For a more complete example of a background image uploader which expands on both of the following examples see the <a href="https://github.com/square/tape/tree/master/tape-sample">sample Android application</a> in the repository.</p>
-          <h3 id="example-image-queue">Android Task Queue Service</h3>
-          <p>When used on Android, a service is the perfect companion to a <code>TaskQueue</code> since it allows actions to be completed in the background. If the user is uploading new photos to their favorite sharing site, the service will iterate through the queue until all of the upload tasks completes successfully.</p>
-          <pre class="prettyprint">/** Listener for starting the upload service when the queue has tasks. */
-public class ImageQueueServiceListener implements ObjectQueue.Listener&lt;ImageUploadTask> {
-  private final Context context;
-
-  public ImageQueueServiceStarter(Context context) {
-    this.context = context;
-  }
-
-  @Override public void onAdd(ObjectQueue&lt;ImageUploadTask> queue, ImageUploadTask task) {
-    context.startService(new Intent(context, ImageQueueService.class));
-  }
-
-  @Override public void onRemove(ObjectQueue&lt;ImageUploadTask> queue) {}
-}
-
-/** Service which iterates through pending upload tasks one-by-one. */
-public class ImageQueueService extends Service implements ImageUploadTask.Callback {
-  private TaskQueue&lt;ImageUploadTask> queue;
-  private boolean running;
-
-  @Override public void onCreate() {
-    super.onCreate();
-    // Obtain TaskQueue here (e.g., through injection)
-  }
-
-  @Override public int onStartCommand(Intent intent, int flags, int startId) {
-    executeNext();
-    return START_STICKY;
-  }
-
-  public void executeNext() {
-    if (running) return; // Only one task at a time.
-    ImageUploadTask task = queue.peek();
-    if (task != null) {
-      task.execute(this);
-      running = true;
-      return;
-    }
-    stopSelf(); // We're done for now.
-  }
-
-  @Override public void imageUploadComplete() {
-    running = false;
-    queue.remove();
-    executeNext();
-  }
-}</pre>
-          <h3 id="example-gson">GSON Object Converter</h3>
-          <p>As an alternative to traditional object serialization, GSON makes it really easy to convert objects to and from a format that can be written to disk by the <code>FileObjectQueue</code>. This allows for much more flexibility in modifying classes moving forward as well as providing a human-readable storage format.</p>
-          <pre class="prettyprint">/** Converter which uses GSON to serialize instances of class T to disk. */
-public class GsonConverter&lt;T> implements FileObjectQueue.Converter&lt;T> {
-  private final Gson gson;
-  private final Class&lt;T> type;
-
-  public GsonConverter(Gson gson, Class&lt;T> type) {
-    this.gson = gson;
-    this.type = type;
-  }
-
-  @Override public T from(byte[] bytes) {
-    Reader reader = new InputStreamReader(new ByteArrayInputStream(bytes));
-    return gson.fromJson(reader, type);
-  }
-
-  @Override public void toStream(T object, OutputStream bytes) throws IOException {
-    Writer writer = new OutputStreamWriter(bytes);
-    gson.toJson(object, writer);
-    writer.close();
-  }
-}</pre>
         </div>
       </div>
       <div class="row">
@@ -142,7 +63,7 @@ limitations under the License.</p>
     <script> prettyPrint(); </script>
     <script>
         // Look up the latest version of the library.
-        $.fn.artifactVersion('com.squareup', 'tape', function(version, url) {
+        $.fn.artifactVersion('com.squareup.tape2', 'tape', function(version, url) {
           $('#mvn-version').text(version);
           $('#download-btn').text('Download v' + version).attr('href', url);
         });
