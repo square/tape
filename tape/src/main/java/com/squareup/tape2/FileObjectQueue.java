@@ -86,7 +86,7 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
       try {
         return converter.from(data);
       } catch (IOException e) {
-        throw new RuntimeException("todo: throw a proper error", e);
+        throw new TapeException("Error is occurred while converting object from binary form", e);
       }
     }
 
