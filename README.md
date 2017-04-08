@@ -158,8 +158,8 @@ class MoshiConverter<T> implements Converter<T> {
     return jsonAdapter.fromJson(new Buffer().write(bytes));
   }
 
-  @Override public void toStream(T o, OutputStream os) throws IOException {
-    return jsonAdapter.toJson(Okio.buffer(Okio.sink(os)), val);
+  @Override public void toStream(T val, OutputStream os) throws IOException {
+    jsonAdapter.toJson(Okio.buffer(Okio.sink(os)), val);
   }
 }
 ```
