@@ -132,7 +132,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
   @Private boolean closed;
 
-  private static RandomAccessFile initializeFromFile(File file, boolean forceLegacy)
+  @Private static RandomAccessFile initializeFromFile(File file, boolean forceLegacy)
       throws IOException {
     if (!file.exists()) {
       // Use a temp file so we don't leave a partially-initialized file.
