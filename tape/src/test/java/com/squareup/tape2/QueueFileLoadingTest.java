@@ -61,7 +61,7 @@ public class QueueFileLoadingTest {
   }
 
   @Test(expected = IOException.class)
-  public void testCreateWithReadOnlyFile_throwsException() throws Exception {
+  public void testCreateWithReadOnlyFileThrowsException() throws Exception {
     testFile = copyTestFile(TRUNCATED_ONE_ENTRY_SERIALIZED_QUEUE);
     assertTrue(testFile.setWritable(false));
 
@@ -71,7 +71,7 @@ public class QueueFileLoadingTest {
   }
 
   @Test(expected = IOException.class)
-  public void testAddWithReadOnlyFile_missesMonitor() throws Exception {
+  public void testAddWithReadOnlyFileMissesMonitor() throws Exception {
     testFile = copyTestFile(EMPTY_SERIALIZED_QUEUE);
 
     QueueFile qf = new QueueFile.Builder(testFile).build();
