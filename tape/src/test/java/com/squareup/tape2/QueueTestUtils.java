@@ -39,4 +39,8 @@ public class QueueTestUtils {
       return false;
     }
   }
+
+  private QueueTestUtils() {
+    throw new AssertionError("No instances.");
+  }
 }
