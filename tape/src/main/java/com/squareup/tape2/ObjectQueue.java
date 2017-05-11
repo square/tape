@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /** A queue of objects. */
 public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
@@ -25,7 +26,7 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
   }
 
   /** The underlying {@link QueueFile} backing this queue, or null if it's only in memory. */
-  public abstract QueueFile file();
+  public abstract @Nullable QueueFile file();
 
   /** Returns the number of entries in the queue. */
   public abstract int size();
@@ -42,7 +43,7 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
    * Returns the head of the queue, or {@code null} if the queue is empty. Does not modify the
    * queue.
    */
-  public abstract T peek() throws IOException;
+  public abstract @Nullable T peek() throws IOException;
 
   /**
    * Reads up to {@code max} entries from the head of the queue without removing the entries.

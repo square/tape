@@ -24,6 +24,7 @@ import java.nio.channels.FileChannel;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import javax.annotation.Nullable;
 
 import static java.lang.Math.min;
 
@@ -487,7 +488,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Reads the eldest element. Returns null if the queue is empty. */
-  public byte[] peek() throws IOException {
+  public @Nullable byte[] peek() throws IOException {
     if (closed) throw new IOException("closed");
     if (isEmpty()) return null;
     int length = first.length;
