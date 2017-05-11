@@ -96,16 +96,15 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
   }
 
   /** Enables direct access to the internal array. Avoids unnecessary copying. */
-  private static class DirectByteArrayOutputStream extends ByteArrayOutputStream {
-    public DirectByteArrayOutputStream() {
-      super();
+  private static final class DirectByteArrayOutputStream extends ByteArrayOutputStream {
+    DirectByteArrayOutputStream() {
     }
 
     /**
      * Gets a reference to the internal byte array.  The {@link #size()} method indicates how many
      * bytes contain actual data added since the last {@link #reset()} call.
      */
-    public byte[] getArray() {
+    byte[] getArray() {
       return buf;
     }
   }
