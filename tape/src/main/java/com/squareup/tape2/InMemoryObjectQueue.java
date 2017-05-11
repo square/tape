@@ -4,6 +4,7 @@ package com.squareup.tape2;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Deque;
 import java.util.Iterator;
@@ -40,7 +41,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
   }
 
   @Override public List<T> asList() throws IOException {
-    return new ArrayList<>(entries);
+    return Collections.unmodifiableList(new ArrayList<>(entries));
   }
 
   @Override public int size() {
