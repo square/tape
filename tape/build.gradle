@@ -8,11 +8,12 @@ dependencies {
   testCompile 'junit:junit:4.12'
   testCompile 'com.google.truth:truth:0.32'
   testCompile 'com.squareup.burst:burst-junit4:1.1.1'
-  testCompile 'com.squareup.okio:okio:1.11.0'
+  testCompile 'com.squareup.okio:okio:1.12.0'
 }
 
 checkstyle {
   configFile rootProject.file('checkstyle.xml')
+  toolVersion = '7.7'
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')

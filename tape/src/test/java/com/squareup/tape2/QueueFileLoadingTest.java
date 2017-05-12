@@ -13,7 +13,6 @@ import static com.squareup.tape2.QueueTestUtils.FRESH_SERIALIZED_QUEUE;
 import static com.squareup.tape2.QueueTestUtils.ONE_ENTRY_SERIALIZED_QUEUE;
 import static com.squareup.tape2.QueueTestUtils.TRUNCATED_EMPTY_SERIALIZED_QUEUE;
 import static com.squareup.tape2.QueueTestUtils.TRUNCATED_ONE_ENTRY_SERIALIZED_QUEUE;
-import static com.squareup.tape2.QueueTestUtils.UndeletableFile;
 import static com.squareup.tape2.QueueTestUtils.copyTestFile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -65,7 +64,6 @@ public class QueueFileLoadingTest {
     testFile = copyTestFile(TRUNCATED_ONE_ENTRY_SERIALIZED_QUEUE);
     assertTrue(testFile.setWritable(false));
 
-    File tmp = new UndeletableFile(testFile.getAbsolutePath());
     // Should throw an exception.
     new QueueFile.Builder(testFile).build();
   }
@@ -78,12 +76,13 @@ public class QueueFileLoadingTest {
 
     // Should throw an exception.
     FileObjectQueue<String> queue =
-        new FileObjectQueue<String>(qf, new FileObjectQueue.Converter<String>() {
+        new FileObjectQueue<>(qf, new FileObjectQueue.Converter<String>() {
           @Override public String from(byte[] bytes) throws IOException {
             return null;
           }
 
-          @Override public void toStream(String o, OutputStream bytes) throws IOException {
+          @Override public void toStream(String o, OutputStream bytes)
+              throws IOException {
             throw new IOException("fake Permission denied");
           }
         });

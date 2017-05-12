@@ -9,7 +9,7 @@ import okio.Okio;
 
 import static org.junit.Assert.assertTrue;
 
-public class QueueTestUtils {
+final class QueueTestUtils {
   static final String TRUNCATED_ONE_ENTRY_SERIALIZED_QUEUE =
       "/truncated-one-entry-serialized-queue";
   static final String TRUNCATED_EMPTY_SERIALIZED_QUEUE = "/truncated-empty-serialized-queue";
@@ -31,7 +31,7 @@ public class QueueTestUtils {
   static class UndeletableFile extends File {
     private static final long serialVersionUID = 1L;
 
-    public UndeletableFile(String name) {
+    UndeletableFile(String name) {
       super(name);
     }
 
