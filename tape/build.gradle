@@ -5,6 +5,8 @@ targetCompatibility = JavaVersion.VERSION_1_7
 sourceCompatibility = JavaVersion.VERSION_1_7
 
 dependencies {
+  compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+  testCompileOnly 'com.google.code.findbugs:jsr305:3.0.2'
   testCompile 'junit:junit:4.12'
   testCompile 'com.google.truth:truth:0.32'
   testCompile 'com.squareup.burst:burst-junit4:1.1.1'

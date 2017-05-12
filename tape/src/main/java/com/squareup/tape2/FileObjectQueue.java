@@ -4,6 +4,8 @@ package com.squareup.tape2;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 final class FileObjectQueue<T> extends ObjectQueue<T> {
   /** Backing storage implementation. */
@@ -17,7 +19,7 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
     this.converter = converter;
   }
 
-  @Override public QueueFile file() {
+  @Override public @Nonnull QueueFile file() {
     return queueFile;
   }
 
@@ -35,7 +37,7 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
     queueFile.add(bytes.getArray(), 0, bytes.size());
   }
 
-  @Override public T peek() throws IOException {
+  @Override public @Nullable T peek() throws IOException {
     byte[] bytes = queueFile.peek();
     if (bytes == null) return null;
     return converter.from(bytes);
