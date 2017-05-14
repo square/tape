@@ -72,6 +72,12 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
     return new QueueFileIterator(queueFile.iterator());
   }
 
+  @Override public String toString() {
+    return "FileObjectQueue{"
+        + "queueFile=" + queueFile
+        + '}';
+  }
+
   private final class QueueFileIterator implements Iterator<T> {
     final Iterator<byte[]> iterator;
 

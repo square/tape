@@ -909,11 +909,15 @@ public class QueueFileTest {
       queueFile.add(values[i]);
     }
 
-    assertThat(queueFile.toString()).isIn(Arrays.asList("QueueFile[length=4096, size=15, "
-        + "first=Element[position=16, length=0], "
-        + "last=Element[position=163, length=14]]", "QueueFile[length=4096, size=15, "
-        + "first=Element[position=32, length=0], "
-        + "last=Element[position=179, length=14]]"));
+    if (forceLegacy) {
+      assertThat(queueFile.toString()).contains("zero=true, versioned=false, length=4096,"
+          + " size=15,"
+          + " first=Element[position=16, length=0], last=Element[position=163, length=14]}");
+    } else {
+      assertThat(queueFile.toString()).contains("zero=true, versioned=true, length=4096,"
+          + " size=15,"
+          + " first=Element[position=32, length=0], last=Element[position=179, length=14]}");
+    }
   }
 
   /**
