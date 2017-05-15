@@ -101,10 +101,10 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   final File file;
 
   /** True when using the versioned header format. Otherwise use the legacy format. */
-  boolean versioned;
+  final boolean versioned;
 
   /** The header length in bytes: 16 or 32. */
-  int headerLength;
+  final int headerLength;
 
   /** Cached file length. Always a power of 2. */
   long fileLength;
@@ -675,12 +675,15 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   @Override public String toString() {
-    return getClass().getSimpleName()
-        + "[length=" + fileLength
+    return "QueueFile{"
+        + "file=" + file
+        + ", zero=" + zero
+        + ", versioned=" + versioned
+        + ", length=" + fileLength
         + ", size=" + elementCount
         + ", first=" + first
         + ", last=" + last
-        + "]";
+        + '}';
   }
 
   /** A pointer to an element. */

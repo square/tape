@@ -71,6 +71,12 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     closed = true;
   }
 
+  @Override public String toString() {
+    return "InMemoryObjectQueue{"
+        + "size=" + entries.size()
+        + '}';
+  }
+
   private final class EntryIterator implements Iterator<T> {
     private final Iterator<T> delegate;
     private int index = 0;
