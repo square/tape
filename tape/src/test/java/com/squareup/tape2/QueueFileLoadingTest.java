@@ -1,12 +1,13 @@
 // Copyright 2012 Square, Inc.
 package com.squareup.tape2;
 
-import org.junit.After;
-import org.junit.Test;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import org.junit.After;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import static com.squareup.tape2.QueueTestUtils.EMPTY_SERIALIZED_QUEUE;
 import static com.squareup.tape2.QueueTestUtils.FRESH_SERIALIZED_QUEUE;
@@ -18,7 +19,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class QueueFileLoadingTest {
+@RunWith(JUnit4.class)
+public final class QueueFileLoadingTest {
 
   private File testFile;
 
