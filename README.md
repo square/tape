@@ -46,7 +46,7 @@ Create a `QueueFile` instance.
 
 ```java
 File file = // ...
-QueueFile queueFile = new QueueFile.Builder(file).build();
+QueueFile queueFile = new QueueFile(file).build();
 ```
 
 Add some data to the queue to the end of the queue. `QueueFile` accepts a `byte[]` of arbitrary length.
