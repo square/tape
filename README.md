@@ -154,13 +154,13 @@ class MoshiConverter<T> implements Converter<T> {
     this.jsonAdapter = moshi.adapter(type);
   }
 
-  @Override public String from(byte[] bytes) throws IOException {
+  @Override public T from(byte[] bytes) throws IOException {
     return jsonAdapter.fromJson(new Buffer().write(bytes));
   }
 
   @Override public void toStream(T val, OutputStream os) throws IOException {
-    try (BufferedSink sink = Okio.buffer(Okio.sink(bytes))) {
-      jsonAdapter.toJson(sink, os);
+    try (BufferedSink sink = Okio.buffer(Okio.sink(os))) {
+      jsonAdapter.toJson(sink, val);
     }
   }
 }
