@@ -1,6 +1,6 @@
 buildscript {
   dependencies {
-    classpath 'net.ltgt.gradle:gradle-errorprone-plugin:0.0.8'
+    classpath 'net.ltgt.gradle:gradle-errorprone-plugin:0.0.13'
   }
 
   repositories {
@@ -18,6 +18,18 @@ subprojects { project ->
 
   tasks.withType(JavaCompile) {
     options.compilerArgs += ['-Xlint:all', '-Xlint:-path', '-Werror']
+  }
+
+  configurations.all {
+    resolutionStrategy {
+      eachDependency { details ->
+        // Force all the error-prone dependencies to use the same version.
+        if (details.requested.group == 'com.google.errorprone' &&
+                details.requested.name.startsWith('error_prone_')) {
+          details.useVersion '2.1.2'
+        }
+      }
+    }
   }
 
   apply plugin: 'net.ltgt.errorprone'
