@@ -750,7 +750,20 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
      */
     public QueueFile build() throws IOException {
       RandomAccessFile raf = initializeFromFile(file, forceLegacy);
-      return new QueueFile(file, raf, zero, forceLegacy);
+
+      boolean succeeded = false;
+      try
+      {
+        QueueFile qf = new QueueFile(file, raf, zero, forceLegacy);
+        succeeded = true;
+        return qf;
+      }
+      finally
+      {
+        if (!succeeded) {
+          raf.close();
+        }
+      }
     }
   }
 }
