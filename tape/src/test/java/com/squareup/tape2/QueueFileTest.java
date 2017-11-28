@@ -6,10 +6,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -330,7 +330,7 @@ public class QueueFileTest {
   @Test public void testAddAndRemoveElements() throws IOException {
     long start = System.nanoTime();
 
-    Queue<byte[]> expected = new LinkedList<>();
+    Queue<byte[]> expected = new ArrayDeque<>();
 
     for (int round = 0; round < 5; round++) {
       QueueFile queue = newQueueFile();
@@ -369,7 +369,7 @@ public class QueueFileTest {
     // This should result in 3560 bytes.
     int max = 80;
 
-    Queue<byte[]> expected = new LinkedList<>();
+    Queue<byte[]> expected = new ArrayDeque<>();
     QueueFile queue = newQueueFile();
 
     for (int i = 0; i < max; i++) {
@@ -402,7 +402,7 @@ public class QueueFileTest {
     // This should results in a full file, but doesn't trigger an expansion (yet)
     int max = 86;
 
-    Queue<byte[]> expected = new LinkedList<>();
+    Queue<byte[]> expected = new ArrayDeque<>();
     QueueFile queue = newQueueFile();
 
     for (int i = 0; i < max; i++) {
