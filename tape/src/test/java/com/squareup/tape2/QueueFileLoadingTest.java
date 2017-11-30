@@ -33,20 +33,32 @@ public final class QueueFileLoadingTest {
     assertTrue(testFile.delete());
     assertFalse(testFile.exists());
     QueueFile queue = new QueueFile.Builder(testFile).build();
-    assertEquals(0, queue.size());
-    assertTrue(testFile.exists());
+    try {
+      assertEquals( 0, queue.size() );
+      assertTrue( testFile.exists() );
+    } finally {
+      queue.close();
+    }
   }
 
   @Test public void testEmptyFileInitializes() throws Exception {
     testFile = copyTestFile(EMPTY_SERIALIZED_QUEUE);
     QueueFile queue = new QueueFile.Builder(testFile).build();
-    assertEquals(0, queue.size());
+    try {
+      assertEquals( 0, queue.size() );
+    } finally {
+      queue.close();
+    }
   }
 
   @Test public void testSingleEntryFileInitializes() throws Exception {
     testFile = copyTestFile(ONE_ENTRY_SERIALIZED_QUEUE);
     QueueFile queue = new QueueFile.Builder(testFile).build();
-    assertEquals(1, queue.size());
+    try {
+      assertEquals( 1, queue.size() );
+    } finally {
+      queue.close();
+    }
   }
 
   @Test(expected = IOException.class)
@@ -89,7 +101,11 @@ public final class QueueFileLoadingTest {
           }
         });
 
-    // Should throw an exception.
-    queue.add("trouble");
+     try {
+       // Should throw an exception.
+       queue.add("trouble");
+     } finally {
+       queue.close();
+     }
   }
 }
