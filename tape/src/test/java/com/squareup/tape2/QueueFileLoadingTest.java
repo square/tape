@@ -34,8 +34,8 @@ public final class QueueFileLoadingTest {
     assertFalse(testFile.exists());
     QueueFile queue = new QueueFile.Builder(testFile).build();
     try {
-      assertEquals( 0, queue.size() );
-      assertTrue( testFile.exists() );
+      assertEquals(0, queue.size());
+      assertTrue(testFile.exists());
     } finally {
       queue.close();
     }
@@ -45,7 +45,7 @@ public final class QueueFileLoadingTest {
     testFile = copyTestFile(EMPTY_SERIALIZED_QUEUE);
     QueueFile queue = new QueueFile.Builder(testFile).build();
     try {
-      assertEquals( 0, queue.size() );
+      assertEquals(0, queue.size());
     } finally {
       queue.close();
     }
@@ -55,7 +55,7 @@ public final class QueueFileLoadingTest {
     testFile = copyTestFile(ONE_ENTRY_SERIALIZED_QUEUE);
     QueueFile queue = new QueueFile.Builder(testFile).build();
     try {
-      assertEquals( 1, queue.size() );
+      assertEquals(1, queue.size());
     } finally {
       queue.close();
     }
