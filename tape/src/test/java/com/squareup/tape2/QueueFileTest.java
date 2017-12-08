@@ -792,6 +792,7 @@ public class QueueFileTest {
         saw++;
       }
       assertThat(saw).isEqualTo(i);
+      queueFile.close();
       file.delete();
     }
   }
