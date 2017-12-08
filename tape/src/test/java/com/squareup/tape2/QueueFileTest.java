@@ -782,20 +782,17 @@ public class QueueFileTest {
 
     for (int i = 0; i < 10; i++) {
       QueueFile queueFile = newQueueFile();
-      try {
-        for (int j = 0; j < i; j++) {
-          queueFile.add(data);
-        }
-
-        int saw = 0;
-        for (byte[] element : queueFile) {
-          assertThat(element).isEqualTo(data);
-          saw++;
-        }
-        assertThat(saw).isEqualTo(i);
-      } finally {
-        queueFile.close();
+      for (int j = 0; j < i; j++) {
+        queueFile.add(data);
       }
+
+      int saw = 0;
+      for (byte[] element : queueFile) {
+        assertThat(element).isEqualTo(data);
+        saw++;
+      }
+      assertThat(saw).isEqualTo(i);
+      queueFile.close();
       file.delete();
     }
   }
