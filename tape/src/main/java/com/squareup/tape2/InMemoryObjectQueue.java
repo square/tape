@@ -117,7 +117,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
       try {
         InMemoryObjectQueue.this.remove();
       } catch (IOException e) {
-        throw new RuntimeException("todo: throw a proper error", e);
+        throw new TapeException("Error is occurred while deleting object", e);
       }
 
       expectedModCount = modCount;
