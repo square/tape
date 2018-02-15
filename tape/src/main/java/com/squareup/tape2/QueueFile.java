@@ -378,7 +378,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     if ((offset | count) < 0 || count > data.length - offset) {
       throw new IndexOutOfBoundsException();
     }
-    if (closed) throw new IOException("closed");
+    if (closed) throw new IllegalStateException("closed");
 
     expandIfNecessary(count);
 
@@ -489,7 +489,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
   /** Reads the eldest element. Returns null if the queue is empty. */
   public @Nullable byte[] peek() throws IOException {
-    if (closed) throw new IOException("closed");
+    if (closed) throw new IllegalStateException("closed");
     if (isEmpty()) return null;
     int length = first.length;
     byte[] data = new byte[length];
@@ -645,7 +645,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
   /** Clears this queue. Truncates the file to the initial size. */
   public void clear() throws IOException {
-    if (closed) throw new IOException("closed");
+    if (closed) throw new IllegalStateException("closed");
 
     // Commit the header.
     writeHeader(INITIAL_LENGTH, 0, 0, 0);

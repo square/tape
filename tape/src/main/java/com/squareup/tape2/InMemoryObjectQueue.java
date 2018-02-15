@@ -1,7 +1,6 @@
 // Copyright 2012 Square, Inc.
 package com.squareup.tape2;
 
-import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,18 +29,18 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     return null;
   }
 
-  @Override public void add(T entry) throws IOException {
-    if (closed) throw new IOException("closed");
+  @Override public void add(T entry) {
+    if (closed) throw new IllegalStateException("closed");
     modCount++;
     entries.addLast(entry);
   }
 
-  @Override public @Nullable T peek() throws IOException {
-    if (closed) throw new IOException("closed");
+  @Override public @Nullable T peek() {
+    if (closed) throw new IllegalStateException("closed");
     return entries.peekFirst();
   }
 
-  @Override public List<T> asList() throws IOException {
+  @Override public List<T> asList() {
     return Collections.unmodifiableList(new ArrayList<>(entries));
   }
 
@@ -49,8 +48,12 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     return entries.size();
   }
 
-  @Override public void remove(int n) throws IOException {
-    if (closed) throw new IOException("closed");
+  @Override public void remove() {
+    remove(1);
+  }
+
+  @Override public void remove(int n) {
+    if (closed) throw new IllegalStateException("closed");
     modCount++;
     for (int i = 0; i < n; i++) {
       entries.removeFirst();
@@ -67,7 +70,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     return new EntryIterator(entries.iterator());
   }
 
-  @Override public void close() throws IOException {
+  @Override public void close() {
     closed = true;
   }
 
@@ -114,11 +117,7 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
         throw new UnsupportedOperationException("Removal is only permitted from the head.");
       }
 
-      try {
-        InMemoryObjectQueue.this.remove();
-      } catch (IOException e) {
-        throw new RuntimeException("todo: throw a proper error", e);
-      }
+      InMemoryObjectQueue.this.remove();
 
       expectedModCount = modCount;
       index -= 1;
