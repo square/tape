@@ -558,7 +558,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
         // Return the read element.
         return buffer;
       } catch (IOException e) {
-        throw new RuntimeException("todo: throw a proper error", e);
+        throw new UncheckedIOException(e);
       }
     }
 
@@ -573,7 +573,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
       try {
         QueueFile.this.remove();
       } catch (IOException e) {
-        throw new RuntimeException("todo: throw a proper error", e);
+        throw new UncheckedIOException(e);
       }
 
       expectedModCount = modCount;
