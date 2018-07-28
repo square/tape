@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package com.squareup.tape2;
+
+import java.io.IOException;
+import java.util.Objects;
+
+/**
+ * Wraps an {@link IOException} with an unchecked exception.
+ * <p>
+ * This class is available in Java 8 (https://docs.oracle.com/javase/8/docs/api/java/io/UncheckedIOException.html).
+ * We've copied the implementation so that we can maintain Java 7 compatibility.
+ */
+public class UncheckedIOException extends RuntimeException {
+    private static final long serialVersionUID = -8134305061645241065L;
+
+    /**
+     * Constructs an instance of this class.
+     *
+     * @param cause the {@code IOException}
+     * @throws NullPointerException if the cause is {@code null}
+     */
+    UncheckedIOException(IOException cause) {
+        super(Objects.requireNonNull(cause));
+    }
+
+    /**
+     * Returns the cause of this exception.
+     *
+     * @return the {@code IOException} which is the cause of this exception.
+     */
+    @Override
+    public synchronized IOException getCause() {
+        return (IOException) super.getCause();
+    }
+}
