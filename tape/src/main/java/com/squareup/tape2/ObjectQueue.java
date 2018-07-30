@@ -3,12 +3,13 @@ package com.squareup.tape2;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nullable;
+import okio.BufferedSink;
+import okio.BufferedSource;
 
 /** A queue of objects. */
 public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
@@ -85,9 +86,9 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
    */
   public interface Converter<T> {
     /** Converts bytes to an object. */
-    T from(byte[] bytes) throws IOException;
+    T from(BufferedSource source) throws IOException;
 
     /** Converts o to bytes written to the specified stream. */
-    void toStream(T o, OutputStream bytes) throws IOException;
+    void toStream(T o, BufferedSink sink) throws IOException;
   }
 }

@@ -4,12 +4,13 @@ import com.squareup.burst.BurstJUnit4;
 import com.squareup.burst.annotation.Burst;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import okio.BufferedSink;
+import okio.BufferedSource;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -194,13 +195,13 @@ public class ObjectQueueTest {
     }
   }
 
-  static class StringConverter implements FileObjectQueue.Converter<String> {
-    @Override public String from(byte[] bytes) throws IOException {
-      return new String(bytes, "UTF-8");
+  static final class StringConverter implements FileObjectQueue.Converter<String> {
+    @Override public String from(BufferedSource source) throws IOException {
+      return source.readUtf8();
     }
 
-    @Override public void toStream(String s, OutputStream os) throws IOException {
-      os.write(s.getBytes("UTF-8"));
+    @Override public void toStream(String s, BufferedSink sink) throws IOException {
+      sink.writeUtf8(s);
     }
   }
 }
