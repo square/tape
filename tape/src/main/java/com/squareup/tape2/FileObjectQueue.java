@@ -11,7 +11,6 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
   /** Backing storage implementation. */
   private final QueueFile queueFile;
   /** Reusable byte output buffer. */
-  private final Buffer buffer = new Buffer();
   @Private final Converter<T> converter;
 
   FileObjectQueue(QueueFile queueFile, Converter<T> converter) {
@@ -32,9 +31,10 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
   }
 
   @Override public void add(T entry) throws IOException {
+    Buffer buffer = new Buffer();
     converter.toStream(entry, buffer);
-    long size = buffer.size();
-    queueFile.add(buffer.readByteArray(), 0, (int) size);
+    byte[] data = buffer.readByteArray();
+    queueFile.add(data, 0, data.length);
   }
 
   @Override public @Nullable T peek() throws IOException {
