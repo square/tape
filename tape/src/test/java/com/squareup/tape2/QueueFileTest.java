@@ -904,6 +904,57 @@ public class QueueFileTest {
     }
   }
 
+  @Test public void iteratorThrowsIOException() throws IOException {
+    QueueFile queueFile = newQueueFile();
+    queueFile.add(values[253]);
+    queueFile.close();
+
+    final class BrokenRandomAccessFile extends RandomAccessFile {
+      boolean fail = false;
+
+      BrokenRandomAccessFile(File file, String mode)
+          throws FileNotFoundException {
+        super(file, mode);
+      }
+
+      @Override public void write(byte[] b, int off, int len) throws IOException {
+        if (fail) {
+          throw new IOException();
+        }
+        super.write(b, off, len);
+      }
+
+      @Override public int read(byte[] b, int off, int len) throws IOException {
+        if (fail) {
+          throw new IOException();
+        }
+        return super.read(b, off, len);
+      }
+    }
+    BrokenRandomAccessFile braf = new BrokenRandomAccessFile(file, "rwd");
+    queueFile = newQueueFile(braf);
+    Iterator<byte[]> iterator = queueFile.iterator();
+
+    braf.fail = true;
+    try {
+      iterator.next();
+      fail();
+    } catch (Exception ioe) {
+      assertThat(ioe).isInstanceOf(IOException.class);
+    }
+
+    braf.fail = false;
+    iterator.next();
+
+    braf.fail = true;
+    try {
+      iterator.remove();
+      fail();
+    } catch (Exception ioe) {
+      assertThat(ioe).isInstanceOf(IOException.class);
+    }
+  }
+
   @Test public void queueToString() throws IOException {
     QueueFile queueFile = newQueueFile();
     for (int i = 0; i < 15; i++) {

@@ -504,7 +504,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    * elements from the head of the QueueFile is permitted during iteration using
    * {@link Iterator#remove()}.
    *
-   * <p>The iterator may throw an unchecked {@link RuntimeException} during {@link Iterator#next()}
+   * <p>The iterator may throw an unchecked {@link IOException} during {@link Iterator#next()}
    * or {@link Iterator#remove()}.
    */
   @Override public Iterator<byte[]> iterator() {
@@ -558,7 +558,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
         // Return the read element.
         return buffer;
       } catch (IOException e) {
-        throw new RuntimeException("todo: throw a proper error", e);
+        throw QueueFile.<Error>getSneakyThrowable(e);
       }
     }
 
@@ -573,7 +573,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
       try {
         QueueFile.this.remove();
       } catch (IOException e) {
-        throw new RuntimeException("todo: throw a proper error", e);
+        throw QueueFile.<Error>getSneakyThrowable(e);
       }
 
       expectedModCount = modCount;
@@ -760,5 +760,14 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
         }
       }
     }
+  }
+
+  /**
+   * Use this to throw checked exceptions from iterator methods that do not declare that they throw
+   * checked exceptions.
+   */
+  @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
+  static <T extends Throwable> T getSneakyThrowable(Throwable t) throws T {
+    throw (T) t;
   }
 }
