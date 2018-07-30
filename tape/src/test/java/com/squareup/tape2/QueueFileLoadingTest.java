@@ -3,7 +3,8 @@ package com.squareup.tape2;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
+import okio.BufferedSink;
+import okio.BufferedSource;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -82,11 +83,11 @@ public final class QueueFileLoadingTest {
     // Should throw an exception.
     FileObjectQueue<String> queue =
         new FileObjectQueue<>(qf, new FileObjectQueue.Converter<String>() {
-          @Override public String from(byte[] bytes) throws IOException {
+          @Override public String from(BufferedSource source) throws IOException {
             return null;
           }
 
-          @Override public void toStream(String o, OutputStream bytes)
+          @Override public void toStream(String o, BufferedSink sink)
               throws IOException {
             throw new IOException("fake Permission denied");
           }

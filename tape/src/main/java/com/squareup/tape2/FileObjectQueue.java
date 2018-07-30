@@ -1,17 +1,16 @@
 // Copyright 2012 Square, Inc.
 package com.squareup.tape2;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import okio.Buffer;
 
 final class FileObjectQueue<T> extends ObjectQueue<T> {
   /** Backing storage implementation. */
   private final QueueFile queueFile;
   /** Reusable byte output buffer. */
-  private final DirectByteArrayOutputStream bytes = new DirectByteArrayOutputStream();
   @Private final Converter<T> converter;
 
   FileObjectQueue(QueueFile queueFile, Converter<T> converter) {
@@ -32,15 +31,16 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
   }
 
   @Override public void add(T entry) throws IOException {
-    bytes.reset();
-    converter.toStream(entry, bytes);
-    queueFile.add(bytes.getArray(), 0, bytes.size());
+    Buffer buffer = new Buffer();
+    converter.toStream(entry, buffer);
+    byte[] data = buffer.readByteArray();
+    queueFile.add(data, 0, data.length);
   }
 
   @Override public @Nullable T peek() throws IOException {
     byte[] bytes = queueFile.peek();
     if (bytes == null) return null;
-    return converter.from(bytes);
+    return converter.from(new Buffer().write(bytes));
   }
 
   @Override public void remove() throws IOException {
@@ -92,7 +92,7 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
     @Override public T next() {
       byte[] data = iterator.next();
       try {
-        return converter.from(data);
+        return converter.from(new Buffer().write(data));
       } catch (IOException e) {
         throw new RuntimeException("todo: throw a proper error", e);
       }
@@ -100,20 +100,6 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
 
     @Override public void remove() {
       iterator.remove();
-    }
-  }
-
-  /** Enables direct access to the internal array. Avoids unnecessary copying. */
-  private static final class DirectByteArrayOutputStream extends ByteArrayOutputStream {
-    DirectByteArrayOutputStream() {
-    }
-
-    /**
-     * Gets a reference to the internal byte array.  The {@link #size()} method indicates how many
-     * bytes contain actual data added since the last {@link #reset()} call.
-     */
-    byte[] getArray() {
-      return buf;
     }
   }
 }
