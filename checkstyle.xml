@@ -136,7 +136,7 @@
     <!-- See http://checkstyle.sf.net/config_misc.html -->
     <module name="ArrayTypeStyle"/>
     <!--module name="FinalParameters"/-->
-    <!--module name="TodoComment"/-->
+    <module name="TodoComment"/>
     <module name="UpperEll"/>
 
     <!-- Make the @SuppressWarnings annotations available to Checkstyle -->

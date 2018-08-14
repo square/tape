@@ -65,7 +65,7 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
    * <p>The iterator disallows modifications to the queue during iteration. Removing entries from
    * the head of the queue is permitted during iteration using {@link Iterator#remove()}.
    *
-   * <p>The iterator may throw an unchecked {@link RuntimeException} during {@link Iterator#next()}
+   * <p>The iterator may throw an unchecked {@link IOException} during {@link Iterator#next()}
    * or {@link Iterator#remove()}.
    */
   @Override public Iterator<T> iterator() {
@@ -94,7 +94,7 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
       try {
         return converter.from(data);
       } catch (IOException e) {
-        throw new RuntimeException("todo: throw a proper error", e);
+        throw QueueFile.<Error>getSneakyThrowable(e);
       }
     }
 

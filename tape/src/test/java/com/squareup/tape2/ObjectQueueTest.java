@@ -194,6 +194,28 @@ public class ObjectQueueTest {
     }
   }
 
+  @Test public void iteratorThrowsIOException() throws IOException {
+    File parent = folder.getRoot();
+    File file = new File(parent, "object-queue");
+    QueueFile queueFile = new QueueFile.Builder(file).build();
+    ObjectQueue<Object> queue = ObjectQueue.create(queueFile, new ObjectQueue.Converter<Object>() {
+      @Override public String from(byte[] bytes) throws IOException {
+        throw new IOException();
+      }
+
+      @Override public void toStream(Object o, OutputStream bytes) {
+      }
+    });
+    queue.add(new Object());
+    Iterator<Object> iterator = queue.iterator();
+    try {
+      iterator.next();
+      fail();
+    } catch (Exception ioe) {
+      assertThat(ioe).isInstanceOf(IOException.class);
+    }
+  }
+
   static class StringConverter implements FileObjectQueue.Converter<String> {
     @Override public String from(byte[] bytes) throws IOException {
       return new String(bytes, "UTF-8");
