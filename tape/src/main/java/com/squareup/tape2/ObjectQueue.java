@@ -85,9 +85,9 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
    */
   public interface Converter<T> {
     /** Converts bytes to an object. */
-    T from(byte[] bytes) throws IOException;
+    T from(byte[] source) throws IOException;
 
-    /** Converts o to bytes written to the specified stream. */
-    void toStream(T o, OutputStream bytes) throws IOException;
+    /** Converts {@code value} to bytes written to the specified stream. */
+    void toStream(T value, OutputStream sink) throws IOException;
   }
 }
