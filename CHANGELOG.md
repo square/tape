@@ -1,14 +1,18 @@
 Change Log
 ==========
 
-Version 1.3.0 *(In Development)*
---------------------------------
+Version 2.0.0-beta1 *(2018-09-12)*
+----------------------------------
 
- * New: `remove(int)` allows atomic removal of multiple elements.
- * New: `forEach(ElementVisitor)` allows iterating queue items and stopping iteration early.
- * `QueueFile` now implements the `Closeable` interface.
- * Fix: Do not erase data before updating the header when calling `clear()` or `remove()`.
+Tape 2 is a major release that focusses on simplifying the API. Tape 2 also adopts a new file format that allows QueueFile to grow beyond 4GB.
 
+  * New: `remove(int)` allows atomic removal of multiple elements.
+  * Improvement: `QueueFile` now implements the `Closeable` and `Iterable` interface.
+  * Improvement: Simplified `ObjectQueue` API. `ObjectQueue` now implements the `Closeable` and `Iterable` interface. `ObjectQueue.Listener` has been removed.
+  * New: Iterator API allows iterating queue items and stopping iteration early.
+  * Improvement: New file format that allows QueueFile to grow beyond 4GB. Tape 2 can continue to operate on the v1 format. You can also force the legacy format by using the `forceLegacy` option.
+
+Note: Existing queues are currently not migrated to the newer format. This will be added in a future release.
 
 Version 1.2.3 *(2014-10-07)*
 ----------------------------
