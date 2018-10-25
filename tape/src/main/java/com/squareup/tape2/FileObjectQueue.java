@@ -19,7 +19,7 @@ final class FileObjectQueue<T> extends ObjectQueue<T> {
     this.converter = converter;
   }
 
-  @Override public @Nonnull QueueFile file() {
+  public @Nonnull QueueFile file() {
     return queueFile;
   }
 

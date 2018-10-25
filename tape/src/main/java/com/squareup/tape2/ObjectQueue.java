@@ -25,9 +25,6 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
     return new InMemoryObjectQueue<>();
   }
 
-  /** The underlying {@link QueueFile} backing this queue, or null if it's only in memory. */
-  public abstract @Nullable QueueFile file();
-
   /** Returns the number of entries in the queue. */
   public abstract int size();
 

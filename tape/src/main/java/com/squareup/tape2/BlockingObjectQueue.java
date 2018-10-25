@@ -52,7 +52,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
    * @return a BlockObjectQueue implementation
    */
   public static BlockingObjectQueue<byte[]> create(QueueFile qf) {
-    return create(qf, ByteArrayConverter.INSTANCE);
+    return new BlockingObjectQueue<>(qf);
   }
 
   @Override public boolean add(E element) {
