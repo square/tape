@@ -8,12 +8,21 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-public class BlockingFileQueueTest {
+public class BlockingObjectQueueTest {
 
   @Rule public TemporaryFolder folder = new TemporaryFolder();
   private File file;
@@ -27,12 +36,12 @@ public class BlockingFileQueueTest {
     return new QueueFile.Builder(file).build();
   }
 
-  private BlockingFileQueue newQueue() throws IOException {
-    return new BlockingFileQueue(newQueueFile());
+  private BlockingObjectQueue<byte[]> newQueue() throws IOException {
+    return BlockingObjectQueue.create(newQueueFile());
   }
 
   @Test public void add() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertEquals(0, q.size());
     q.add(new byte[]{1, 2});
     assertArrayEquals(new byte[]{1, 2}, q.peek());
@@ -40,7 +49,7 @@ public class BlockingFileQueueTest {
   }
 
   @Test public void offer() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertEquals(0, q.size());
     q.offer(new byte[]{1, 2});
     assertArrayEquals(new byte[]{1, 2}, q.peek());
@@ -48,7 +57,7 @@ public class BlockingFileQueueTest {
   }
 
   @Test public void put() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertEquals(0, q.size());
     q.put(new byte[]{1, 2});
     assertArrayEquals(new byte[]{1, 2}, q.peek());
@@ -56,7 +65,7 @@ public class BlockingFileQueueTest {
   }
 
   @Test public void offer1() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertEquals(0, q.size());
     q.offer(new byte[]{1, 2}, 1, TimeUnit.SECONDS);
     assertArrayEquals(new byte[]{1, 2}, q.peek());
@@ -64,7 +73,7 @@ public class BlockingFileQueueTest {
   }
 
   @Test public void takeEmpty() throws IOException, InterruptedException {
-    final BlockingFileQueue q = newQueue();
+    final BlockingObjectQueue<byte[]> q = newQueue();
     Thread t = new Thread(new Runnable() {
       @Override public void run() {
         try {
@@ -72,7 +81,7 @@ public class BlockingFileQueueTest {
         } catch (InterruptedException ignored) {
           return;
         }
-        Assert.fail("The take operation should have been interrupted and this fail should not be called!");
+        Assert.fail("The take operation should have been interrupted!");
       }
     });
     t.start();
@@ -81,24 +90,24 @@ public class BlockingFileQueueTest {
   }
 
   @Test public void takeNonEmpty() throws IOException, InterruptedException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     q.put(new byte[]{1, 2});
     assertArrayEquals(new byte[]{1, 2}, q.take());
   }
 
   @Test public void pollEmpty() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertNull(q.poll());
   }
 
   @Test public void pollNonEmpty() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     q.put(new byte[]{1, 2});
     assertArrayEquals(new byte[]{1, 2}, q.poll());
   }
 
   @Test public void remainingCapacity() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertEquals(0, q.size());
     assertEquals(Integer.MAX_VALUE, q.remainingCapacity());
     q.add(new byte[]{});
@@ -107,7 +116,7 @@ public class BlockingFileQueueTest {
   }
 
   @Test public void remove() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertEquals(0, q.size());
     assertTrue(q.add(new byte[]{1}));
     assertEquals(1, q.size());
@@ -120,20 +129,20 @@ public class BlockingFileQueueTest {
   }
 
   @Test public void contains() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertEquals(0, q.size());
     assertTrue(q.add(new byte[]{1}));
     assertEquals(1, q.size());
     assertTrue(q.add(new byte[]{2}));
     assertEquals(2, q.size());
 
-    assertTrue(q.contains(new byte[] {1}));
-    assertTrue(q.contains(new byte[] {2}));
-    assertFalse(q.contains(new byte[] {3}));
+    assertTrue(q.contains(new byte[]{1}));
+    assertTrue(q.contains(new byte[]{2}));
+    assertFalse(q.contains(new byte[]{3}));
   }
 
   @Test public void drainTo() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     List<byte[]> ref = Arrays.asList(new byte[]{1}, new byte[]{2});
     assertTrue(q.addAll(ref));
     assertEquals(ref.size(), q.size());
@@ -146,7 +155,7 @@ public class BlockingFileQueueTest {
   }
 
   @Test public void drainTo1() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     List<byte[]> ref = Arrays.asList(new byte[]{1}, new byte[]{2}, new byte[]{3});
     assertTrue(q.addAll(ref));
     assertEquals(ref.size(), q.size());
@@ -160,7 +169,7 @@ public class BlockingFileQueueTest {
   }
 
   @Test public void drainTo1TooSmall() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     List<byte[]> ref = Arrays.asList(new byte[]{1}, new byte[]{2});
     assertTrue(q.addAll(ref));
     assertEquals(ref.size(), q.size());
@@ -176,14 +185,14 @@ public class BlockingFileQueueTest {
     byte[] o1 = {1};
     byte[] o2 = {2};
 
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertEquals(0, q.size());
     assertTrue(q.add(o1));
     assertEquals(1, q.size());
     assertTrue(q.add(o2));
     assertEquals(2, q.size());
 
-    assertFalse(q.remove(new byte[] {3}));
+    assertFalse(q.remove(new byte[]{3}));
     assertEquals(2, q.size());
     assertTrue(q.remove(o1));
     assertEquals(1, q.size());
@@ -196,7 +205,7 @@ public class BlockingFileQueueTest {
     byte[] o1 = {1};
     byte[] o2 = {2};
 
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertEquals(0, q.size());
     assertTrue(q.add(o1));
     assertEquals(1, q.size());
@@ -208,67 +217,68 @@ public class BlockingFileQueueTest {
 
   @Test(expected = NoSuchElementException.class)
   public void poll1Empty() throws IOException, InterruptedException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     q.poll(1, TimeUnit.SECONDS);
   }
 
   @Test public void poll1NonEmpty() throws IOException, InterruptedException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     q.put(new byte[]{1, 2});
     assertArrayEquals(new byte[]{1, 2}, q.poll(1, TimeUnit.SECONDS));
   }
 
   @Test(expected = NoSuchElementException.class)
   public void elementEmpty() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     q.element();
   }
 
   @Test public void elementNonEmpty() throws IOException {
-    BlockingFileQueue q = newQueue();
-    assertTrue(q.add(new byte[] {1}));
+    BlockingObjectQueue<byte[]> q = newQueue();
+    assertTrue(q.add(new byte[]{1}));
     assertEquals(1, q.size());
-    assertArrayEquals(new byte[] {1}, q.element());
+    assertArrayEquals(new byte[]{1}, q.element());
   }
 
   @Test public void peekEmpty() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertNull(q.peek());
   }
 
   @Test public void peekNonEmpty() throws IOException {
-    BlockingFileQueue q = newQueue();
-    assertTrue(q.add(new byte[] {1}));
+    BlockingObjectQueue<byte[]> q = newQueue();
+    assertTrue(q.add(new byte[]{1}));
     assertEquals(1, q.size());
-    assertArrayEquals(new byte[] {1}, q.peek());
+    assertArrayEquals(new byte[]{1}, q.peek());
   }
 
   @Test(expected = NoSuchElementException.class)
   public void peek1Empty() throws IOException, InterruptedException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     q.peek(1, TimeUnit.SECONDS);
   }
 
   @Test public void peek1NonEmpty() throws IOException, InterruptedException {
-    BlockingFileQueue q = newQueue();
-    assertTrue(q.add(new byte[] {1}));
+    BlockingObjectQueue<byte[]> q = newQueue();
+    assertTrue(q.add(new byte[]{1}));
     assertEquals(1, q.size());
-    assertArrayEquals(new byte[] {1}, q.peek(1, TimeUnit.SECONDS));
+    assertArrayEquals(new byte[]{1}, q.peek(1, TimeUnit.SECONDS));
   }
 
   @Test public void size() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertEquals(0, q.size());
-    assertTrue(q.add(new byte[] {1}));
-    assertEquals(1, q.size());;
-    assertTrue(q.add(new byte[] {2}));
+    assertTrue(q.add(new byte[]{1}));
+    assertEquals(1, q.size());
+
+    assertTrue(q.add(new byte[]{2}));
     assertEquals(2, q.size());
   }
 
   @Test public void isEmpty() throws IOException {
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertTrue(q.isEmpty());
-    assertTrue(q.add(new byte[] {1}));
+    assertTrue(q.add(new byte[]{1}));
     assertFalse(q.isEmpty());
     assertNotNull(q.remove());
     assertTrue(q.isEmpty());
@@ -276,10 +286,8 @@ public class BlockingFileQueueTest {
 
   @Test public void iterator() throws IOException {
     byte[][] ref = {{1}, {2}, {3}};
-    BlockingFileQueue q = newQueue();
-    for (byte[] b : ref) {
-      q.add(b);
-    }
+    BlockingObjectQueue<byte[]> q = newQueue();
+    q.addAll(Arrays.asList(ref));
 
     int i = 0;
     Iterator<byte[]> it = q.iterator();
@@ -292,74 +300,74 @@ public class BlockingFileQueueTest {
 
   @Test public void toArray() throws IOException {
     byte[][] bytes = {{1}, {2}};
-    BlockingFileQueue q = newQueue();
-    assertTrue(q.add(new byte[] {1}));
-    assertTrue(q.add(new byte[] {2}));
+    BlockingObjectQueue<byte[]> q = newQueue();
+    assertTrue(q.add(new byte[]{1}));
+    assertTrue(q.add(new byte[]{2}));
 
     assertArrayEquals(bytes, q.toArray());
   }
 
   @Test public void toArray1() throws IOException {
     byte[][] bytes = {{1}, {2}};
-    BlockingFileQueue q = newQueue();
-    assertTrue(q.add(new byte[] {1}));
-    assertTrue(q.add(new byte[] {2}));
+    BlockingObjectQueue<byte[]> q = newQueue();
+    assertTrue(q.add(new byte[]{1}));
+    assertTrue(q.add(new byte[]{2}));
 
     assertArrayEquals(bytes, q.toArray(new byte[0][]));
   }
 
   @Test public void containsAll() throws IOException {
     List<byte[]> bytes = Arrays.asList(new byte[]{1}, new byte[]{2});
-    BlockingFileQueue q = newQueue();
+    BlockingObjectQueue<byte[]> q = newQueue();
     assertFalse(q.containsAll(bytes));
-    assertTrue(q.add(new byte[] {1}));
+    assertTrue(q.add(new byte[]{1}));
     assertEquals(1, q.size());
     assertFalse(q.containsAll(bytes));
-    assertTrue(q.add(new byte[] {2}));
+    assertTrue(q.add(new byte[]{2}));
     assertEquals(2, q.size());
     assertTrue(q.containsAll(bytes));
-    assertTrue(q.add(new byte[] {3}));
+    assertTrue(q.add(new byte[]{3}));
     assertEquals(3, q.size());
     assertTrue(q.containsAll(bytes));
   }
 
   @Test public void addAll() throws IOException {
-    BlockingFileQueue q = newQueue();
-    assertTrue(q.addAll(Arrays.asList(new byte[] {1}, new byte[] {2})));
-    assertArrayEquals(new byte[] {1}, q.remove());
-    assertArrayEquals(new byte[] {2}, q.remove());
+    BlockingObjectQueue<byte[]> q = newQueue();
+    assertTrue(q.addAll(Arrays.asList(new byte[]{1}, new byte[]{2})));
+    assertArrayEquals(new byte[]{1}, q.remove());
+    assertArrayEquals(new byte[]{2}, q.remove());
     assertTrue(q.isEmpty());
   }
 
   @Test public void removeAll() throws IOException {
-    BlockingFileQueue q = newQueue();
-    assertTrue(q.add(new byte[] {1}));
-    assertTrue(q.add(new byte[] {2}));
-    assertTrue(q.add(new byte[] {3}));
+    BlockingObjectQueue<byte[]> q = newQueue();
+    assertTrue(q.add(new byte[]{1}));
+    assertTrue(q.add(new byte[]{2}));
+    assertTrue(q.add(new byte[]{3}));
 
-    List<byte[]> remove = Arrays.asList(new byte[] {1}, new byte[] {2});
+    List<byte[]> remove = Arrays.asList(new byte[]{1}, new byte[]{2});
     assertTrue(q.removeAll(remove));
-    assertArrayEquals(new byte[] {3}, q.remove());
+    assertArrayEquals(new byte[]{3}, q.remove());
     assertTrue(q.isEmpty());
   }
 
   @Test public void retainAll() throws IOException {
-    BlockingFileQueue q = newQueue();
-    assertTrue(q.add(new byte[] {1}));
-    assertTrue(q.add(new byte[] {2}));
-    assertTrue(q.add(new byte[] {3}));
+    BlockingObjectQueue<byte[]> q = newQueue();
+    assertTrue(q.add(new byte[]{1}));
+    assertTrue(q.add(new byte[]{2}));
+    assertTrue(q.add(new byte[]{3}));
 
-    List<byte[]> retain = Arrays.asList(new byte[] {2}, new byte[] {3});
+    List<byte[]> retain = Arrays.asList(new byte[]{2}, new byte[]{3});
     assertTrue(q.retainAll(retain));
-    assertArrayEquals(new byte[] {2}, q.remove());
-    assertArrayEquals(new byte[] {3}, q.remove());
+    assertArrayEquals(new byte[]{2}, q.remove());
+    assertArrayEquals(new byte[]{3}, q.remove());
     assertTrue(q.isEmpty());
   }
 
   @Test public void clear() throws IOException {
-    BlockingFileQueue q = newQueue();
-    assertTrue(q.add(new byte[] {1}));
-    assertTrue(q.add(new byte[] {2}));
+    BlockingObjectQueue<byte[]> q = newQueue();
+    assertTrue(q.add(new byte[]{1}));
+    assertTrue(q.add(new byte[]{2}));
     assertEquals(2, q.size());
     q.clear();
     assertEquals(0, q.size());

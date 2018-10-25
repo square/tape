@@ -1,10 +1,11 @@
 package com.squareup.tape2;
 
+import java.io.Closeable;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -12,30 +13,52 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * This is a simple and unbounded @{@link BlockingQueue} implementation as a wrapper around a @{@link QueueFile}.
- * Thread safety is implemented using a single lock around all operations to the backing @{@link QueueFile}.
+ * This is a simple and unbounded {@link BlockingQueue} implementation as a wrapper
+ * around a {@link QueueFile}. Thread safety is implemented using a single lock around all
+ * operations to the backing {@link QueueFile}.
+ *
+ * @param <E> the element type
  */
-public class BlockingFileQueue implements BlockingQueue<byte[]> {
+public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
 
   private final Lock lock = new ReentrantLock();
 
   private final Condition nonEmpty = lock.newCondition();
 
-  private final QueueFile queue;
+  private final ObjectQueue<E> queue;
 
-  /**
-   * Creates a new @{@link BlockingQueue} of type {@code byte[]} backed by the given @{@link QueueFile}.
-   *
-   * @param queue the queue file which should not be shared to other places
-   * */
-  public BlockingFileQueue(QueueFile queue) {
+  private BlockingObjectQueue(ObjectQueue<E> queue) {
     this.queue = queue;
   }
 
-  @Override public boolean add(byte[] bytes) {
+  /**
+   * Creates a new {@link BlockingQueue} of type {@code T} backed by the given
+   * {@link ObjectQueue} of type {@code T}.
+   *
+   * @param qf the queue file which should not be shared to other places
+   * @param conv the converter used to convert from and to byte arrays
+   * @param <T> the element type
+   * @return a BlockObjectQueue implementation
+   */
+  public static <T> BlockingObjectQueue<T> create(QueueFile qf, ObjectQueue.Converter<T> conv) {
+    return new BlockingObjectQueue<>(new FileObjectQueue<>(qf, conv));
+  }
+
+  /**
+   * Creates a new {@link BlockingQueue} of type {@code T} backed by the given
+   * {@link ObjectQueue} of type {@code T}.
+   *
+   * @param qf the queue file which should not be shared to other places
+   * @return a BlockObjectQueue implementation
+   */
+  public static BlockingObjectQueue<byte[]> create(QueueFile qf) {
+    return create(qf, ByteArrayConverter.INSTANCE);
+  }
+
+  @Override public boolean add(E element) {
     lock.lock();
     try {
-      queue.add(bytes);
+      queue.add(element);
       nonEmpty.signal();
       return true;
     } catch (IOException e) {
@@ -45,25 +68,25 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  @Override public boolean offer(byte[] bytes) {
-    return add(bytes);
+  @Override public boolean offer(E element) {
+    return add(element);
   }
 
-  @Override public void put(byte[] bytes) {
-    add(bytes);
+  @Override public void put(E element) {
+    add(element);
   }
 
-  @Override public boolean offer(byte[] bytes, long timeout, TimeUnit unit) {
-    return add(bytes);
+  @Override public boolean offer(E element, long timeout, TimeUnit unit) {
+    return add(element);
   }
 
-  @Override public byte[] take() throws InterruptedException {
+  @Override public E take() throws InterruptedException {
     lock.lock();
     try {
       while (queue.isEmpty()) {
         nonEmpty.await();
       }
-      byte[] peek = queue.peek();
+      E peek = queue.peek();
       if (peek == null) {
         throw new IllegalStateException("Queue empty!");
       }
@@ -76,14 +99,14 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  @Override public byte[] poll(long timeout, TimeUnit unit) throws InterruptedException {
+  @Override public E poll(long timeout, TimeUnit unit) throws InterruptedException {
     lock.lock();
     try {
       long timeoutNanos = unit.toNanos(timeout);
       while (queue.isEmpty() && timeoutNanos > 0) {
         timeoutNanos = nonEmpty.awaitNanos(timeoutNanos);
       }
-      byte[] peek = queue.peek();
+      E peek = queue.peek();
       if (peek == null) {
         throw new NoSuchElementException();
       }
@@ -100,23 +123,22 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     return Integer.MAX_VALUE; // as per BlockingQueue javadoc for unbounded queues
   }
 
-  /** The backing @{@link QueueFile} only supports removing the head, so this will only work if head matches. */
+  /**
+   * The underlying {@link QueueFile} only supports removing the head, so this will only work if
+   * head matches.
+   * */
   @Override public boolean remove(Object o) {
     if (o == null) {
       return false;
     }
-    if (o.getClass() != byte[].class && o.getClass() != Byte[].class) {
-      return false;
-    }
-    byte[] remove = (byte[])o;
     lock.lock();
     try {
       if (queue.isEmpty()) {
         return false;
       }
-      Iterator<byte[]> it = queue.iterator();
+      Iterator<E> it = queue.iterator();
       while (it.hasNext()) {
-        if (Arrays.equals(it.next(), remove)) {
+        if (Objects.deepEquals(it.next(), o)) {
           it.remove();
           return true;
         }
@@ -128,17 +150,10 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
   }
 
   @Override public boolean contains(Object o) {
-    if (o == null) {
-      return false;
-    }
-    if (o.getClass() != byte[].class && o.getClass() != Byte[].class) {
-      return false;
-    }
-    byte[] check = (byte[])o;
     lock.lock();
     try {
-      for (byte[] entry : queue) {
-        if (Arrays.equals(entry, check)) {
+      for (E entry : queue) {
+        if (Objects.deepEquals(entry, o)) {
           return true;
         }
       }
@@ -148,11 +163,11 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  @Override public int drainTo(Collection<? super byte[]> c) {
+  @Override public int drainTo(Collection<? super E> c) {
     lock.lock();
     try {
       int size = queue.size();
-      Iterator<byte[]> it = queue.iterator();
+      Iterator<E> it = queue.iterator();
       while (it.hasNext()) {
         c.add(it.next());
         it.remove();
@@ -163,13 +178,13 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  @Override public int drainTo(Collection<? super byte[]> c, int maxElements) {
+  @Override public int drainTo(Collection<? super E> c, int maxElements) {
     if (maxElements == 0) {
       return 0;
     }
     lock.lock();
     try {
-      Iterator<byte[]> it = queue.iterator();
+      Iterator<E> it = queue.iterator();
       int i = 0;
       while (it.hasNext() && i < maxElements) {
         c.add(it.next());
@@ -182,13 +197,13 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  @Override public byte[] remove() {
+  @Override public E remove() {
     lock.lock();
     try {
       if (queue.isEmpty()) {
         throw new NoSuchElementException();
       }
-      byte[] peek = queue.peek();
+      E peek = queue.peek();
       queue.remove();
       return peek;
     } catch (IOException e) {
@@ -198,13 +213,13 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  @Override public byte[] poll() {
+  @Override public E poll() {
     lock.lock();
     try {
       if (queue.isEmpty()) {
         return null;
       }
-      byte[] peek = queue.peek();
+      E peek = queue.peek();
       queue.remove();
       return peek;
     } catch (IOException e) {
@@ -214,7 +229,7 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  @Override public byte[] element() {
+  @Override public E element() {
     lock.lock();
     try {
       if (queue.isEmpty()) {
@@ -228,7 +243,7 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  @Override public byte[] peek() {
+  @Override public E peek() {
     lock.lock();
     try {
       if (queue.isEmpty()) {
@@ -243,8 +258,8 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
   }
 
   /**
-   * This overload is an addition to the @{@link BlockingQueue} interface similar to the {@link #poll(long, TimeUnit)}
-   * method, a blocking peek operation with a timeout.
+   * This overload is an addition to the {@link BlockingQueue} interface similar to the
+   * {@link #poll(long, TimeUnit)} method, a blocking peek operation with a timeout.
    *
    * @param timeout the timeout
    * @param unit the time unit of the timeout
@@ -252,14 +267,14 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
    * @see #peek() for more information
    * @throws InterruptedException if interrupted while waiting
    */
-  public byte[] peek(long timeout, TimeUnit unit) throws InterruptedException {
+  public E peek(long timeout, TimeUnit unit) throws InterruptedException {
     lock.lock();
     try {
       long timeoutNanos = unit.toNanos(timeout);
       while (queue.isEmpty() && timeoutNanos > 0) {
         timeoutNanos = nonEmpty.awaitNanos(timeoutNanos);
       }
-      byte[] peek = queue.peek();
+      E peek = queue.peek();
       if (peek == null) {
         throw new NoSuchElementException();
       }
@@ -289,7 +304,7 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  @Override public Iterator<byte[]> iterator() {
+  @Override public Iterator<E> iterator() {
     lock.lock();
     try {
       return queue.iterator();
@@ -303,7 +318,7 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     try {
       Object[] out = new Object[queue.size()];
       int i = 0;
-      for (byte[] e : queue) {
+      for (E e : queue) {
         out[i++] = e;
       }
       return out;
@@ -330,13 +345,13 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  @Override public boolean addAll(Collection<? extends byte[]> c) {
+  @Override public boolean addAll(Collection<? extends E> c) {
     if (c.isEmpty()) {
       return false;
     }
     lock.lock();
     try {
-      for (byte[] e : c) {
+      for (E e : c) {
         queue.add(e);
       }
       nonEmpty.signal();
@@ -348,7 +363,10 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  /** The backing @{@link QueueFile} only supports removing the head, so this will only work if head matches. */
+  /**
+   * The underlying {@link QueueFile} only supports removing the head, so this will only work if
+   * head matches.
+   * */
   @Override public boolean removeAll(Collection<?> c) {
     lock.lock();
     boolean changed = false;
@@ -364,17 +382,19 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
   }
 
-  private static boolean arrayContained(Collection<?> haystack, byte[] needle) {
+  private static boolean contains(Iterable<?> haystack, Object needle) {
     for (Object o : haystack) {
-      byte[] byteArray = (byte[])o;
-      if (Arrays.equals(byteArray, needle)) {
+      if (Objects.deepEquals(o, needle)) {
         return true;
       }
     }
     return false;
   }
 
-  /** The backing @{@link QueueFile} only supports removing the head, so this will only work if head matches. */
+  /**
+   * The underlying {@link QueueFile} only supports removing the head, so this will only work if
+   * head matches.
+   * */
   @Override public boolean retainAll(Collection<?> c) {
     lock.lock();
     if (c.isEmpty()) {
@@ -387,9 +407,9 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     }
     try {
       boolean changed = false;
-      Iterator<byte[]> it = queue.iterator();
+      Iterator<E> it = queue.iterator();
       while (it.hasNext()) {
-        if (!arrayContained(c, it.next())) {
+        if (!contains(c, it.next())) {
           it.remove();
           changed = true;
         }
@@ -409,5 +429,9 @@ public class BlockingFileQueue implements BlockingQueue<byte[]> {
     } finally {
       lock.unlock();
     }
+  }
+
+  @Override public void close() throws IOException {
+    queue.close();
   }
 }
