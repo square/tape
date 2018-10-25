@@ -62,7 +62,8 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       nonEmpty.signal();
       return true;
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      QueueFile.<Error>getSneakyThrowable(e);
+      return false;
     } finally {
       lock.unlock();
     }
@@ -88,12 +89,14 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       }
       E peek = queue.peek();
       if (peek == null) {
+        // this won't happen unless the backing queue has been shared.
         throw new IllegalStateException("Queue empty!");
       }
       queue.remove();
       return peek;
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      QueueFile.<Error>getSneakyThrowable(e);
+      return null;
     } finally {
       lock.unlock();
     }
@@ -113,7 +116,8 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       queue.remove();
       return peek;
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      QueueFile.<Error>getSneakyThrowable(e);
+      return null;
     } finally {
       lock.unlock();
     }
@@ -207,7 +211,8 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       queue.remove();
       return peek;
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      QueueFile.<Error>getSneakyThrowable(e);
+      return null;
     } finally {
       lock.unlock();
     }
@@ -223,7 +228,8 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       queue.remove();
       return peek;
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      QueueFile.<Error>getSneakyThrowable(e);
+      return null;
     } finally {
       lock.unlock();
     }
@@ -237,7 +243,8 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       }
       return queue.peek();
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      QueueFile.<Error>getSneakyThrowable(e);
+      return null;
     } finally {
       lock.unlock();
     }
@@ -251,7 +258,8 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       }
       return queue.peek();
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      QueueFile.<Error>getSneakyThrowable(e);
+      return null;
     } finally {
       lock.unlock();
     }
@@ -280,7 +288,8 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       }
       return peek;
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      QueueFile.<Error>getSneakyThrowable(e);
+      return null;
     } finally {
       lock.unlock();
     }
@@ -357,7 +366,8 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       nonEmpty.signal();
       return true;
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      QueueFile.<Error>getSneakyThrowable(e);
+      return false;
     } finally {
       lock.unlock();
     }
@@ -425,7 +435,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
     try {
       queue.clear();
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      QueueFile.<Error>getSneakyThrowable(e);
     } finally {
       lock.unlock();
     }
