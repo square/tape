@@ -423,11 +423,6 @@ public final class QueueFile extends ObjectQueue<byte[]> {
     return fileLength - usedBytes();
   }
 
-  /** Returns true if this queue contains no entries. */
-  @Override public boolean isEmpty() {
-    return elementCount == 0;
-  }
-
   /**
    * If necessary, expands the file to accommodate an additional element of the given length.
    *
@@ -583,15 +578,6 @@ public final class QueueFile extends ObjectQueue<byte[]> {
   /** Returns the number of elements in this queue. */
   @Override public int size() {
     return elementCount;
-  }
-
-  /**
-   * Removes the eldest element.
-   *
-   * @throws NoSuchElementException if the queue is empty
-   */
-  @Override public void remove() throws IOException {
-    remove(1);
   }
 
   /**

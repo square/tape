@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
 
 /** A queue of objects. */
@@ -62,7 +63,11 @@ public abstract class ObjectQueue<T> implements Iterable<T>, Closeable {
     return peek(size());
   }
 
-  /** Removes the head of the queue. */
+  /**
+   * Removes the eldest element (the head) of the queue.
+   *
+   * @throws NoSuchElementException if the queue is empty
+   */
   public void remove() throws IOException {
     remove(1);
   }

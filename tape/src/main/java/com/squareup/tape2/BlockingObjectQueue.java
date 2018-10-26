@@ -94,7 +94,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       E peek = queue.peek();
       if (peek == null) {
         // this won't happen unless the backing queue has been shared.
-        throw new IllegalStateException("backing queue empty");
+        throw new NoSuchElementException();
       }
       queue.remove();
       return peek;
@@ -115,6 +115,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       }
       E peek = queue.peek();
       if (peek == null) {
+        // this won't happen unless the backing queue has been shared.
         throw new NoSuchElementException();
       }
       queue.remove();
@@ -285,6 +286,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       }
       E peek = queue.peek();
       if (peek == null) {
+        // this won't happen unless the backing queue has been shared.
         throw new NoSuchElementException();
       }
       return peek;
