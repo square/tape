@@ -27,8 +27,12 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
 
   private final ObjectQueue<E> queue;
 
-  private BlockingObjectQueue(ObjectQueue<E> queue) {
+  public BlockingObjectQueue(ObjectQueue<E> queue) {
     this.queue = queue;
+  }
+
+  public ObjectQueue<E> queue() {
+    return queue;
   }
 
   /**
@@ -90,7 +94,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       E peek = queue.peek();
       if (peek == null) {
         // this won't happen unless the backing queue has been shared.
-        throw new IllegalStateException("Queue empty!");
+        throw new IllegalStateException("backing queue empty");
       }
       queue.remove();
       return peek;
@@ -132,9 +136,6 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
    * head matches.
    * */
   @Override public boolean remove(Object o) {
-    if (o == null) {
-      return false;
-    }
     lock.lock();
     try {
       if (queue.isEmpty()) {

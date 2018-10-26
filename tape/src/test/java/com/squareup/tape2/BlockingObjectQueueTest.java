@@ -6,10 +6,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -126,6 +129,14 @@ public class BlockingObjectQueueTest {
     assertEquals(1, q.size());
     assertArrayEquals(new byte[]{2}, q.remove());
     assertEquals(0, q.size());
+
+    assertFalse(q.remove(null));
+  }
+
+  @Test(expected = NoSuchElementException.class)
+  public void removeEmpty() throws IOException {
+    BlockingObjectQueue<byte[]> q = newQueue();
+    q.remove();
   }
 
   @Test public void contains() throws IOException {
@@ -166,6 +177,8 @@ public class BlockingObjectQueueTest {
     assertEquals(drain, out.size());
     assertEquals(1, q.size());
     assertArrayEquals(ref.subList(0, drain).toArray(), out.toArray());
+
+    assertEquals(0, q.drainTo(out, 0));
   }
 
   @Test public void drainTo1TooSmall() throws IOException {
@@ -337,6 +350,7 @@ public class BlockingObjectQueueTest {
     assertArrayEquals(new byte[]{1}, q.remove());
     assertArrayEquals(new byte[]{2}, q.remove());
     assertTrue(q.isEmpty());
+    assertFalse(q.addAll(Collections.<byte[]>emptyList()));
   }
 
   @Test public void removeAll() throws IOException {
@@ -364,6 +378,20 @@ public class BlockingObjectQueueTest {
     assertTrue(q.isEmpty());
   }
 
+  @Test public void retainAllListEmpty() throws IOException {
+    List<byte[]> retainNone = Collections.emptyList();
+
+    BlockingObjectQueue<byte[]> empty = newQueue();
+    assertFalse(empty.retainAll(retainNone));
+
+    BlockingObjectQueue<byte[]> nonEmpty = newQueue();
+    assertTrue(nonEmpty.add(new byte[]{1}));
+    assertTrue(nonEmpty.add(new byte[]{2}));
+    assertTrue(nonEmpty.add(new byte[]{3}));
+    assertTrue(nonEmpty.retainAll(retainNone));
+    assertTrue(nonEmpty.isEmpty());
+  }
+
   @Test public void clear() throws IOException {
     BlockingObjectQueue<byte[]> q = newQueue();
     assertTrue(q.add(new byte[]{1}));
@@ -371,5 +399,70 @@ public class BlockingObjectQueueTest {
     assertEquals(2, q.size());
     q.clear();
     assertEquals(0, q.size());
+  }
+
+  @Test public void create() throws IOException {
+    QueueFile qf = newQueueFile();
+    BlockingObjectQueue<Object> q = BlockingObjectQueue.create(qf, new NoOpConverter());
+    assertTrue(q.queue() instanceof FileObjectQueue);
+  }
+
+  @Test public void createByteArray() throws IOException {
+    QueueFile qf = newQueueFile();
+    BlockingObjectQueue<byte[]> q = BlockingObjectQueue.create(qf);
+    assertTrue(q.queue() instanceof QueueFile);
+  }
+
+  @Test public void close() throws IOException {
+    BlockingObjectQueue<byte[]> q = newQueue();
+    assertTrue(q.queue() instanceof QueueFile);
+    QueueFile qf = (QueueFile) q.queue();
+    q.close();
+    assertTrue(qf.closed);
+  }
+
+  @Test(expected = IOException.class)
+  public void ioException() {
+    BlockingObjectQueue<Object> q = new BlockingObjectQueue<>(new BrokenQueueFile());
+    q.add(null);
+    q.remove();
+  }
+
+  private static final class BrokenQueueFile extends ObjectQueue<Object> {
+    public int size = 0;
+
+    @Override public int size() {
+      return size;
+    }
+
+    @Override public void add(Object entry) throws IOException {
+      throw new IOException("test");
+    }
+
+    @Nullable @Override public Object peek() throws IOException {
+      throw new IOException("test");
+    }
+
+    @Override public void remove(int n) throws IOException {
+      throw new IOException("test");
+    }
+
+    @Override public void close() throws IOException {
+      throw new IOException("test");
+    }
+
+    @Override public Iterator<Object> iterator() {
+      return null;
+    }
+  }
+
+  private static final class NoOpConverter implements ObjectQueue.Converter<Object> {
+    @Override public Object from(byte[] source) {
+      return null;
+    }
+
+    @Override public void toStream(Object value, OutputStream sink) {
+
+    }
   }
 }
