@@ -25,10 +25,6 @@ final class InMemoryObjectQueue<T> extends ObjectQueue<T> {
     entries = new ArrayDeque<>();
   }
 
-  @Override public @Nullable QueueFile file() {
-    return null;
-  }
-
   @Override public void add(T entry) {
     if (closed) throw new IllegalStateException("closed");
     modCount++;

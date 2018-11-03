@@ -15,7 +15,6 @@
  */
 package com.squareup.tape2;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -52,7 +51,7 @@ import static java.lang.Math.min;
  *
  * @author Bob Lee (bob@squareup.com)
  */
-public final class QueueFile implements Closeable, Iterable<byte[]> {
+public final class QueueFile extends ObjectQueue<byte[]> {
   /** Leading bit set to 1 indicating a versioned header and the version of 1. */
   private static final int VERSIONED_HEADER = 0x80000001;
 
@@ -358,7 +357,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    *
    * @param data to copy bytes from
    */
-  public void add(byte[] data) throws IOException {
+  @Override public void add(byte[] data) throws IOException {
     add(data, 0, data.length);
   }
 
@@ -424,11 +423,6 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     return fileLength - usedBytes();
   }
 
-  /** Returns true if this queue contains no entries. */
-  public boolean isEmpty() {
-    return elementCount == 0;
-  }
-
   /**
    * If necessary, expands the file to accommodate an additional element of the given length.
    *
@@ -488,7 +482,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Reads the eldest element. Returns null if the queue is empty. */
-  public @Nullable byte[] peek() throws IOException {
+  @Override public @Nullable byte[] peek() throws IOException {
     if (closed) throw new IllegalStateException("closed");
     if (isEmpty()) return null;
     int length = first.length;
@@ -582,17 +576,8 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Returns the number of elements in this queue. */
-  public int size() {
+  @Override public int size() {
     return elementCount;
-  }
-
-  /**
-   * Removes the eldest element.
-   *
-   * @throws NoSuchElementException if the queue is empty
-   */
-  public void remove() throws IOException {
-    remove(1);
   }
 
   /**
@@ -600,7 +585,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
    *
    * @throws NoSuchElementException if the queue is empty
    */
-  public void remove(int n) throws IOException {
+  @Override public void remove(int n) throws IOException {
     if (n < 0) {
       throw new IllegalArgumentException("Cannot remove negative (" + n + ") number of elements.");
     }
@@ -644,7 +629,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
   }
 
   /** Clears this queue. Truncates the file to the initial size. */
-  public void clear() throws IOException {
+  @Override public void clear() throws IOException {
     if (closed) throw new IllegalStateException("closed");
 
     // Commit the header.
