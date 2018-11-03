@@ -3,6 +3,7 @@ package com.squareup.tape2;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -14,12 +15,12 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * This is a simple and unbounded {@link BlockingQueue} implementation as a wrapper
- * around a {@link QueueFile}. Thread safety is implemented using a single lock around all
- * operations to the backing {@link QueueFile}.
+ * around a {@link ObjectQueue}. Thread safety is implemented using a single lock around all
+ * operations to the backing {@link ObjectQueue}.
  *
  * @param <E> the element type
  */
-public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
+public final class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
 
   private final Lock lock = new ReentrantLock();
 
@@ -94,7 +95,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       E peek = queue.peek();
       if (peek == null) {
         // this won't happen unless the backing queue has been shared.
-        throw new NoSuchElementException();
+        throw new ConcurrentModificationException();
       }
       queue.remove();
       return peek;
@@ -115,7 +116,6 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       }
       E peek = queue.peek();
       if (peek == null) {
-        // this won't happen unless the backing queue has been shared.
         throw new NoSuchElementException();
       }
       queue.remove();
@@ -133,7 +133,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
   }
 
   /**
-   * The underlying {@link QueueFile} only supports removing the head, so this will only work if
+   * The underlying {@link ObjectQueue} only supports removing the head, so this will only work if
    * head matches.
    * */
   @Override public boolean remove(Object o) {
@@ -172,13 +172,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
   @Override public int drainTo(Collection<? super E> c) {
     lock.lock();
     try {
-      int size = queue.size();
-      Iterator<E> it = queue.iterator();
-      while (it.hasNext()) {
-        c.add(it.next());
-        it.remove();
-      }
-      return size;
+      return drainTo(c, size());
     } finally {
       lock.unlock();
     }
@@ -255,9 +249,6 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
   @Override public E peek() {
     lock.lock();
     try {
-      if (queue.isEmpty()) {
-        return null;
-      }
       return queue.peek();
     } catch (IOException e) {
       QueueFile.<Error>getSneakyThrowable(e);
@@ -286,7 +277,6 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
       }
       E peek = queue.peek();
       if (peek == null) {
-        // this won't happen unless the backing queue has been shared.
         throw new NoSuchElementException();
       }
       return peek;
@@ -317,12 +307,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
   }
 
   @Override public Iterator<E> iterator() {
-    lock.lock();
-    try {
-      return queue.iterator();
-    } finally {
-      lock.unlock();
-    }
+    return queue.iterator();
   }
 
   @Override public Object[] toArray() {
@@ -377,7 +362,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
   }
 
   /**
-   * The underlying {@link QueueFile} only supports removing the head, so this will only work if
+   * The underlying {@link ObjectQueue} only supports removing the head, so this will only work if
    * head matches.
    * */
   @Override public boolean removeAll(Collection<?> c) {
@@ -405,7 +390,7 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
   }
 
   /**
-   * The underlying {@link QueueFile} only supports removing the head, so this will only work if
+   * The underlying {@link ObjectQueue} only supports removing the head, so this will only work if
    * head matches.
    * */
   @Override public boolean retainAll(Collection<?> c) {
@@ -445,6 +430,11 @@ public class BlockingObjectQueue<E> implements BlockingQueue<E>, Closeable {
   }
 
   @Override public void close() throws IOException {
-    queue.close();
+    lock.lock();
+    try {
+      queue.close();
+    } finally {
+      lock.unlock();
+    }
   }
 }

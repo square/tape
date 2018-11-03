@@ -234,6 +234,24 @@ public class BlockingObjectQueueTest {
     q.poll(1, TimeUnit.SECONDS);
   }
 
+  @Test(timeout = 1000)
+  public void poll1EmptyAndAdd() throws IOException, InterruptedException {
+    final BlockingObjectQueue<byte[]> q = newQueue();
+    Thread t = new Thread(new Runnable() {
+      @Override public void run() {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+        q.add(new byte[]{1});
+      }
+    });
+    t.start();
+    assertArrayEquals(new byte[] {1}, q.poll(1, TimeUnit.MINUTES));
+    t.join();
+  }
+
   @Test public void poll1NonEmpty() throws IOException, InterruptedException {
     BlockingObjectQueue<byte[]> q = newQueue();
     q.put(new byte[]{1, 2});
