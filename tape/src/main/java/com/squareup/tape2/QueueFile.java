@@ -133,7 +133,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
 
   @Private boolean closed;
 
-  @Private static RandomAccessFile initializeFromFile(File file, boolean forceLegacy)
+  @Private static void initializeFromFile(File file, boolean forceLegacy)
       throws IOException {
     if (!file.exists()) {
       // Use a temp file so we don't leave a partially-initialized file.
@@ -157,13 +157,16 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
         throw new IOException("Rename failed!");
       }
     }
-
-    return open(file);
   }
 
   /** Opens a random access file that writes synchronously. */
   private static RandomAccessFile open(File file) throws FileNotFoundException {
     return new RandomAccessFile(file, "rwd");
+  }
+
+  /** Opens a random access file that writes asynchronously. */
+  private static RandomAccessFile openAsynchronously(File file) throws FileNotFoundException {
+    return new RandomAccessFile(file, "rw");
   }
 
   QueueFile(File file, RandomAccessFile raf, boolean zero, boolean forceLegacy) throws IOException {
@@ -723,6 +726,7 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     final File file;
     boolean zero = true;
     boolean forceLegacy = false;
+    boolean writeSynchronously = true;
 
     /** Start constructing a new queue backed by the given file. */
     public Builder(File file) {
@@ -745,11 +749,20 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     }
 
     /**
+     * When false, writing to file is asynchronous
+     */
+    public Builder writeSynchronously(boolean writeSynchronously) {
+      this.writeSynchronously = writeSynchronously;
+      return this;
+    }
+
+    /**
      * Constructs a new queue backed by the given builder. Only one instance should access a given
      * file at a time.
      */
     public QueueFile build() throws IOException {
-      RandomAccessFile raf = initializeFromFile(file, forceLegacy);
+      initializeFromFile(file, forceLegacy);
+      RandomAccessFile raf = writeSynchronously ? open(file) : openAsynchronously(file);
       QueueFile qf = null;
       try {
         qf = new QueueFile(file, raf, zero, forceLegacy);
