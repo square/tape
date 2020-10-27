@@ -8,6 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,6 +20,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import static com.squareup.tape.QueueFile.HEADER_LENGTH;
+import static com.squareup.tape.QueueFile.writeInts;
 import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.Fail.fail;
 
@@ -638,6 +640,185 @@ import static org.fest.assertions.Fail.fail;
 
     assertThat(queueFile.peek()).isEqualTo(a);
     assertThat(iteration.get()).isEqualTo(1);
+  }
+
+  @Test public void testCheckQueueIntegrityDoesNotThrow() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+
+    final byte[] a = { 1, 2 };
+    queueFile.add(a);
+    final byte[] b = { 3, 4, 5 };
+    queueFile.add(b);
+
+    queueFile.checkQueueIntegrity();
+  }
+
+  @Test public void testCheckQueueIntegrityOnEmptyDoesNotThrow() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+
+    queueFile.checkQueueIntegrity();
+  }
+
+  @Test public void testCheckQueueIntegrityOnWrongLength() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    byte[] headerBuffer = new byte[16];
+    writeInts(headerBuffer, QueueFile.INITIAL_LENGTH * 2, 0, 0, 0);
+    queueFile.raf.seek(0);
+    queueFile.raf.write(headerBuffer);
+
+    try {
+      queueFile.checkQueueIntegrity();
+      fail("Should have complained about bad file length!");
+    } catch (IOException ex) {
+      assertThat(ex).hasMessage("File is truncated. Expected length: "
+          + (QueueFile.INITIAL_LENGTH * 2)
+          + ", Actual length: "
+          + queueFile.raf.length());
+    }
+  }
+
+  @Test public void testCheckQueueIntegrityOnCorruptedElement() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+
+    // Element a is 4 + 2 bytes = 6 bytes.
+    final byte[] a = { 1, 2 };
+    queueFile.add(a);
+
+    // Element b is 4 + 3 bytes = 7 bytes.
+    final byte[] b = { 3, 4, 5 };
+    queueFile.add(b);
+
+    // Element c is 4 + 3 bytes = 7 bytes.
+    final byte[] c = { 6, 7, 8 };
+    queueFile.add(c);
+
+    final int positionOfElementC = QueueFile.HEADER_LENGTH + Element.HEADER_LENGTH * 2 + 2 + 3;
+
+    // Leftover space would be INITIAL_LENGTH - HEADER_LENGTH - 25 bytes.
+    // We want it to slightly wrap.
+    final int corruptLengthWrap = QueueFile.INITIAL_LENGTH - QueueFile.HEADER_LENGTH -
+        positionOfElementC + 2;
+    // Let's wrap but miss-align.
+    final byte[] intBuffer = new byte[4];
+    QueueFile.writeInt(intBuffer, 0, corruptLengthWrap);
+    queueFile.raf.write(intBuffer);
+
+    // corrupt the 3rd element's length.
+    queueFile.raf.seek(positionOfElementC);
+    queueFile.raf.write(intBuffer);
+
+    try {
+      queueFile.checkQueueIntegrity();
+      fail("Should have complained about wrong element lengths.");
+    } catch (IOException ex) {
+      assertThat(ex).hasMessage("Queue corruption: last (2) Element has actual position of 4077"
+          + " in file, but Queue header reports it should have " + positionOfElementC + ".");
+    }
+  }
+
+  @Test public void testCheckQueueIntegrityOn2xLongCorruptedElement() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+
+    // Element a is 4 + 2 bytes = 6 bytes.
+    final byte[] a = { 1, 2 };
+    queueFile.add(a);
+
+    // Element b is 4 + 3 bytes = 7 bytes.
+    final byte[] b = { 3, 4, 5 };
+    queueFile.add(b);
+
+    // corrupt the 2nd element's length.
+    final int positionOfElementB = QueueFile.HEADER_LENGTH + Element.HEADER_LENGTH + 2;
+    queueFile.raf.seek(positionOfElementB);
+    int doubleFileSize = (int)queueFile.raf.length() * 2;
+    final byte[] intBuffer = new byte[4];
+    QueueFile.writeInt(intBuffer, 0, doubleFileSize);
+    queueFile.raf.write(intBuffer);
+
+    try {
+      queueFile.checkQueueIntegrity();
+      fail("Should have complained about wrong element lengths.");
+    } catch (IOException ex) {
+      assertThat(ex).hasMessage("Queue corruption: Element 1 has length: "
+          + doubleFileSize + " with cumulative element length of: 8218 in a file of length: "
+          + QueueFile.INITIAL_LENGTH + ".");
+    }
+  }
+
+  @Test public void testCheckQueueIntegrityOnMultipleCorruptedElements() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+
+    // 4 + 2 bytes = 6 bytes.
+    final byte[] first = { 1, 2 };
+    queueFile.add(first);
+
+    final byte[] intBuffer = new byte[4];
+    QueueFile.writeInt(intBuffer, 0, QueueFile.INITIAL_LENGTH / 4);
+
+    final byte[] filler1 = { 1, 2, 3 };
+    queueFile.add(filler1);
+
+    final byte[] filler2 = { 1, 2 };
+    queueFile.add(filler2);
+
+    final byte[] filler3 = { 1, 2 };
+    queueFile.add(filler3);
+
+    // 4 + 3 bytes = 7 bytes.
+    final byte[] last = { 3, 4, 5 };
+    queueFile.add(last);
+
+    int position = QueueFile.HEADER_LENGTH + Element.HEADER_LENGTH + 2;
+
+    // Position of filler1.
+    queueFile.raf.seek(position);
+    queueFile.raf.write(intBuffer);
+
+    position += Element.HEADER_LENGTH + 3;
+
+    // Supposed position of filler2.
+    queueFile.raf.seek(position);
+    queueFile.raf.write(intBuffer);
+
+    position += Element.HEADER_LENGTH + 2;
+
+    // Supposed position of filler3.
+    queueFile.raf.seek(position);
+    queueFile.raf.write(intBuffer);
+
+    try {
+      queueFile.checkQueueIntegrity();
+      fail("Should have complained about wrong element lengths.");
+    } catch (IOException ex) {
+      assertThat(ex).hasMessage("Queue corruption: last (4) Element has actual position of 1058 in"
+          + " file, but Queue header reports it should have 41.");
+    }
+  }
+
+  @Test public void testCheckQueueIntegrityNoFalsePositivesOnWrap() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+
+    int elementsToFill = QueueFile.INITIAL_LENGTH / 8;
+    int totalBytesToFill = QueueFile.INITIAL_LENGTH - QueueFile.HEADER_LENGTH;
+    int bytesPerElement = totalBytesToFill / elementsToFill - Element.HEADER_LENGTH;
+
+    byte[] element = new byte[bytesPerElement];
+    Arrays.fill(element, (byte)1);
+
+    for (int i = 0; i < elementsToFill - 1; i++) {
+      queueFile.add(element);
+    }
+
+    // One space left, now let's remove to get some wrap.
+    queueFile.remove();
+
+    // Double size element wraps the file without needing to resize.
+    final byte[] doubleElement = new byte[bytesPerElement*2];
+    Arrays.fill(doubleElement, (byte)1);
+    queueFile.add(doubleElement);
+
+    // Should not throw.
+    queueFile.checkQueueIntegrity();
   }
 
   /**

@@ -43,4 +43,8 @@ public class FileObjectQueueTest {
     List<String> peek = queue.peek(2);
     assertThat(peek).containsExactly("one", "two");
   }
+
+  @Test public void checkForIntegritySanityCheckDoesNotThrow() throws IOException {
+    queue.checkQueueIntegrity();
+  }
 }

@@ -110,6 +110,15 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     }
   }
 
+  /**
+   * Checks the queue for inconsistencies in element lengths.
+   *
+   * @throws IOException for the problem causing corruption.
+   */
+  public final void checkQueueIntegrity() throws IOException {
+      queueFile.checkQueueIntegrity();
+  }
+
   @Override public void setListener(final Listener<T> listener) {
     if (listener != null) {
       try {

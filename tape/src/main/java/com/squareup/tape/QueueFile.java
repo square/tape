@@ -55,7 +55,7 @@ public class QueueFile {
   private static final Logger LOGGER = Logger.getLogger(QueueFile.class.getName());
 
   /** Initial file size in bytes. */
-  private static final int INITIAL_LENGTH = 4096; // one file system block
+  static final int INITIAL_LENGTH = 4096; // one file system block
 
   /** A block of nothing to write over old data. */
   private static final byte[] ZEROES = new byte[INITIAL_LENGTH];
@@ -127,7 +127,7 @@ public class QueueFile {
    * Stores int in buffer. The behavior is equivalent to calling {@link
    * java.io.RandomAccessFile#writeInt}.
    */
-  private static void writeInt(byte[] buffer, int offset, int value) {
+  static void writeInt(byte[] buffer, int offset, int value) {
     buffer[offset] = (byte) (value >> 24);
     buffer[offset + 1] = (byte) (value >> 16);
     buffer[offset + 2] = (byte) (value >> 8);
@@ -138,7 +138,7 @@ public class QueueFile {
    * Stores int values in buffer. The behavior is equivalent to calling {@link
    * java.io.RandomAccessFile#writeInt} for each value.
    */
-  private static void writeInts(byte[] buffer, int... values) {
+  static void writeInts(byte[] buffer, int... values) {
     int offset = 0;
     for (int value : values) {
       writeInt(buffer, offset, value);
@@ -169,6 +169,13 @@ public class QueueFile {
     int lastOffset = readInt(buffer, 12);
     first = readElement(firstOffset);
     last = readElement(lastOffset);
+  }
+
+  /** Reads the header without any file side effects. */
+  private void readHeaderWithoutMovingFilePointer() throws IOException {
+    final long currentFilePointer = raf.getFilePointer();
+    readHeader();
+    raf.seek(currentFilePointer);
   }
 
   /**
@@ -459,6 +466,40 @@ public class QueueFile {
       boolean shouldContinue = reader.read(new ElementInputStream(current), current.length);
       if (!shouldContinue) break;
       position = wrapPosition(current.position + Element.HEADER_LENGTH + current.length);
+    }
+  }
+
+  /**
+   * First reads header to update element counts and file length, then scans each element in the
+   * queue for its length. Will check that none of these lengths are greater than the file size and
+   * that when we reach the last element we are at the position of the last element as recorded in
+   * the header.
+   *
+   * @throws IOException Detailing the corruption identified while scanning.
+   */
+  public synchronized void checkQueueIntegrity() throws IOException {
+    // Read header to update all our counts.
+    readHeaderWithoutMovingFilePointer();
+    int position = first.position;
+    int totalSize = HEADER_LENGTH;
+    for (int i = 0; i < elementCount; i++) {
+      if (i == elementCount - 1 && position != last.position) {
+        throw new IOException("Queue corruption: last (" + i + ") Element has actual position of "
+            + position + " in file, but Queue header reports it should have " + last.position + ".");
+      }
+      Element current = readElement(position);
+      totalSize += current.length + Element.HEADER_LENGTH;
+      if (current.length > (fileLength - HEADER_LENGTH)) {
+        // Even after wrapping, this length is just too long for our file. It is corrupted.
+        throw new IOException("Queue corruption: Element " + i + " has length: " + current.length
+            + " with cumulative element length of: " + totalSize + " in a file of "
+            + "length: " + fileLength + ".");
+      }
+      position = wrapPosition(current.position + Element.HEADER_LENGTH + current.length);
+    }
+    if (totalSize > fileLength) {
+      throw new IOException("Queue corruption: Total element reported size is: " + totalSize
+          + " in a file of size: " + fileLength + '.');
     }
   }
 
