@@ -1,6 +1,11 @@
 Change Log
 ==========
 
+Version 1.2.4-41c3b39 *(2020-10-28)*
+----------------------------
+
+ * `checkQueueIntegrity()` method on `FileObjectQueue` and `QueueFile`
+
 Version 1.2.3 *(2014-10-07)*
 ----------------------------
 
