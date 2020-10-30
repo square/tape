@@ -57,11 +57,16 @@ public class QueueFile {
   /** Initial file size in bytes. */
   static final int INITIAL_LENGTH = 4096; // one file system block
 
+  /** Max element size in bytes. */
+  private static final int MAX_ELEMENT_SIZE = Integer.MAX_VALUE / 4;
+
   /** A block of nothing to write over old data. */
   private static final byte[] ZEROES = new byte[INITIAL_LENGTH];
 
   /** Length of header in bytes. */
   static final int HEADER_LENGTH = 16;
+
+  private final int maxElementSize;
 
   /**
    * The underlying file. Uses a ring buffer to store entries. Designed so that
@@ -112,6 +117,7 @@ public class QueueFile {
    * instance should access a given file at a time.
    */
   public QueueFile(File file) throws IOException {
+    maxElementSize = MAX_ELEMENT_SIZE;
     if (!file.exists()) initialize(file);
     raf = open(file);
     readHeader();
@@ -119,7 +125,16 @@ public class QueueFile {
 
   /** For testing. */
   QueueFile(RandomAccessFile raf) throws IOException {
+    maxElementSize = MAX_ELEMENT_SIZE;
     this.raf = raf;
+    readHeader();
+  }
+
+  /** For testing. */
+  QueueFile(File file, int maxElementSize) throws IOException {
+    this.maxElementSize = maxElementSize;
+    if (!file.exists()) initialize(file);
+    raf = open(file);
     readHeader();
   }
 
@@ -309,6 +324,11 @@ public class QueueFile {
       throw new IndexOutOfBoundsException();
     }
 
+    if (count > maxElementSize) {
+      throw new IllegalArgumentException("Adding element that is " + count + " to queue with max"
+          + " element size " + maxElementSize + ".");
+    }
+
     expandIfNecessary(count);
 
     // Insert a new element after the current last element.
@@ -376,6 +396,11 @@ public class QueueFile {
     do {
       remainingBytes += previousLength;
       newLength = previousLength << 1;
+      if (newLength < 0) {
+        throw new IllegalArgumentException("Cannot add data of length " + dataLength + " to the "
+            + "queue which already has a length of " + fileLength + ". The max file size is "
+            + "1,073,741,823 (half of Integer.MAX_VALUE).");
+      }
       previousLength = newLength;
     } while (remainingBytes < elementLength);
 

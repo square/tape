@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+Version 1.2.4-next *(2020-10-30)*
+----------------------------
+
+ * Add MAX_ELEMENT_SIZE of Integer.MAX_VALUE / 4 for Queue element.
+ * Throw IllegalArgumentException if element pushes queue file > Integer.MAX_VALUE / 2 to prevent
+   int overrun.
+
 Version 1.2.4-41c3b39 *(2020-10-28)*
 ----------------------------
 
