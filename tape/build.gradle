@@ -12,4 +12,8 @@ dependencies {
   testCompile 'com.squareup.okio:okio:1.13.0'
 }
 
+test {
+  maxHeapSize = "2G"
+}
+
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')

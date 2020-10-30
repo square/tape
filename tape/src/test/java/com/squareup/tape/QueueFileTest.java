@@ -68,6 +68,41 @@ import static org.fest.assertions.Fail.fail;
     assertThat(queue.peek()).isEqualTo(expected);
   }
 
+  @Test public void testAddElementTooLarge() throws IOException {
+    QueueFile queue = new QueueFile(file);
+    byte[] newBigValue = new byte[QueueFile.MAX_ELEMENT_SIZE + 1];
+    try {
+      queue.add(newBigValue);
+      fail("Should have failed with IllegalArgumentException for element too large.");
+    } catch (IllegalArgumentException e) {
+      assertThat(e).hasMessage("Adding element that is " +
+          (QueueFile.MAX_ELEMENT_SIZE + 1) + " to queue with max"
+          + " element size " + QueueFile.MAX_ELEMENT_SIZE + ".");
+    } finally {
+      queue.close();
+    }
+  }
+
+  @Test public void testAddElementToQueueAboutToOverrun() throws IOException {
+    QueueFile queue = new QueueFile(file);
+    final int elementSize = QueueFile.MAX_ELEMENT_SIZE / 2;
+    byte[] expected = new byte[elementSize];
+    for (int i = 0; i < (Integer.MAX_VALUE / 2 / elementSize - 1); i++) {
+      queue.add(expected);
+    }
+    try {
+      queue.add(expected);
+      fail("Should have failed with IllegalArgumentException for element too large.");
+    } catch (IllegalArgumentException e) {
+      assertThat(e).hasMessage("Cannot add data of length " + elementSize + " to the "
+          + "queue which already has a length of " + (Integer.MAX_VALUE / 2 + 1)
+          + ". The max file size is "
+          + "1,073,741,823 (half of Integer.MAX_VALUE).");
+    } finally {
+      queue.close();
+    }
+  }
+
   @Test public void testClearErases() throws IOException {
     QueueFile queue = new QueueFile(file);
     byte[] expected = values[253];

@@ -57,6 +57,9 @@ public class QueueFile {
   /** Initial file size in bytes. */
   static final int INITIAL_LENGTH = 4096; // one file system block
 
+  /** Max element size in bytes. */
+  static final int MAX_ELEMENT_SIZE = Integer.MAX_VALUE / 4;
+
   /** A block of nothing to write over old data. */
   private static final byte[] ZEROES = new byte[INITIAL_LENGTH];
 
@@ -309,6 +312,11 @@ public class QueueFile {
       throw new IndexOutOfBoundsException();
     }
 
+    if (count > MAX_ELEMENT_SIZE) {
+      throw new IllegalArgumentException("Adding element that is " + count + " to queue with max"
+          + " element size " + MAX_ELEMENT_SIZE + ".");
+    }
+
     expandIfNecessary(count);
 
     // Insert a new element after the current last element.
@@ -376,6 +384,11 @@ public class QueueFile {
     do {
       remainingBytes += previousLength;
       newLength = previousLength << 1;
+      if (newLength < 0) {
+        throw new IllegalArgumentException("Cannot add data of length " + dataLength + " to the "
+            + "queue which already has a length of " + fileLength + ". The max file size is "
+            + "1,073,741,823 (half of Integer.MAX_VALUE).");
+      }
       previousLength = newLength;
     } while (remainingBytes < elementLength);
 
