@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.Base64;
 import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,6 +54,9 @@ import static java.lang.Math.min;
  */
 public class QueueFile {
   private static final Logger LOGGER = Logger.getLogger(QueueFile.class.getName());
+
+  /** Preview size of element when there is a problem **/
+  private static final int LARGE_ELEMENT_PREVIEW_SIZE = 10;
 
   /** Initial file size in bytes. */
   static final int INITIAL_LENGTH = 4096; // one file system block
@@ -211,7 +215,32 @@ public class QueueFile {
     if (position == 0) return Element.NULL;
     ringRead(position, buffer, 0, Element.HEADER_LENGTH);
     int length = readInt(buffer, 0);
+    checkForElementLengthCorruption(length, position);
     return new Element(position, length);
+  }
+
+  /**
+   * If a single element in the queue has a size greater than the length of the content as recorded
+   * in the header, we have a corruption problem. We also check against maxElementSize as no element
+   * should have been inserted with a size greater than that - so if the element's header reports as
+   * such, then again there is corruption.
+   * @param elementLength - Length of the element we are checking.
+   * @param elementPosition - Position of the element's header in the file.
+   * @throws IOException - When there is a file read problem or when there is corruption.
+   */
+  private void checkForElementLengthCorruption(int elementLength, int elementPosition) throws IOException {
+    int fileContentLength = fileLength - QueueFile.HEADER_LENGTH;
+    if (elementLength > fileContentLength || elementLength > maxElementSize) {
+      // Maybe fileContentLength is very small?
+      int debugSize = Math.min(fileContentLength, Math.min(LARGE_ELEMENT_PREVIEW_SIZE, elementLength));
+      byte[] debugBytes = new byte[debugSize];
+      ringRead(elementPosition + Element.HEADER_LENGTH, debugBytes, 0, debugSize);
+      throw new CorruptionException("Possible corruption: Trying to read a Tape element "
+          + "claiming length: " + elementLength + ", which is either a) larger than the current file"
+          + " content length of: " + fileContentLength + ", or larger than the max Tape element size"
+          + " of: " + maxElementSize + ". The first " + debugSize + " bytes of the element are: " +
+          Base64.getEncoder().encodeToString(debugBytes));
+    }
   }
 
   /** Atomically initializes a new file. */
@@ -443,6 +472,7 @@ public class QueueFile {
   public synchronized byte[] peek() throws IOException {
     if (isEmpty()) return null;
     int length = first.length;
+    checkForElementLengthCorruption(length, first.position);
     byte[] data = new byte[length];
     ringRead(first.position + Element.HEADER_LENGTH, data, 0, length);
     return data;

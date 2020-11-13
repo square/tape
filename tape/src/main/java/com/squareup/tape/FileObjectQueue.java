@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +25,7 @@ import static java.util.Collections.unmodifiableList;
  * @param <T> The type of elements in the queue.
  */
 public class FileObjectQueue<T> implements ObjectQueue<T> {
+
   /** Backing storage implementation. */
   private final QueueFile queueFile;
   /** Reusable byte output buffer. */
@@ -37,6 +39,13 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
     this.file = file;
     this.converter = converter;
     this.queueFile = new QueueFile(file);
+  }
+
+  /** For Testing **/
+  FileObjectQueue(int maxElementSize, File file, Converter<T> converter) throws IOException {
+    this.file = file;
+    this.converter = converter;
+    this.queueFile = new QueueFile(file, maxElementSize);
   }
 
   @Override public int size() {

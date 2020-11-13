@@ -9,7 +9,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import static com.squareup.tape.QueueTestUtils.ONE_ENTRY_SERIALIZED_QUEUE;
+import static com.squareup.tape.QueueTestUtils.copyTestFile;
 import static org.fest.assertions.Assertions.assertThat;
+import static org.fest.assertions.Fail.fail;
 
 public class FileObjectQueueTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();
@@ -27,6 +30,17 @@ public class FileObjectQueueTest {
   @Test public void peekMultiple() {
     List<String> peek = queue.peek(3);
     assertThat(peek).containsExactly("one", "two", "three");
+  }
+
+  @Test public void tryReadingInFileWithElementOverMax() throws IOException {
+    File file = copyTestFile(ONE_ENTRY_SERIALIZED_QUEUE);
+    try {
+      queue = new FileObjectQueue<String>(10, file, new SerializedConverter<String>());
+      fail("Should have failed with IOException for element too large.");
+    } catch (IOException e) {
+      String message = e.getMessage();
+      assertThat(message).contains("Possible corruption");
+    }
   }
 
   @Test public void getsAllAsList() {

@@ -21,6 +21,8 @@ import org.junit.rules.TemporaryFolder;
 
 import static com.squareup.tape.QueueFile.HEADER_LENGTH;
 import static com.squareup.tape.QueueFile.writeInts;
+import static com.squareup.tape.QueueTestUtils.ONE_ENTRY_SERIALIZED_QUEUE;
+import static com.squareup.tape.QueueTestUtils.copyTestFile;
 import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.Fail.fail;
 
@@ -676,6 +678,26 @@ import static org.fest.assertions.Fail.fail;
     assertThat(iteration.get()).isEqualTo(1);
   }
 
+  @Test public void testReadHeaderFailsOnElementTooLarge() throws IOException {
+    File file = copyTestFile(ONE_ENTRY_SERIALIZED_QUEUE);
+    try {
+      QueueFile queueFile = new QueueFile(file, 10);
+      fail("Should have failed with IOException for element too large.");
+    } catch (IOException e) {
+      String message = e.getMessage();
+      assertThat(message).contains("Possible corruption");
+    }
+  }
+
+  @Test public void testElementSizeCorruptionCheckNoProblem() throws IOException {
+    QueueFile queueFile = new QueueFile(file);
+    try {
+      queueFile.peek();
+    } catch (IOException e) {
+      fail("Peek found corruption.", e);
+    }
+  }
+
   @Test public void testCheckQueueIntegrityDoesNotThrow() throws IOException {
     QueueFile queueFile = new QueueFile(file);
 
@@ -773,9 +795,8 @@ import static org.fest.assertions.Fail.fail;
       queueFile.checkQueueIntegrity();
       fail("Should have complained about wrong element lengths.");
     } catch (IOException ex) {
-      assertThat(ex).hasMessage("Queue corruption: Element 1 has length: "
-          + doubleFileSize + " with cumulative element length of: 8218 in a file of length: "
-          + QueueFile.INITIAL_LENGTH + ".");
+      final String message = ex.getMessage();
+      assertThat(message).contains("corruption");
     }
   }
 
