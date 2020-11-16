@@ -691,11 +691,7 @@ import static org.fest.assertions.Fail.fail;
 
   @Test public void testElementSizeCorruptionCheckNoProblem() throws IOException {
     QueueFile queueFile = new QueueFile(file);
-    try {
-      queueFile.peek();
-    } catch (IOException e) {
-      fail("Peek found corruption.", e);
-    }
+    queueFile.peek();
   }
 
   @Test public void testCheckQueueIntegrityDoesNotThrow() throws IOException {
@@ -795,7 +791,7 @@ import static org.fest.assertions.Fail.fail;
       queueFile.checkQueueIntegrity();
       fail("Should have complained about wrong element lengths.");
     } catch (IOException ex) {
-      final String message = ex.getMessage();
+      String message = ex.getMessage();
       assertThat(message).contains("corruption");
     }
   }
