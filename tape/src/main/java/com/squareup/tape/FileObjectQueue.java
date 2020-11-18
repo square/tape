@@ -9,6 +9,8 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.squareup.tape.QueueElementObserver.NO_OP_OBSERVER;
+import static com.squareup.tape.QueueFile.MAX_ELEMENT_SIZE;
 import static java.util.Collections.unmodifiableList;
 
 /**
@@ -35,16 +37,31 @@ public class FileObjectQueue<T> implements ObjectQueue<T> {
   private Listener<T> listener;
 
   public FileObjectQueue(File file, Converter<T> converter) throws IOException {
-    this.file = file;
-    this.converter = converter;
-    this.queueFile = new QueueFile(file);
+    this(file, converter, MAX_ELEMENT_SIZE);
   }
 
-  /** For Testing **/
-  FileObjectQueue(int maxElementSize, File file, Converter<T> converter) throws IOException {
+  public FileObjectQueue(File file, Converter<T> converter, int maxElementSize) throws IOException {
+    this(file, converter, maxElementSize, NO_OP_OBSERVER);
+  }
+
+  /**
+   * Construct a basic queue backed by a file. This class is not thread safe; instances should be kept
+   *  * thread-confined.
+   *
+   * @param file - The file to back this queue with.
+   * @param converter - The converter for the elements stored in the queue.
+   * @param maxElementSize - The maximum size of an element of the queue in bytes.
+   * @param observer - The handler for queue/file element problems.
+   * @throws IOException - For any problems during initialization.
+   */
+  public FileObjectQueue(
+      File file,
+      Converter<T> converter,
+      int maxElementSize,
+      QueueElementObserver observer) throws IOException {
     this.file = file;
     this.converter = converter;
-    this.queueFile = new QueueFile(file, maxElementSize);
+    this.queueFile = new QueueFile(file, maxElementSize, observer);
   }
 
   @Override public int size() {

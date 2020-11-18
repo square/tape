@@ -25,6 +25,7 @@ import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static com.squareup.tape.QueueElementObserver.NO_OP_OBSERVER;
 import static java.lang.Math.min;
 
 /**
@@ -58,7 +59,7 @@ public class QueueFile {
   static final int INITIAL_LENGTH = 4096; // one file system block
 
   /** Max element size in bytes. */
-  private static final int MAX_ELEMENT_SIZE = Integer.MAX_VALUE / 4;
+  static final int MAX_ELEMENT_SIZE = Integer.MAX_VALUE / 4;
 
   /** A block of nothing to write over old data. */
   private static final byte[] ZEROES = new byte[INITIAL_LENGTH];
@@ -97,6 +98,8 @@ public class QueueFile {
    */
   final RandomAccessFile raf;
 
+  private final QueueElementObserver queueElementObserver;
+
   /** Cached file length. Always a power of 2. */
   int fileLength;
 
@@ -117,26 +120,43 @@ public class QueueFile {
    * instance should access a given file at a time.
    */
   public QueueFile(File file) throws IOException {
-    maxElementSize = MAX_ELEMENT_SIZE;
+    this(file, MAX_ELEMENT_SIZE, NO_OP_OBSERVER);
+  }
+
+  /**
+   * Constructs a new queue backed by the given file. Only one {@code QueueFile}
+   * instance should access a given file at a time.
+   *
+   * This queue will have max element size of maxElementSize and will handle any anomalies by
+   * passing them to the anomalyHandler.
+   */
+  public QueueFile(
+      File file,
+      int maxElementSize,
+      QueueElementObserver queueElementObserver) throws IOException {
+    this.maxElementSize = maxElementSize;
+    this.queueElementObserver = queueElementObserver;
     if (!file.exists()) initialize(file);
     raf = open(file);
     readHeader();
   }
 
   /** For testing. */
-  QueueFile(RandomAccessFile raf) throws IOException {
-    maxElementSize = MAX_ELEMENT_SIZE;
+  QueueFile(RandomAccessFile raf, int maxElementSize, QueueElementObserver queueElementObserver) throws IOException {
+    this.maxElementSize = maxElementSize;
+    this.queueElementObserver = queueElementObserver;
     this.raf = raf;
     readHeader();
   }
 
   /** For testing. */
-  QueueFile(File file, int maxElementSize) throws IOException {
-    this.maxElementSize = maxElementSize;
-    if (!file.exists()) initialize(file);
-    raf = open(file);
+  QueueFile(RandomAccessFile raf) throws IOException {
+    this.maxElementSize = MAX_ELEMENT_SIZE;
+    this.queueElementObserver = NO_OP_OBSERVER;
+    this.raf = raf;
     readHeader();
   }
+
 
   /**
    * Stores int in buffer. The behavior is equivalent to calling {@link
@@ -182,8 +202,8 @@ public class QueueFile {
     elementCount = readInt(buffer, 4);
     int firstOffset = readInt(buffer, 8);
     int lastOffset = readInt(buffer, 12);
-    first = readElement(firstOffset);
-    last = readElement(lastOffset);
+    first = readElement(firstOffset, true);
+    last = readElement(lastOffset, true);
   }
 
   /** Reads the header without any file side effects. */
@@ -208,30 +228,24 @@ public class QueueFile {
 
   /** Returns the Element for the given offset. */
   private Element readElement(int position) throws IOException {
-    if (position == 0) return Element.NULL;
-    ringRead(position, buffer, 0, Element.HEADER_LENGTH);
-    int length = readInt(buffer, 0);
-    checkForElementLengthCorruption(length);
-    return new Element(position, length);
+    return readElement(position, false);
   }
 
   /**
-   * If a single element in the queue has a size greater than the length of the content as recorded
-   * in the header, we have a corruption problem. We also check against maxElementSize as no element
-   * should have been inserted with a size greater than that - so if the element's header reports as
-   * such, then again there is corruption.
-   *
-   * @param elementLength - Length of the element we are checking.
-   * @throws IOException - When there is a file read problem or when there is corruption.
+   * Returns the Element for the given offset.
+   * @param isInit - This is true when reading the first/last elements of a file during init.
    */
-  private void checkForElementLengthCorruption(int elementLength) throws IOException {
-    int fileContentLength = fileLength - QueueFile.HEADER_LENGTH;
-    if (elementLength > fileContentLength || elementLength > maxElementSize) {
-      throw new IOException("Possible corruption: Trying to read a Tape element "
-          + "claiming length: " + elementLength + ", which is either a) larger than the current file"
-          + " content length of: " + fileContentLength + ", or larger than the max Tape element size"
-          + " of: " + maxElementSize + ".");
-    }
+  private Element readElement(int position, boolean isInit) throws IOException {
+    if (position == 0) return Element.NULL;
+    ringRead(position, buffer, 0, Element.HEADER_LENGTH);
+    int length = readInt(buffer, 0);
+    queueElementObserver.observeElement( new QueueElementObserver.QueueElementObservation(
+        length,
+        maxElementSize,
+        fileLength - HEADER_LENGTH,
+        false,
+        isInit));
+    return new Element(position, length);
   }
 
   /** Atomically initializes a new file. */
@@ -344,10 +358,12 @@ public class QueueFile {
       throw new IndexOutOfBoundsException();
     }
 
-    if (count > maxElementSize) {
-      throw new IllegalArgumentException("Adding element that is " + count + " to queue with max"
-          + " element size " + maxElementSize + ".");
-    }
+    queueElementObserver.observeElement( new QueueElementObserver.QueueElementObservation(
+        count,
+        maxElementSize,
+        fileLength - HEADER_LENGTH,
+        true,
+        false));
 
     expandIfNecessary(count);
 
@@ -417,9 +433,11 @@ public class QueueFile {
       remainingBytes += previousLength;
       newLength = previousLength << 1;
       if (newLength < 0) {
+        // NB: We have no config for this as we have no choice, it will crash later if we let it
+        // overrun an int on the file size.
         throw new IllegalArgumentException("Cannot add data of length " + dataLength + " to the "
             + "queue which already has a length of " + fileLength + ". The max file size is "
-            + "1,073,741,823 (half of Integer.MAX_VALUE).");
+            + "1,073,741,823 (half of Integer.MAX_VALUE), or 1.07 GB.");
       }
       previousLength = newLength;
     } while (remainingBytes < elementLength);
@@ -463,7 +481,12 @@ public class QueueFile {
   public synchronized byte[] peek() throws IOException {
     if (isEmpty()) return null;
     int length = first.length;
-    checkForElementLengthCorruption(length);
+    queueElementObserver.observeElement( new QueueElementObserver.QueueElementObservation(
+        length,
+        maxElementSize,
+        fileLength - HEADER_LENGTH,
+        false,
+        false));
     byte[] data = new byte[length];
     ringRead(first.position + Element.HEADER_LENGTH, data, 0, length);
     return data;

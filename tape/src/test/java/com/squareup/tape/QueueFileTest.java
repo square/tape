@@ -11,6 +11,8 @@ import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import org.fest.assertions.Assertions;
@@ -19,12 +21,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import static com.squareup.tape.QueueElementObserver.NO_OP_OBSERVER;
 import static com.squareup.tape.QueueFile.HEADER_LENGTH;
+import static com.squareup.tape.QueueFile.MAX_ELEMENT_SIZE;
 import static com.squareup.tape.QueueFile.writeInts;
 import static com.squareup.tape.QueueTestUtils.ONE_ENTRY_SERIALIZED_QUEUE;
 import static com.squareup.tape.QueueTestUtils.copyTestFile;
 import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.Fail.fail;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for QueueFile.
@@ -33,6 +39,7 @@ import static org.fest.assertions.Fail.fail;
  */
 @SuppressWarnings({ "ResultOfMethodCallIgnored" }) public class QueueFileTest {
   private static final Logger logger = Logger.getLogger(QueueFileTest.class.getName());
+  private static final long TIMEOUT_MS = 200;
 
   /**
    * Takes up 33401 bytes in the queue (N*(N+1)/2+4*N). Picked 254 instead of 255 so that the number
@@ -68,22 +75,91 @@ import static org.fest.assertions.Fail.fail;
     queue.close();
     queue = new QueueFile(file);
     assertThat(queue.peek()).isEqualTo(expected);
+    queue.close();
   }
 
-  @Test public void testAddElementTooLarge() throws IOException {
+  @Test public void allOperationsCallObserver() throws IOException, InterruptedException {
+    int chosenSize = 10;
+    CountDownLatch latch = new CountDownLatch(4);
+    QueueFile queue = new QueueFile(file, MAX_ELEMENT_SIZE,
+        (observation) -> {
+          latch.countDown();
+          assertThat(observation.getElementSize()).isEqualTo(chosenSize);
+        });
+    queue.add(new byte[chosenSize]);
+    queue.add(new byte[chosenSize]);
+    queue.add(new byte[chosenSize]);
+    queue.peek();
+    latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    queue.close();
+  }
+
+  @Test public void addReportsCorrectlyToObserver() throws IOException, InterruptedException {
+    int chosenSize = 10;
+    CountDownLatch latch = new CountDownLatch(3);
+    QueueFile queue = new QueueFile(file, MAX_ELEMENT_SIZE,
+        (observation) -> {
+          latch.countDown();
+          assertThat(observation.getElementSize()).isEqualTo(chosenSize);
+          assertTrue(observation.isAdd());
+          assertFalse(observation.isInit());
+        });
+    queue.add(new byte[chosenSize]);
+    queue.add(new byte[chosenSize]);
+    queue.add(new byte[chosenSize]);
+    latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    queue.close();
+  }
+
+  @Test public void initAndReadReportsCorrectlyToObserver()
+      throws IOException, InterruptedException {
+    File file = copyTestFile(ONE_ENTRY_SERIALIZED_QUEUE);
+    CountDownLatch latch = new CountDownLatch(1);
+    QueueFile queue = new QueueFile(file, MAX_ELEMENT_SIZE,
+        (observation) -> {
+          latch.countDown();
+          assertTrue(observation.isInit());
+          assertFalse(observation.isAdd());
+        });
+    latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    queue.close();
+  }
+
+  @Test public void readReportsCorrectlyToObserver() throws IOException, InterruptedException {
+    File file = copyTestFile(ONE_ENTRY_SERIALIZED_QUEUE);
+    CountDownLatch latch = new CountDownLatch(1);
+    QueueFile queue = new QueueFile(file, MAX_ELEMENT_SIZE,
+        (observation) -> {
+          latch.countDown();
+          assertFalse(observation.isAdd());
+        });
+    queue.peek();
+    latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    queue.close();
+  }
+
+  @Test public void testAddElementTooLargeCalls() throws IOException, InterruptedException {
     int testMaxElementSize = 1000;
-    QueueFile queue = new QueueFile(file, testMaxElementSize);
+    CountDownLatch latch = new CountDownLatch(1);
+    QueueFile queue = new QueueFile(file, testMaxElementSize,
+        (observation) -> {
+          if (observation.getElementSize() > observation.getMaxElementSize()) {
+            latch.countDown();
+          }
+        });
     byte[] newBigValue = new byte[testMaxElementSize + 1];
-    try {
-      queue.add(newBigValue);
-      fail("Should have failed with IllegalArgumentException for element too large.");
-    } catch (IllegalArgumentException e) {
-      assertThat(e).hasMessage("Adding element that is " +
-          (testMaxElementSize + 1) + " to queue with max"
-          + " element size " + testMaxElementSize + ".");
-    } finally {
-      queue.close();
-    }
+    queue.add(newBigValue);
+    latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    queue.close();
+  }
+
+  @Test public void testAddElementTooLargeIgnoresWithDefault() throws IOException {
+    int testMaxElementSize = 1000;
+    QueueFile queue = new QueueFile(file, testMaxElementSize, NO_OP_OBSERVER);
+    byte[] newBigValue = new byte[testMaxElementSize + 1];
+    queue.add(newBigValue);
+    assertThat(queue.size()).isEqualTo(1);
+    queue.close();
   }
 
   @Test public void testAddElementToQueueAboutToOverrun() throws IOException {
@@ -366,12 +442,41 @@ import static org.fest.assertions.Fail.fail;
     assertThat(queueFile.peek()).isEqualTo(values[99]);
   }
 
+  @Test public void testPeekElementTooLargeCalls() throws IOException, InterruptedException {
+    int testMaxElementSize = 1000;
+    CountDownLatch latch = new CountDownLatch(2);
+    QueueFile queue = new QueueFile(file, testMaxElementSize,
+        (observation) -> {
+          if (!observation.isAdd()
+              && observation.getElementSize() > observation.getMaxElementSize()) {
+            latch.countDown();
+          }
+        });
+    byte[] newBigValue = new byte[testMaxElementSize + 1];
+    queue.add(newBigValue);
+    assertThat(queue.size()).isEqualTo(1);
+    queue.peek();
+    latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    queue.close();
+  }
+
+  @Test public void testPeekElementTooLargeIgnoresWithDefault() throws IOException {
+    int testMaxElementSize = 1000;
+    QueueFile queue = new QueueFile(file, testMaxElementSize, NO_OP_OBSERVER);
+    byte[] newBigValue = new byte[testMaxElementSize + 1];
+    queue.add(newBigValue);
+    assertThat(queue.size()).isEqualTo(1);
+    queue.peek();
+    assertThat(queue.size()).isEqualTo(1);
+    queue.close();
+  }
+
   @SuppressWarnings("deprecation") @Test
   public void testPeekWithElementReader() throws IOException {
     QueueFile queueFile = new QueueFile(file);
-    final byte[] a = {1, 2};
+    final byte[] a = { 1, 2 };
     queueFile.add(a);
-    final byte[] b = {3, 4, 5};
+    final byte[] b = { 3, 4, 5 };
     queueFile.add(b);
 
     final AtomicInteger peeks = new AtomicInteger(0);
@@ -471,12 +576,12 @@ import static org.fest.assertions.Fail.fail;
   @SuppressWarnings("deprecation") @Test public void testForEach() throws IOException {
     QueueFile queueFile = new QueueFile(file);
 
-    final byte[] a = {1, 2};
+    final byte[] a = { 1, 2 };
     queueFile.add(a);
-    final byte[] b = {3, 4, 5};
+    final byte[] b = { 3, 4, 5 };
     queueFile.add(b);
 
-    final int[] iteration = new int[]{0};
+    final int[] iteration = new int[] { 0 };
     QueueFile.ElementReader elementReader = new QueueFile.ElementReader() {
       @Override public void read(InputStream in, int length) throws IOException {
         if (iteration[0] == 0) {
@@ -526,8 +631,8 @@ import static org.fest.assertions.Fail.fail;
 
   @SuppressWarnings("deprecation") @Test public void testForEachStreamCopy() throws IOException {
     final QueueFile queueFile = new QueueFile(file);
-    queueFile.add(new byte[] {1, 2});
-    queueFile.add(new byte[] {3, 4, 5});
+    queueFile.add(new byte[] { 1, 2 });
+    queueFile.add(new byte[] { 3, 4, 5 });
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final byte[] buffer = new byte[8];
@@ -554,7 +659,7 @@ import static org.fest.assertions.Fail.fail;
     };
 
     queueFile.forEach(elementReader);
-    assertThat(baos.toByteArray()).isEqualTo(new byte[] {1, 2, 3, 4, 5});
+    assertThat(baos.toByteArray()).isEqualTo(new byte[] { 1, 2, 3, 4, 5 });
   }
 
   @Test public void testForEachVisitor() throws IOException {
@@ -616,8 +721,8 @@ import static org.fest.assertions.Fail.fail;
 
   @Test public void testForEachVisitorStreamCopy() throws IOException {
     final QueueFile queueFile = new QueueFile(file);
-    queueFile.add(new byte[] {1, 2});
-    queueFile.add(new byte[] {3, 4, 5});
+    queueFile.add(new byte[] { 1, 2 });
+    queueFile.add(new byte[] { 3, 4, 5 });
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final byte[] buffer = new byte[8];
@@ -645,15 +750,15 @@ import static org.fest.assertions.Fail.fail;
     };
 
     queueFile.forEach(elementReader);
-    assertThat(baos.toByteArray()).isEqualTo(new byte[] {1, 2, 3, 4, 5});
+    assertThat(baos.toByteArray()).isEqualTo(new byte[] { 1, 2, 3, 4, 5 });
   }
 
   @Test public void testForEachCanAbortEarly() throws IOException {
     QueueFile queueFile = new QueueFile(file);
 
-    final byte[] a = {1, 2};
+    final byte[] a = { 1, 2 };
     queueFile.add(a);
-    final byte[] b = {3, 4, 5};
+    final byte[] b = { 3, 4, 5 };
     queueFile.add(b);
 
     final AtomicInteger iteration = new AtomicInteger();
@@ -676,17 +781,6 @@ import static org.fest.assertions.Fail.fail;
 
     assertThat(queueFile.peek()).isEqualTo(a);
     assertThat(iteration.get()).isEqualTo(1);
-  }
-
-  @Test public void testReadHeaderFailsOnElementTooLarge() throws IOException {
-    File file = copyTestFile(ONE_ENTRY_SERIALIZED_QUEUE);
-    try {
-      QueueFile queueFile = new QueueFile(file, 10);
-      fail("Should have failed with IOException for element too large.");
-    } catch (IOException e) {
-      String message = e.getMessage();
-      assertThat(message).contains("Possible corruption");
-    }
   }
 
   @Test public void testElementSizeCorruptionCheckNoProblem() throws IOException {
@@ -782,7 +876,7 @@ import static org.fest.assertions.Fail.fail;
     // corrupt the 2nd element's length.
     final int positionOfElementB = QueueFile.HEADER_LENGTH + Element.HEADER_LENGTH + 2;
     queueFile.raf.seek(positionOfElementB);
-    int doubleFileSize = (int)queueFile.raf.length() * 2;
+    int doubleFileSize = (int) queueFile.raf.length() * 2;
     final byte[] intBuffer = new byte[4];
     QueueFile.writeInt(intBuffer, 0, doubleFileSize);
     queueFile.raf.write(intBuffer);
@@ -854,7 +948,7 @@ import static org.fest.assertions.Fail.fail;
     int bytesPerElement = totalBytesToFill / elementsToFill - Element.HEADER_LENGTH;
 
     byte[] element = new byte[bytesPerElement];
-    Arrays.fill(element, (byte)1);
+    Arrays.fill(element, (byte) 1);
 
     for (int i = 0; i < elementsToFill - 1; i++) {
       queueFile.add(element);
@@ -864,8 +958,8 @@ import static org.fest.assertions.Fail.fail;
     queueFile.remove();
 
     // Double size element wraps the file without needing to resize.
-    final byte[] doubleElement = new byte[bytesPerElement*2];
-    Arrays.fill(doubleElement, (byte)1);
+    final byte[] doubleElement = new byte[bytesPerElement * 2];
+    Arrays.fill(doubleElement, (byte) 1);
     queueFile.add(doubleElement);
 
     // Should not throw.
@@ -970,7 +1064,7 @@ import static org.fest.assertions.Fail.fail;
     // block "5" to be moved to the end of the file.
     queue.add(values[4]);
 
-    byte[] expectedBlockNumbers = {2, 3, 4, 6, 7, 8, 5};
+    byte[] expectedBlockNumbers = { 2, 3, 4, 6, 7, 8, 5 };
 
     // Make sure values are not corrupted, specifically block "4" that wasn't
     // being made contiguous in the version with the bug.
@@ -1125,5 +1219,30 @@ import static org.fest.assertions.Fail.fail;
       }
       super.write(buffer);
     }
+  }
+
+  @Test public void testReadHeaderElementTooLargeCalls() throws IOException, InterruptedException {
+    int testMaxElementSize = 10;
+    File file = copyTestFile(ONE_ENTRY_SERIALIZED_QUEUE);
+    CountDownLatch latch = new CountDownLatch(1);
+    QueueFile queue = new QueueFile(file, testMaxElementSize,
+        (observation) -> {
+          if (observation.isAdd()
+              && observation.getElementSize() > observation.getMaxElementSize()) {
+            latch.countDown();
+          }
+        });
+    latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    queue.close();
+  }
+
+  @Test public void testReadHeaderElementTooLargeIgnoresWithDefault() throws IOException {
+    int testMaxElementSize = 10;
+    File file = copyTestFile(ONE_ENTRY_SERIALIZED_QUEUE);
+    QueueFile queue = new QueueFile(file, testMaxElementSize, NO_OP_OBSERVER);
+    assertThat(queue.size()).isEqualTo(1);
+    queue.peek();
+    assertThat(queue.size()).isEqualTo(1);
+    queue.close();
   }
 }
