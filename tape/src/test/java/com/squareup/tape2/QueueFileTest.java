@@ -752,6 +752,51 @@ public class QueueFileTest {
   }
 
   /**
+   * Exercise a bug where an expanding queue file needs to transfer large data (more than 2GB).
+   */
+  @Test public void testFileExpansionMoveLargeElements() throws IOException {
+    QueueFile queue = newQueueFile();
+
+    // Create test data - (1GB - 4 byte - 4 byte) block
+    // We can mock the large elements transfer as follows:
+    // 1. add four blocks to saturate the queue file;
+    // 2. remove first three blocks;
+    // 3. add three blocks to make the last position smaller than first position;
+    // 4. add one new block which trigger the expansion of queue file
+    // and large data transfer (first three blocks approximately 3GB).
+    int blockSize = 1024 * 1024 * 1024 - headerLength - Element.HEADER_LENGTH;
+    byte[] values = new byte[blockSize];
+    for (int i = 0; i < blockSize; i++) {
+      values[i] = (byte) (i + 1);
+    }
+
+    // Saturate the queue file
+    queue.add(values);
+    queue.add(values);
+    queue.add(values);
+    queue.add(values);
+
+    // Remove first three blocks and add three blocks
+    queue.remove();
+    queue.remove();
+    queue.remove();
+    queue.add(values);
+    queue.add(values);
+    queue.add(values);
+
+    // Cause the queue file to expand and a large data transfer
+    queue.add(values);
+
+    // Make sure values are not corrupted
+    for (int i = 0; i < 5; i++) {
+      assertThat(queue.peek()).isEqualTo(values);
+      queue.remove();
+    }
+
+    queue.close();
+  }
+
+  /**
    * Exercise a bug where opening a queue whose first or last element's header
    * was non contiguous throws an {@link java.io.EOFException}.
    */

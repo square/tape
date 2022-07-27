@@ -454,13 +454,21 @@ public final class QueueFile implements Closeable, Iterable<byte[]> {
     // Calculate the position of the tail end of the data in the ring buffer
     long endOfLastElement = wrapPosition(last.position + Element.HEADER_LENGTH + last.length);
     long count = 0;
+    long pos = headerLength;
     // If the buffer is split, we need to make it contiguous
     if (endOfLastElement <= first.position) {
       FileChannel channel = raf.getChannel();
       channel.position(fileLength); // destination position
       count = endOfLastElement - headerLength;
-      if (channel.transferTo(headerLength, count, channel) != count) {
-        throw new AssertionError("Copied insufficient number of bytes!");
+      // Transfer data in batches because of the write limitation of 2GB in FileChannelImpl.
+      long remainingToTransfer = count;
+      while (remainingToTransfer > 0) {
+        long sizeToTransfer = min(remainingToTransfer, Integer.MAX_VALUE);
+        if (channel.transferTo(pos, sizeToTransfer, channel) != sizeToTransfer) {
+          throw new AssertionError("Copied insufficient number of bytes!");
+        }
+        remainingToTransfer -= sizeToTransfer;
+        pos += sizeToTransfer;
       }
     }
 
